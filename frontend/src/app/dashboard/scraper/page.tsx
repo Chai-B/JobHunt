@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Globe, Users, Briefcase, Send, Activity, Info, Zap, ExternalLink } from "lucide-react";
+import { Globe, Users, Briefcase, Send, Activity, Info, Zap, ExternalLink, StopCircle } from "lucide-react";
 
 const Tip = ({ text }: { text: string }) => (
     <span className="relative inline-flex items-center ml-1.5 cursor-help group/tip">
@@ -34,6 +34,7 @@ export default function ScraperPage() {
     const [targetType, setTargetType] = useState("jobs");
     const [scraping, setScraping] = useState(false);
     const [scrapingSite, setScrapingSite] = useState<string | null>(null);
+    const [stopping, setStopping] = useState(false);
 
     const [contacts, setContacts] = useState<any[]>([]);
     const [loadingContacts, setLoadingContacts] = useState(true);
@@ -94,6 +95,27 @@ export default function ScraperPage() {
         }
     };
 
+    const handleStop = async () => {
+        setStopping(true);
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${API_BASE_URL}/api/v1/scraper/stop`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                toast.success(data.message);
+            } else {
+                toast.error("Failed to stop scraper.");
+            }
+        } catch (err) {
+            toast.error("Network error.");
+        } finally {
+            setStopping(false);
+        }
+    };
+
     const labelClass = "text-[11px] uppercase tracking-[0.15em] text-muted-foreground font-medium mb-1.5 flex items-center";
 
     return (
@@ -106,6 +128,10 @@ export default function ScraperPage() {
                     </h1>
                     <p className="text-muted-foreground mt-1 text-sm">Extract jobs and contacts from the web. Auto-scrape popular sites or manually target any URL.</p>
                 </div>
+                <Button variant="destructive" size="sm" onClick={handleStop} disabled={stopping} className="gap-2">
+                    <StopCircle className={`w-4 h-4 ${stopping ? 'animate-spin' : ''}`} />
+                    Stop All Scrapers
+                </Button>
             </div>
 
             {/* Auto-Scrape Quick Launch */}

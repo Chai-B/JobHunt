@@ -1,14 +1,16 @@
 from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from loguru import logger
+import asyncio
 
 from app.api import deps
 from app.db.models.user import User
 from app.db.models.resume import Resume
 from app.schemas.resume import ResumeRead, ResumeList, ResumeUpdate
-from app.worker.tasks import process_resume_task, process_resume_async
+from app.worker.tasks import process_resume_async
+from app.services.task_registry import register_task, cancel_user_tasks
 
 router = APIRouter()
 
@@ -18,7 +20,6 @@ ALLOWED_EXTENSIONS = {"pdf", "docx", "doc", "txt", "md"}
 async def upload_resume(
     file: UploadFile = File(...),
     label: str | None = Form(None),
-    background_tasks: BackgroundTasks = BackgroundTasks(),
     db: AsyncSession = Depends(deps.get_personal_db),
     current_user: User = Depends(deps.get_current_active_user)
 ) -> Any:
@@ -41,18 +42,23 @@ async def upload_resume(
     await db.commit()
     await db.refresh(new_resume)
     
-    # Try Celery first, fall back to inline background task
-    try:
-        process_resume_task.delay(new_resume.id, file_bytes, file.filename)
-        logger.info(f"Resume {new_resume.id} dispatched to Celery worker")
-    except Exception as e:
-        logger.warning(f"Celery unavailable ({e}), processing resume inline")
-        import asyncio
-        background_tasks.add_task(asyncio.run, process_resume_async(new_resume.id, file_bytes, file.filename))
+    # Run directly in the current event loop (non-blocking)
+    task = asyncio.create_task(
+        process_resume_async(new_resume.id, file_bytes, file.filename)
+    )
+    task_id = register_task(current_user.id, "resume_extraction", task)
     
-    logger.info(f"User {current_user.id} uploaded resume {new_resume.id}. Background task triggered.")
+    logger.info(f"User {current_user.id} uploaded resume {new_resume.id}. Task {task_id} started.")
     
     return new_resume
+
+@router.post("/stop", status_code=200)
+async def stop_resume_processing(
+    current_user: User = Depends(deps.get_current_active_user)
+):
+    """Stop all running resume processing tasks for the current user."""
+    count = cancel_user_tasks(current_user.id, task_type="resume_extraction")
+    return {"message": f"Stopped {count} resume processing task(s).", "cancelled": count}
 
 @router.get("/", response_model=ResumeList)
 async def list_resumes(
@@ -62,12 +68,10 @@ async def list_resumes(
     current_user: User = Depends(deps.get_current_active_user)
 ) -> Any:
     """Get all resumes for the current user."""
-    # Count total
     count_stmt = select(func.count(Resume.id)).where(Resume.user_id == current_user.id)
     count_res = await db.execute(count_stmt)
     total = count_res.scalar() or 0
     
-    # Get items
     stmt = select(Resume).where(Resume.user_id == current_user.id).offset(skip).limit(limit).order_by(Resume.created_at.desc())
     res = await db.execute(stmt)
     items = res.scalars().all()

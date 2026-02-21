@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Terminal, Activity, RefreshCw } from "lucide-react";
+import { Terminal, Activity, RefreshCw, StopCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { formatDistanceToNow } from 'date-fns';
@@ -13,19 +13,30 @@ import { formatDistanceToNow } from 'date-fns';
 export default function LogsPage() {
     const [logs, setLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [stopping, setStopping] = useState(false);
+    const [runningCount, setRunningCount] = useState(0);
 
     const fetchLogs = async () => {
         setLoading(true);
         try {
             const token = localStorage.getItem("token");
-            const res = await fetch(`${API_BASE_URL}/api/v1/logs/`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
+            const [logsRes, runningRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/api/v1/logs/`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                }),
+                fetch(`${API_BASE_URL}/api/v1/logs/running`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                })
+            ]);
+            if (logsRes.ok) {
+                const data = await logsRes.json();
                 setLogs(Array.isArray(data) ? data : []);
             } else {
                 toast.error("Failed to fetch system logs.");
+            }
+            if (runningRes.ok) {
+                const data = await runningRes.json();
+                setRunningCount(data.count || 0);
             }
         } catch (err) {
             toast.error("Network Error: Could not parse logs.");
@@ -34,9 +45,31 @@ export default function LogsPage() {
         }
     };
 
+    const handleStopAll = async () => {
+        setStopping(true);
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${API_BASE_URL}/api/v1/logs/stop-all`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                toast.success(data.message);
+                fetchLogs();
+            } else {
+                toast.error("Failed to stop tasks.");
+            }
+        } catch (err) {
+            toast.error("Network error.");
+        } finally {
+            setStopping(false);
+        }
+    };
+
     useEffect(() => {
         fetchLogs();
-        const interval = setInterval(fetchLogs, 10000); // 10s auto-refresh
+        const interval = setInterval(fetchLogs, 5000); // 5s auto-refresh
         return () => clearInterval(interval);
     }, []);
 
@@ -60,12 +93,25 @@ export default function LogsPage() {
                     <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
                         <Activity className="h-6 w-6" />
                         System Logs
+                        {runningCount > 0 && (
+                            <Badge variant="outline" className="border-blue-500/50 text-blue-500 bg-blue-500/10 animate-pulse ml-2">
+                                {runningCount} running
+                            </Badge>
+                        )}
                     </h1>
-                    <p className="text-muted-foreground mt-1 text-sm">Monitor all background framework operations in real-time.</p>
+                    <p className="text-muted-foreground mt-1 text-sm">Monitor all background operations in real-time.</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={fetchLogs} disabled={loading} className="gap-2 border-border text-foreground">
-                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
-                </Button>
+                <div className="flex gap-2">
+                    {runningCount > 0 && (
+                        <Button variant="destructive" size="sm" onClick={handleStopAll} disabled={stopping} className="gap-2">
+                            <StopCircle className={`w-4 h-4 ${stopping ? 'animate-spin' : ''}`} />
+                            Stop All
+                        </Button>
+                    )}
+                    <Button variant="outline" size="sm" onClick={fetchLogs} disabled={loading} className="gap-2 border-border text-foreground">
+                        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+                    </Button>
+                </div>
             </div>
 
             <Card className="bg-card border-border shadow-sm">
