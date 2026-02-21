@@ -68,17 +68,23 @@ def cancel_user_tasks(user_id: int, task_type: Optional[str] = None) -> int:
 
 
 def get_running_tasks(user_id: int) -> list:
-    """Get all running tasks for a user."""
+    """Get all running tasks for a user. Auto-cleans up finished tasks."""
+    # Auto-cleanup: mark done tasks and remove old ones
+    to_remove = []
+    for k, v in _tasks.items():
+        if v.asyncio_task and v.asyncio_task.done() and v.status == "running":
+            v.status = "completed"
+        # Remove tasks older than 1 hour to prevent memory leak
+        if v.asyncio_task and v.asyncio_task.done():
+            age = (datetime.utcnow() - v.created_at).total_seconds()
+            if age > 3600:
+                to_remove.append(k)
+    for k in to_remove:
+        del _tasks[k]
+    
     return [
         {"task_id": t.task_id, "task_type": t.task_type, "created_at": t.created_at.isoformat()}
         for t in _tasks.values()
         if t.user_id == user_id and t.status == "running"
         and t.asyncio_task and not t.asyncio_task.done()
     ]
-
-
-def cleanup_done_tasks():
-    """Remove completed tasks from registry to prevent memory leak."""
-    done = [k for k, v in _tasks.items() if v.asyncio_task and v.asyncio_task.done()]
-    for k in done:
-        _tasks[k].status = "completed"

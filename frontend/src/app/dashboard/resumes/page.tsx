@@ -238,10 +238,10 @@ export default function ResumesPage() {
                                 onChange={(e) => setEditLabel(e.target.value)}
                             />
                         </div>
-                        <div className="flex flex-col gap-2 flex-1">
-                            <label className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Parsed Resume Text</label>
+                        <div className="flex flex-col gap-2 flex-1 min-h-0">
+                            <label className="text-xs uppercase tracking-wider text-muted-foreground font-medium shrink-0">Parsed Resume Text</label>
                             <Textarea
-                                className="flex-1 font-mono text-xs resize-none p-4 bg-background border-border focus-visible:ring-ring text-foreground rounded-md leading-relaxed shadow-sm transition-colors"
+                                className="flex-1 font-mono text-xs resize-y p-4 bg-background border-border focus-visible:ring-ring text-foreground rounded-md leading-relaxed shadow-sm transition-colors overflow-y-auto min-h-[300px]"
                                 placeholder="Text extraction pending..."
                                 value={editRawText}
                                 onChange={(e) => setEditRawText(e.target.value)}

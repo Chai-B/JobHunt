@@ -32,6 +32,7 @@ const AUTO_SCRAPE_SITES = [
 export default function ScraperPage() {
     const [targetUrl, setTargetUrl] = useState("");
     const [targetType, setTargetType] = useState("jobs");
+    const [keywords, setKeywords] = useState("");
     const [scraping, setScraping] = useState(false);
     const [scrapingSite, setScrapingSite] = useState<string | null>(null);
     const [stopping, setStopping] = useState(false);
@@ -81,7 +82,7 @@ export default function ScraperPage() {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ target_url: scrapeUrl, target_type: scrapeType }),
+                body: JSON.stringify({ target_url: scrapeUrl, target_type: scrapeType, keywords: keywords || null }),
             });
 
             if (!res.ok) throw new Error("Scraper failed.");
@@ -165,6 +166,17 @@ export default function ScraperPage() {
                                 <Badge variant="outline" className="text-[10px] border-border text-muted-foreground ml-1">{site.type}</Badge>
                             </Button>
                         ))}
+                    </div>
+                    <div className="mt-4">
+                        <Label className={labelClass}>
+                            Keywords Filter <Tip text="Comma-separated keywords to filter results. Only jobs matching these keywords in title, company, or description will be saved. Leave blank for all results." />
+                        </Label>
+                        <Input
+                            placeholder="e.g. python, react, remote, senior"
+                            value={keywords}
+                            onChange={(e) => setKeywords(e.target.value)}
+                            className="bg-background border-border focus-visible:ring-ring text-foreground h-11 mt-1.5"
+                        />
                     </div>
                 </CardContent>
             </Card>

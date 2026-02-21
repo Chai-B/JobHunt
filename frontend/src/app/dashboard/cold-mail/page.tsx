@@ -54,7 +54,7 @@ export default function ColdMailPage() {
             }
             if (resumesRes.ok) {
                 const data = await resumesRes.json();
-                setResumes(Array.isArray(data) ? data : []);
+                setResumes(Array.isArray(data.items) ? data.items : (Array.isArray(data) ? data : []));
             }
         } catch (err) {
             toast.error("Failed to load outreach data.");

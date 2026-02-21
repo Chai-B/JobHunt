@@ -30,7 +30,7 @@ async def trigger_scraper(
     
     # Run directly in the current event loop
     task = asyncio.create_task(
-        run_scraping_agent_async(current_user.id, req.target_url, req.target_type)
+        run_scraping_agent_async(current_user.id, req.target_url, req.target_type, req.keywords)
     )
     task_id = register_task(current_user.id, "scraper", task)
     

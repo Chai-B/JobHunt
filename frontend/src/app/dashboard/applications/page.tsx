@@ -44,7 +44,7 @@ export default function ApplicationsPage() {
             }
             if (resumesRes.ok) {
                 const data = await resumesRes.json();
-                setResumes(Array.isArray(data) ? data : []);
+                setResumes(Array.isArray(data.items) ? data.items : (Array.isArray(data) ? data : []));
             }
         } catch (err) {
             toast.error("Failed to load applications pipeline");
@@ -185,8 +185,8 @@ export default function ApplicationsPage() {
                                     </SelectTrigger>
                                     <SelectContent className="bg-card border-border text-foreground">
                                         <SelectItem value="manual">Manual Dispatch</SelectItem>
-                                        <SelectItem value="auto_queue">Auto-Queue (Daily)</SelectItem>
-                                        <SelectItem value="aggressive">Aggressive (Immediate)</SelectItem>
+                                        <SelectItem value="auto_queue" disabled>Auto-Queue (Daily) — Coming Soon</SelectItem>
+                                        <SelectItem value="aggressive" disabled>Aggressive (Immediate) — Coming Soon</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
