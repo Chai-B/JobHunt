@@ -1,16 +1,21 @@
 "use client";
 
 import { ClerkProvider } from "@clerk/nextjs";
+import { usePathname } from "next/navigation";
 
 /**
  * Conditional Clerk wrapper.
- * If NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is set, wraps children with ClerkProvider.
- * Otherwise, renders children directly — the app works fully standalone.
+ * Only wraps with ClerkProvider on pages that actually use Clerk (login, SSO callback).
+ * Dashboard pages use custom JWT auth and don't need Clerk's session management.
  */
 export function ClerkWrapper({ children }: { children: React.ReactNode }) {
     const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+    const pathname = usePathname();
 
-    if (!publishableKey) {
+    // Skip Clerk entirely on dashboard routes — they use custom JWT auth
+    const isDashboard = pathname?.startsWith("/dashboard");
+
+    if (!publishableKey || isDashboard) {
         return <>{children}</>;
     }
 
