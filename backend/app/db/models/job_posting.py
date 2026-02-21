@@ -8,11 +8,13 @@ class JobPosting(Base):
     __tablename__ = "job_postings"
 
     id = Column(Integer, primary_key=True, index=True)
-    source = Column(String, nullable=False, index=True) # e.g., 'manual', 'linkedin_adapter'
+    source = Column(String, nullable=False, index=True) # e.g., 'manual', 'scraper'
     external_id = Column(String, nullable=True, index=True)
+    source_url = Column(String, nullable=True) # URL the job was scraped from
     
     title = Column(String, nullable=False)
     company = Column(String, nullable=False)
+    location = Column(String, nullable=True) # e.g., 'Remote', 'New York, NY'
     description = Column(Text, nullable=False)
     
     # Intelligence output

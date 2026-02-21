@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from loguru import logger
@@ -9,25 +9,33 @@ from app.db.models.contact import ScrapedContact
 from app.db.models.job_posting import JobPosting
 from app.schemas.contact import ScrapedContactRead
 from app.schemas.scraper import ScraperJobRequest, ColdMailDispatchRequest
-from app.worker.tasks import run_scraping_agent_task, run_cold_mail_task
+from app.worker.tasks import run_scraping_agent_task, run_cold_mail_task, run_scraping_agent_async
 
 router = APIRouter()
 
 @router.post("/run", status_code=status.HTTP_202_ACCEPTED)
 async def trigger_scraper(
     req: ScraperJobRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(deps.get_current_active_user)
 ):
     """
     Trigger the background scraping autonomous agent.
+    Falls back to inline execution if Celery/Redis is unavailable.
     """
     if req.target_type not in ["jobs", "contacts"]:
         raise HTTPException(status_code=400, detail="Invalid target type. Must be 'jobs' or 'contacts'.")
         
     logger.info(f"User {current_user.email} triggered scraper for {req.target_url} ({req.target_type})")
     
-    # Dispatch unstructured URL to Celery background task
-    run_scraping_agent_task.delay(current_user.id, req.target_url, req.target_type)
+    # Try Celery first, fall back to inline background task
+    try:
+        run_scraping_agent_task.delay(current_user.id, req.target_url, req.target_type)
+        logger.info("Scraper dispatched via Celery")
+    except Exception as e:
+        logger.warning(f"Celery unavailable ({e}), running scraper inline")
+        import asyncio
+        background_tasks.add_task(asyncio.run, run_scraping_agent_async(current_user.id, req.target_url, req.target_type))
     
     return {"message": "Scraper job enqueued. Collaborative data pool will be updated shortly."}
 

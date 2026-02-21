@@ -281,7 +281,7 @@ async def run_scraping_agent_async(user_id: int, target_url: str, target_type: s
                 for item in dataList:
                     item["source_url"] = target_url
                 
-                # Deduplication: check existing titles to avoid duplicates
+                # Deduplication: check existing titles from same source URL
                 existing_titles = set()
                 existing_res = await db.execute(
                     select(JobPosting.title).where(JobPosting.source_url == target_url)
@@ -293,6 +293,7 @@ async def run_scraping_agent_async(user_id: int, target_url: str, target_type: s
                 
                 for item in new_jobs:
                     job = JobPosting(
+                        source="scraper",
                         title=item.get("title", "Unknown"),
                         company=item.get("company", "Unknown"),
                         location=item.get("location"),
@@ -614,6 +615,7 @@ async def run_automated_discovery_async():
                     
                     for item in dataList:
                         job = JobPosting(
+                            source="auto_discovery",
                             title=item.get("title", "Unknown"),
                             company=item.get("company", "Unknown"),
                             location=item.get("location"),

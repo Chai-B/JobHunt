@@ -1,5 +1,5 @@
 from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from loguru import logger
@@ -8,7 +8,7 @@ from app.api import deps
 from app.db.models.user import User
 from app.db.models.resume import Resume
 from app.schemas.resume import ResumeRead, ResumeList, ResumeUpdate
-from app.worker.tasks import process_resume_task
+from app.worker.tasks import process_resume_task, process_resume_async
 
 router = APIRouter()
 
@@ -18,6 +18,7 @@ ALLOWED_EXTENSIONS = {"pdf", "docx", "doc", "txt", "md"}
 async def upload_resume(
     file: UploadFile = File(...),
     label: str | None = Form(None),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     db: AsyncSession = Depends(deps.get_personal_db),
     current_user: User = Depends(deps.get_current_active_user)
 ) -> Any:
@@ -40,9 +41,14 @@ async def upload_resume(
     await db.commit()
     await db.refresh(new_resume)
     
-    # Enqueue background processing task
-    # Passing file_bytes might be large depending on Redis limits, but fine for MB-scale resumes.
-    process_resume_task.delay(new_resume.id, file_bytes, file.filename)
+    # Try Celery first, fall back to inline background task
+    try:
+        process_resume_task.delay(new_resume.id, file_bytes, file.filename)
+        logger.info(f"Resume {new_resume.id} dispatched to Celery worker")
+    except Exception as e:
+        logger.warning(f"Celery unavailable ({e}), processing resume inline")
+        import asyncio
+        background_tasks.add_task(asyncio.run, process_resume_async(new_resume.id, file_bytes, file.filename))
     
     logger.info(f"User {current_user.id} uploaded resume {new_resume.id}. Background task triggered.")
     

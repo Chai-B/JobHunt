@@ -14,6 +14,8 @@ class JobPostingRead(JobPostingBase):
     id: int
     source: str
     external_id: Optional[str] = None
+    source_url: Optional[str] = None
+    location: Optional[str] = None
     relevance_score: Optional[float] = None
     created_at: datetime
     updated_at: Optional[datetime] = None

@@ -8,8 +8,13 @@ celery_app = Celery(
 )
 
 celery_app.conf.task_routes = {
-    "app.worker.tasks.*": "main-queue"
+    "*": "main-queue"
 }
+
+# Allow parallel processing of multiple resume uploads / scraper jobs
+celery_app.conf.worker_concurrency = 4
+celery_app.conf.task_acks_late = True
+celery_app.conf.worker_prefetch_multiplier = 1
 
 celery_app.autodiscover_tasks(['app.worker'])
 
@@ -18,11 +23,11 @@ from celery.schedules import crontab
 
 celery_app.conf.beat_schedule = {
     'run-daily-job-discovery': {
-        'task': 'app.worker.tasks.run_automated_discovery_task',
+        'task': 'run_automated_discovery_task',
         'schedule': crontab(hour=8, minute=0), # Run every day at 8:00 AM
     },
     'run-daily-match-alerts': {
-        'task': 'app.worker.tasks.run_daily_match_alerts_task',
+        'task': 'run_daily_match_alerts_task',
         'schedule': crontab(hour=9, minute=0), # Run every day at 9:00 AM
     },
 }
