@@ -37,7 +37,7 @@ class Settings(BaseSettings):
 
     # JWT Auth
     SECRET_KEY: str = "SUPER_SECRET_CHANGE_ME_IN_PROD"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 30  # 30 days
     
     # Clerk (headless sync)
     CLERK_SECRET_KEY: str = ""

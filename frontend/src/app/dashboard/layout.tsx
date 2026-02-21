@@ -39,13 +39,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     headers: { Authorization: `Bearer ${token}` },
                 });
 
-                if (!res.ok) throw new Error("Auth failed");
+                if (res.status === 401) {
+                    // Token is genuinely expired or invalid — log out
+                    localStorage.removeItem("token");
+                    router.push("/");
+                    return;
+                }
+
+                if (!res.ok) {
+                    // Server error or other issue — keep user logged in, don't wipe token
+                    console.warn("Auth check returned non-OK status, keeping session:", res.status);
+                    return;
+                }
 
                 const userData = await res.json();
                 setUser(userData);
             } catch (err) {
-                localStorage.removeItem("token");
-                router.push("/");
+                // Network error (backend unreachable) — don't log user out
+                console.warn("Auth check failed (network), keeping session:", err);
             }
         };
         checkAuth();
