@@ -63,8 +63,14 @@ async def generate_ai_template(
     stmt = select(UserSetting).where(UserSetting.user_id == current_user.id)
     settings = (await db.execute(stmt)).scalars().first()
     
-    if not settings or not settings.gemini_api_keys:
+    if not settings:
+        raise HTTPException(status_code=400, detail="Configure AI Settings first.")
+        
+    provider = settings.llm_provider or "gemini"
+    if provider == "gemini" and not settings.gemini_api_keys:
         raise HTTPException(status_code=400, detail="Configure a Gemini API Key in Settings first.")
+    elif provider == "openai" and not settings.openai_api_key:
+        raise HTTPException(status_code=400, detail="Configure a Custom API Key in Settings first.")
     
     from app.services.llm import call_llm
     
