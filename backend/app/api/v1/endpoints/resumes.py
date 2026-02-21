@@ -102,3 +102,21 @@ async def update_resume(
     
     logger.info(f"User {current_user.id} updated resume {resume.id}")
     return resume
+
+@router.delete("/{resume_id}", status_code=200)
+async def delete_resume(
+    resume_id: int,
+    db: AsyncSession = Depends(deps.get_personal_db),
+    current_user: User = Depends(deps.get_current_active_user)
+) -> Any:
+    """Delete a resume."""
+    res = await db.execute(select(Resume).where(Resume.id == resume_id, Resume.user_id == current_user.id))
+    resume = res.scalars().first()
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    
+    await db.delete(resume)
+    await db.commit()
+    
+    logger.info(f"User {current_user.id} deleted resume {resume_id}")
+    return {"message": "Resume deleted successfully."}

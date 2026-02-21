@@ -106,8 +106,8 @@ export default function JobsPage() {
                 throw new Error(err.detail || "Failed to find match");
             }
             const data = await res.json();
-            setMatchResult({ jobId, resumeId: data.best_resume_id, score: data.match_score });
-            toast.success(`Matched Resume #${data.best_resume_id} with score: ${data.match_score}%`);
+            setMatchResult({ jobId, resumeId: data.best_resume_id, score: data.match_score ?? 0 });
+            toast.success(`Matched Resume #${data.best_resume_id} with score: ${data.match_score ?? 0}%`);
         } catch (err: any) {
             toast.error(err.message);
         } finally {

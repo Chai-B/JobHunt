@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { UploadCloud, Edit2, FileText, Activity } from "lucide-react";
+import { UploadCloud, Edit2, FileText, Activity, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -21,6 +21,26 @@ export default function ResumesPage() {
     const [editLabel, setEditLabel] = useState("");
     const [saving, setSaving] = useState(false);
     const [dialogOpen, setDialogOpen] = useState(false);
+    const [deleting, setDeleting] = useState<number | null>(null);
+
+    const handleDeleteResume = async (resumeId: number) => {
+        if (!confirm("Are you sure you want to delete this resume?")) return;
+        setDeleting(resumeId);
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${API_BASE_URL}/api/v1/resumes/${resumeId}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error("Failed to delete resume.");
+            toast.success("Resume deleted.");
+            fetchResumes();
+        } catch (err: any) {
+            toast.error(err.message);
+        } finally {
+            setDeleting(null);
+        }
+    };
 
     const fetchResumes = async () => {
         try {
@@ -30,7 +50,7 @@ export default function ResumesPage() {
             });
             if (res.ok) {
                 const data = await res.json();
-                setResumes(data.items);
+                setResumes(data.items || []);
             } else {
                 toast.error("Failed to fetch resumes.");
             }
@@ -200,15 +220,20 @@ export default function ResumesPage() {
                                                 {new Date(r.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Button variant="outline" size="sm" className="bg-transparent border-border text-foreground hover:bg-secondary" onClick={() => {
-                                                    setSelectedResume(r);
-                                                    setEditRawText(r.raw_text || "");
-                                                    setEditLabel(r.label || "");
-                                                    setDialogOpen(true);
-                                                }}>
-                                                    <Edit2 className="w-3.5 h-3.5 mr-2" />
-                                                    View / Edit
-                                                </Button>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Button variant="outline" size="sm" className="bg-transparent border-border text-foreground hover:bg-secondary" onClick={() => {
+                                                        setSelectedResume(r);
+                                                        setEditRawText(r.raw_text || "");
+                                                        setEditLabel(r.label || "");
+                                                        setDialogOpen(true);
+                                                    }}>
+                                                        <Edit2 className="w-3.5 h-3.5 mr-2" />
+                                                        View / Edit
+                                                    </Button>
+                                                    <Button variant="outline" size="sm" className="bg-transparent border-destructive/30 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteResume(r.id)} disabled={deleting === r.id}>
+                                                        <Trash2 className={`w-3.5 h-3.5 ${deleting === r.id ? 'animate-spin' : ''}`} />
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))}

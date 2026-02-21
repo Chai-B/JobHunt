@@ -41,7 +41,8 @@ async def process_resume_async(resume_id: int, file_bytes: bytes, filename: str)
             db.add(log_start)
             await db.commit()
 
-            result = parse_and_embed_resume(file_bytes, filename)
+            # Run synchronous parsing + embedding in a thread pool to avoid blocking event loop
+            result = await asyncio.to_thread(parse_and_embed_resume, file_bytes, filename)
             
             # 2. Update DB Entity
             resume.raw_text = result["raw_text"]

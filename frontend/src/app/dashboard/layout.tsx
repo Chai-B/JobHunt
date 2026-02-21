@@ -62,25 +62,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         checkAuth();
     }, [router]);
 
-    // Poll for running background processes
+    // Poll for running background processes (in-memory task registry)
     useEffect(() => {
         if (!user) return;
 
         const fetchRunning = async () => {
             try {
                 const token = localStorage.getItem("token");
-                const res = await fetch(`${API_BASE_URL}/api/v1/logs/?status=running`, {
+                const res = await fetch(`${API_BASE_URL}/api/v1/logs/running`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    setRunningProcesses(Array.isArray(data) ? data.filter((l: any) => l.status === "running") : []);
+                    setRunningProcesses(Array.isArray(data.running_tasks) ? data.running_tasks : []);
                 }
             } catch { }
         };
 
         fetchRunning();
-        const interval = setInterval(fetchRunning, 5000);
+        const interval = setInterval(fetchRunning, 3000);
         return () => clearInterval(interval);
     }, [user]);
 
