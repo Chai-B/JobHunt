@@ -250,7 +250,7 @@ Webpage text:
 
     try:
         raw = await call_llm(prompt=prompt, settings=settings, is_json=True)
-        jobs = json.loads(raw)
+        jobs = json.loads(raw, strict=False)
         if not isinstance(jobs, list):
             return []
         
@@ -550,7 +550,7 @@ async def run_auto_apply_async(user_id: int, app_id: int):
             elif raw_json_str.startswith('```'):
                 raw_json_str = raw_json_str.split('```')[1].split('```')[0].strip()
                 
-            form_payload = json.loads(raw_json_str)
+            form_payload = json.loads(raw_json_str, strict=False)
             
             # Simulate dispatch
             logger.info(f"Generated auto-apply payload for app {app_id}")
@@ -651,7 +651,7 @@ async def run_cold_mail_async(user_id: int, contact_id: int, template_id: int, r
             elif raw_json_str.startswith('```'):
                 raw_json_str = raw_json_str.split('```')[1].split('```')[0].strip()
                 
-            email_data = json.loads(raw_json_str)
+            email_data = json.loads(raw_json_str, strict=False)
             
             # Send via SMTP
             msg = MIMEMultipart()
@@ -826,7 +826,7 @@ async def run_daily_match_alerts_async():
                     elif raw_json_str.startswith('```'):
                         raw_json_str = raw_json_str.split('```')[1].split('```')[0].strip()
                         
-                    matches = json.loads(raw_json_str)
+                    matches = json.loads(raw_json_str, strict=False)
                     
                     if not matches:
                         continue

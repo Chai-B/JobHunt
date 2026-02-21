@@ -107,7 +107,8 @@ Return STRICTLY as JSON with these fields:
     
     try:
         raw_json = await call_llm(prompt=prompt, settings=settings, is_json=True)
-        result = json.loads(raw_json)
+        # strict=False allows unescaped control characters (like raw \n in LLaMA responses)
+        result = json.loads(raw_json, strict=False)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
