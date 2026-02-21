@@ -116,6 +116,10 @@ export default function LoginPage() {
         frontendApi = `${clerkDomain}.clerk.accounts.dev`;
       }
 
+      if (frontendApi.endsWith("$")) {
+        frontendApi = frontendApi.slice(0, -1);
+      }
+
       const oauthUrl = `https://${frontendApi}/v1/client/sign_ins?strategy=${strategy}&redirect_url=${encodeURIComponent(redirectUrl)}&action_complete_redirect_url=${encodeURIComponent(redirectUrl)}`;
 
       window.location.href = oauthUrl;
