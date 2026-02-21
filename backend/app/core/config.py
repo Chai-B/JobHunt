@@ -15,7 +15,14 @@ class Settings(BaseSettings):
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
         if self.DATABASE_URL:
-            return self.DATABASE_URL
+            # Clean up common copy-paste errors from dashboard (quotes, spaces)
+            clean_url = self.DATABASE_URL.strip().strip("'").strip('"')
+            # Ensure it uses the asyncpg driver
+            if clean_url.startswith("postgresql://"):
+                clean_url = clean_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            elif clean_url.startswith("postgres://"):
+                clean_url = clean_url.replace("postgres://", "postgresql+asyncpg://", 1)
+            return clean_url
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
     
     # Redis Config
