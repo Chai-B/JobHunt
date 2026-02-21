@@ -15,7 +15,11 @@ app = FastAPI(
 # Set up CORS middleware aggressively for local network accessibility
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex="https?://.*",
+    allow_origins=[
+        "http://localhost:3000",
+        "https://job-hunt-ebon.vercel.app",
+        "https://jobhunt-api.eastasia.cloudapp.azure.com"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
