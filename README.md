@@ -1,51 +1,51 @@
-# JobHunt: The Autonomous AI Job Agent
+# JobHunt: Autonomous AI Job Agent
 
-Welcome to JobHunt, an all-in-one AI-powered platform designed to fully automate and optimize the tedious modern job application process. 
+JobHunt is a comprehensive, AI-driven platform designed to automate and optimize the modern job application lifecycle. 
 
-JobHunt acts as your personal recruitment assistant: finding jobs, tracking them in a CRM-style pipeline, extracting contacts, generating highly personalized AI cold emails, and ultimately matching your skills to the perfect role using semantic intelligence.
+The platform serves as an intelligent recruitment assistant by centralizing job discovery, maintaining a structured application pipeline, extracting key contact information, generating personalized cold outreach emails via generative AI, and matching candidate profiles to opportunities using semantic vector intelligence.
 
 ---
 
-## 🚀 Core Features
+## Core Features
 
 ### 1. Unified Job Scraping Engine
-Job finding shouldn't require opening 50 tabs. JobHunt centralizes the search:
-- **Multi-Source Ingestion:** One-click integration with major remote job boards (RemoteOK, HackerNews, We Work Remotely).
-- **Custom URL Scraping:** Feed it any generic job board URL, and the platform uses a fallback parser to extract the structural data.
-- **Background Autonomy:** Scraping runs completely asynchronously via Celery unblocking your workflow while jobs pour into your database.
-- **Smart Deduplication:** The engine intelligently deduplicates job postings that appear across multiple platforms.
+The platform consolidates job discovery through a centralized engine:
+- **Multi-Source Ingestion:** Seamless integration with primary remote job boards including RemoteOK, HackerNews, and We Work Remotely.
+- **Custom URL Scraping:** Support for generic job board URLs, utilizing a fallback parser to extract structural data.
+- **Background Autonomy:** Scraping operations execute asynchronously via Celery, ensuring uninterrupted user workflows while populating the database.
+- **Intelligent Deduplication:** The engine automatically identifies and deduplicates cyclical postings across multiple platforms.
 
 ### 2. Semantic Resume Matching
-Stop guessing if your resume fits the job description.
-- **pgvector Integration:** Both jobs and resumes are converted into high-dimensional vector embeddings using local `sentence-transformers`.
-- **Cosine Similarity:** instantly mathematically determines which of your uploaded resumes is the most conceptually aligned with a specific job posting.
-- **Multi-Format Support:** Automatically parses and extracts semantic text from `.pdf`, `.docx`, and raw text formats.
+The platform utilizes mathematical modeling to determine candidate fit:
+- **Vector Integration:** Job descriptions and resumes are converted into high-dimensional vector embeddings using local `sentence-transformers`.
+- **Cosine Similarity:** The system mathematically determines the optimal resume for a specific job posting based on conceptual alignment.
+- **Multi-Format Support:** Automated parsing and semantic extraction for `.pdf`, `.docx`, and raw text formats.
 
-### 3. Comprehensive Application CRM
-Treat your job search like a sales pipeline.
-- **Strict State Machine:** Applications transition cleanly through states: *Discovered → Shortlisted → Prepared → Submitted → Responded → Closed*.
-- **Metrics Dashboard:** Real-time analytics on your specific pipeline velocity and global knowledge pool stats.
+### 3. Application CRM Pipeline
+Applications are managed through a structured, stage-based lifecycle.
+- **State Machine Architecture:** Applications transition through defined states: *Discovered → Shortlisted → Prepared → Submitted → Responded → Closed*.
+- **Metrics Dashboard:** Real-time analytics tracking pipeline velocity and global knowledge pool statistics.
 
 ### 4. AI-Powered Cold Email Generation
-Harness the power of Google's Gemini Pro to write the perfect pitch.
-- **Contextual Awareness:** The AI reads the specific Job Description and the specific matched Resume.
-- **Customizable Tones:** Generate templates ranging from *Professional* and *Direct* to *Enthusiastic*.
-- **Multi-Purpose:** Specifically tailored modes for General Applications, Cold Outreach (finding recruiters), Networking, and Follow-ups.
-- **Placeholders:** Emits dynamic tags like `{{HiringManager}}` to drop into mass campaigns.
+The platform leverages Google Gemini Pro to generate context-aware outreach.
+- **Contextual Awareness:** The generation model analyzes both the specific job description and the matched resume.
+- **Customizable Tones:** Output configurable for various professional tones including direct, formal, and enthusiastic.
+- **Purpose-Built Modes:** Tailored generation for general applications, cold outreach, networking, and subsequent follow-ups.
+- **Dynamic Placeholders:** Supports template tags such as `{{HiringManager}}` for integration with mass outreach campaigns.
 
 ### 5. Collaborative Contact Extraction
-- As jobs are scraped, embedded email addresses or recruiter contact information is parsed and dropped into a global collaborative pool.
-- Initiate autonomous 'Cold Mail Agents' directly from the contact dashboard safely tied to your selected AI templates.
+- During the scraping process, embedded email addresses and recruiter contact information are parsed and aggregated into a global collaborative pool.
+- Users can initiate autonomous cold outreach campaigns directly from the contact dashboard, securely utilizing generated AI templates.
 
-### 6. Beautiful, Headless Authentication
-- Secure JWT-based backend routing.
-- Integrated out-of-the-box with **Clerk OAuth** for immediate, secure 1-click Google and GitHub login on the frontend, gracefully falling back to local Auth if ignored.
+### 6. Secure Authentication
+- Stateless, JWT-based backend routing.
+- Integrated out-of-the-box with Clerk OAuth for immediate, secure single sign-on (SSO) via Google and GitHub, with a fallback to local authentication when the service is not configured.
 
 ---
 
-## 🛠 Tech Stack Overview
+## Technical Architecture
 
-JobHunt is built for high concurrency and heavy AI workloads.
+JobHunt is architected for high concurrency and intensive AI workloads.
 
 | Layer | Technology |
 |-------|-----------|
@@ -57,6 +57,6 @@ JobHunt is built for high concurrency and heavy AI workloads.
 
 ---
 
-## 📜 License
+## License
 
 This project is licensed under the MIT License.
