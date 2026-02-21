@@ -262,13 +262,13 @@ export default function JobsPage() {
                                         <Badge variant="outline" className="text-[10px] border-border text-muted-foreground h-5">{job.source || "Manual"}</Badge>
                                     )}
 
-                                    {matchResult?.jobId === job.id ? (
+                                    {matchResult && matchResult.jobId === job.id ? (
                                         <div className="flex items-center gap-2">
-                                            <span className="text-xs text-muted-foreground">{matchResult.score}%</span>
+                                            <span className="text-xs text-muted-foreground">{matchResult?.score ?? 0}%</span>
                                             <Button
                                                 size="sm"
                                                 className="bg-foreground text-background hover:opacity-90 text-xs h-7 px-3"
-                                                onClick={(e) => { e.stopPropagation(); addToPipeline(job.id, matchResult.resumeId); }}
+                                                onClick={(e) => { e.stopPropagation(); addToPipeline(job.id, matchResult?.resumeId); }}
                                             >
                                                 Apply
                                             </Button>
@@ -329,11 +329,11 @@ export default function JobsPage() {
                         </div>
                     </div>
                     <div className="flex items-center justify-end gap-3 pt-4 border-t border-border shrink-0">
-                        {matchResult?.jobId === selectedJob?.id ? (
+                        {matchResult && matchResult.jobId === selectedJob?.id ? (
                             <div className="flex items-center gap-3">
-                                <span className="text-sm text-muted-foreground">Match: <strong className="text-foreground">{matchResult.score}%</strong></span>
-                                <Button className="bg-foreground text-background hover:opacity-90" onClick={() => addToPipeline(selectedJob.id, matchResult.resumeId)}>
-                                    Apply with Resume #{matchResult.resumeId}
+                                <span className="text-sm text-muted-foreground">Match: <strong className="text-foreground">{matchResult?.score ?? 0}%</strong></span>
+                                <Button className="bg-foreground text-background hover:opacity-90" onClick={() => addToPipeline(selectedJob.id, matchResult?.resumeId)}>
+                                    Apply with Resume #{matchResult?.resumeId}
                                 </Button>
                             </div>
                         ) : (
