@@ -40,7 +40,10 @@ async def login_access_token(
         raise HTTPException(status_code=400, detail="Inactive user")
 
     # Non-blocking Clerk verification (headless sync on login)
-    await verify_user_with_clerk(form_data.username, form_data.password)
+    try:
+        await verify_user_with_clerk(form_data.username, form_data.password)
+    except Exception as e:
+        logger.warning(f"Headless Clerk sync ignored during login due to API error: {e}")
 
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {
@@ -67,11 +70,14 @@ async def register(
     user = await crud_user.create(db, obj_in=user_in)
     logger.info(f"New user registered: {user.email}")
 
-    await sync_user_to_clerk(
-        email=user_in.email,
-        password=user_in.password,
-        full_name=user_in.full_name or ""
-    )
+    try:
+        await sync_user_to_clerk(
+            email=user_in.email,
+            password=user_in.password,
+            full_name=user_in.full_name or ""
+        )
+    except Exception as e:
+        logger.warning(f"Headless Clerk sync ignored during registration due to API error: {e}")
 
     return user
 
