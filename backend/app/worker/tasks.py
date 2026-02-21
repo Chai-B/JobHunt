@@ -217,44 +217,94 @@ def _parse_json_ld_jobs(soup):
             continue
     return jobs
 
-def _find_job_containers(soup):
-    """Find job listing containers by common CSS class patterns."""
-    jobs = []
-    seen = set()
-    selectors = [
-        ('div', {'class': _re.compile(r'job|posting|listing|position|vacancy|career|opening', _re.I)}),
-        ('li', {'class': _re.compile(r'job|posting|listing|position|vacancy|career|opening', _re.I)}),
-        ('article', {}),
-        ('tr', {'class': _re.compile(r'job|posting|listing|position', _re.I)}),
-    ]
-    for tag, attrs in selectors:
-        for el in soup.find_all(tag, attrs, limit=50):
-            title_el = el.find(['h1', 'h2', 'h3', 'h4', 'a'])
-            if not title_el:
+def _extract_jobs_with_ai(page_text: str, url: str, api_key: str) -> list:
+    """Use Gemini AI to extract real job postings from page text."""
+    if not api_key or not page_text.strip():
+        return []
+    
+    # Truncate to stay within token limits
+    text_chunk = page_text[:15000]
+    
+    prompt = f"""Analyze the following webpage text and extract ONLY actual job postings/openings.
+Do NOT include:
+- Navigation links or menu items
+- Category headers or filter labels
+- Company descriptions or about pages
+- Blog posts or articles
+- Any text that is NOT a specific job opening
+
+For each REAL job posting found, extract:
+- title: The exact job title (e.g. "Senior Software Engineer")
+- company: The hiring company name
+- location: The job location (or "Remote" / "Not specified")
+- description: A brief description of the role (max 300 chars)
+
+Return ONLY a valid JSON array. If no real job postings are found, return [].
+Do not wrap in markdown code blocks. Just return the raw JSON array.
+
+Webpage URL: {url}
+
+Webpage text:
+{text_chunk}"""
+
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(prompt)
+        raw = response.text.strip()
+        
+        # Clean markdown wrappers if present
+        if raw.startswith('```'):
+            raw = raw.split('\n', 1)[-1]  # remove first line
+            if raw.endswith('```'):
+                raw = raw[:-3]
+            raw = raw.strip()
+        
+        jobs = json.loads(raw)
+        if not isinstance(jobs, list):
+            return []
+        
+        # Validate and clean results
+        valid_jobs = []
+        seen = set()
+        for j in jobs:
+            if not isinstance(j, dict):
                 continue
-            title = title_el.get_text(strip=True)
-            if not title or len(title) < 5 or len(title) > 200:
+            title = str(j.get('title', '')).strip()
+            if not title or len(title) < 3 or len(title) > 200:
                 continue
-            tk = title.lower().strip()
+            tk = title.lower()
             if tk in seen:
                 continue
             seen.add(tk)
-            full_text = el.get_text(separator=' ', strip=True)
-            company, location = "Unknown", "Not specified"
-            for sub in el.find_all(['span', 'div', 'p', 'small'], limit=10):
-                sub_text, cls = sub.get_text(strip=True), ' '.join(sub.get('class', []))
-                if _re.search(r'company|employer|org', cls, _re.I) and sub_text:
-                    company = sub_text[:100]
-                elif _re.search(r'location|city|place|region', cls, _re.I) and sub_text:
-                    location = sub_text[:100]
-            if company == "Unknown":
-                for sub in el.find_all(['span', 'p', 'div', 'small'], limit=8):
-                    s = sub.get_text(strip=True)
-                    if s and s != title and 3 < len(s) < 60 and not _re.search(r'(apply|submit|save|ago|posted)', s, _re.I):
-                        company = s; break
-            jobs.append({"title": title, "company": company, "location": location,
-                         "description": full_text[:500] or title})
-    return jobs
+            valid_jobs.append({
+                "title": title,
+                "company": str(j.get('company', 'Unknown')).strip() or 'Unknown',
+                "location": str(j.get('location', 'Not specified')).strip() or 'Not specified',
+                "description": str(j.get('description', title)).strip()[:500] or title
+            })
+        
+        logger.info(f"AI extracted {len(valid_jobs)} verified jobs from {url}")
+        return valid_jobs[:50]
+    except Exception as e:
+        logger.warning(f"AI extraction failed for {url}: {e}")
+        return []
+
+def _clean_page_text(soup) -> str:
+    """Extract meaningful text from a page, stripping nav/footer/scripts."""
+    # Remove noise elements
+    for tag in soup.find_all(['script', 'style', 'noscript', 'iframe', 'svg']):
+        tag.decompose()
+    for tag in soup.find_all(['nav', 'footer', 'header']):
+        tag.decompose()
+    # Also remove hidden elements
+    for tag in soup.find_all(attrs={'style': _re.compile(r'display:\s*none', _re.I)}):
+        tag.decompose()
+    
+    text = soup.get_text(separator='\n', strip=True)
+    # Collapse multiple blank lines
+    text = _re.sub(r'\n{3,}', '\n\n', text)
+    return text
 
 def _crawl_for_job_links(soup, base_url: str):
     """Find internal links that likely lead to job listings."""
@@ -272,34 +322,24 @@ def _crawl_for_job_links(soup, base_url: str):
             job_urls.add(full_url)
     return list(job_urls)[:10]
 
-def _parse_generic_jobs(soup, url: str):
-    """Enhanced generic parser: JSON-LD → container patterns → heading heuristics."""
+def _parse_generic_jobs(soup, url: str, api_key: str = None):
+    """AI-powered generic parser: JSON-LD first (free) → Gemini AI extraction."""
     all_jobs = []
+    
+    # Strategy 1: JSON-LD structured data (free, highest quality)
     all_jobs.extend(_parse_json_ld_jobs(soup))
-    if len(all_jobs) < 5:
-        existing = {j['title'].lower().strip() for j in all_jobs}
-        for j in _find_job_containers(soup):
-            if j['title'].lower().strip() not in existing:
-                all_jobs.append(j); existing.add(j['title'].lower().strip())
-    if len(all_jobs) < 3:
-        seen = {j['title'].lower().strip() for j in all_jobs}
-        for el in soup.find_all(['h1', 'h2', 'h3', 'h4', 'a'], limit=100):
-            title = el.get_text(strip=True)
-            if not title or len(title) < 8 or len(title) > 200: continue
-            tk = title.lower().strip()
-            if tk in seen: continue
-            if not _re.search(r'(engineer|developer|manager|designer|lead|scientist|analyst|architect|specialist|director|intern|consultant|backend|frontend|full.?stack|devops|data|product|marketing|sales|support|qa|writer|recruiter)', title, _re.I): continue
-            seen.add(tk)
-            parent = el.find_parent(['div', 'li', 'article', 'section', 'tr'])
-            desc, company = "", ""
-            if parent:
-                desc = parent.get_text(separator=' ', strip=True)[:300]
-                for sib in parent.find_all(['span', 'p', 'small', 'div'], limit=5):
-                    s = sib.get_text(strip=True)
-                    if s and s != title and len(s) < 60 and not _re.search(r'(Apply|Submit|Save|Posted|ago)', s, _re.I):
-                        company = s; break
-            all_jobs.append({"title": title, "company": company or "Unknown",
-                             "location": "Not specified", "description": desc or title})
+    
+    # Strategy 2: AI extraction (if JSON-LD didn't find enough)
+    if len(all_jobs) < 5 and api_key:
+        page_text = _clean_page_text(soup)
+        if len(page_text) > 100:  # Only if there's meaningful content
+            existing = {j['title'].lower().strip() for j in all_jobs}
+            ai_jobs = _extract_jobs_with_ai(page_text, url, api_key)
+            for j in ai_jobs:
+                if j['title'].lower().strip() not in existing:
+                    all_jobs.append(j)
+                    existing.add(j['title'].lower().strip())
+    
     return all_jobs[:50]
 
 def _filter_jobs_by_keywords(jobs: list, keywords: str) -> list:
@@ -354,6 +394,14 @@ async def run_scraping_agent_async(user_id: int, target_url: str, target_type: s
             soup = BeautifulSoup(response.content, 'lxml')
             dataList = []
             
+            # Fetch user's Gemini API key for AI extraction
+            gemini_key = None
+            from app.db.models.user_setting import UserSetting
+            settings_res = await db.execute(select(UserSetting).where(UserSetting.user_id == user_id))
+            user_settings = settings_res.scalars().first()
+            if user_settings and user_settings.gemini_api_keys:
+                gemini_key = user_settings.gemini_api_keys.split(",")[0].strip()
+            
             if target_type == "jobs":
                 url_lower = target_url.lower()
                 if 'remoteok.com' in url_lower:
@@ -363,7 +411,7 @@ async def run_scraping_agent_async(user_id: int, target_url: str, target_type: s
                 elif 'weworkremotely.com' in url_lower:
                     dataList = _parse_weworkremotely_jobs(soup)
                 else:
-                    dataList = _parse_generic_jobs(soup, target_url)
+                    dataList = _parse_generic_jobs(soup, target_url, gemini_key)
                 
                 # If few results, crawl linked job pages
                 if len(dataList) < 5:
@@ -373,7 +421,7 @@ async def run_scraping_agent_async(user_id: int, target_url: str, target_type: s
                         try:
                             sub_resp = _fetch_page(sub_url, retries=1, timeout=10)
                             sub_soup = BeautifulSoup(sub_resp.content, 'lxml')
-                            for j in _parse_generic_jobs(sub_soup, sub_url):
+                            for j in _parse_generic_jobs(sub_soup, sub_url, gemini_key):
                                 if j['title'].lower().strip() not in existing_t:
                                     j['source_url'] = sub_url
                                     dataList.append(j)

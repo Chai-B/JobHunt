@@ -120,6 +120,19 @@ export default function SettingsPage() {
 
             <form onSubmit={handleSave} className="space-y-8 pb-20">
 
+                {/* Security Notice */}
+                <div className="flex items-start gap-3 p-4 bg-secondary/50 border border-border rounded-lg text-sm">
+                    <div className="h-8 w-8 bg-secondary rounded-md flex items-center justify-center shrink-0 border border-border mt-0.5">
+                        <Info className="w-4 h-4 text-foreground" />
+                    </div>
+                    <div>
+                        <p className="font-medium text-foreground">Your keys are secure</p>
+                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                            API keys and credentials are stored only in your connected database and never leave your environment. They are used server-side for AI operations (job matching, scraping, email) and are never exposed to the browser or third parties.
+                        </p>
+                    </div>
+                </div>
+
                 {/* Application Preferences Section */}
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 p-8 bg-card border border-border shadow-sm rounded-xl relative overflow-hidden group">
                     <div className="col-span-1 lg:col-span-1 lg:border-r border-border pr-6 relative z-10">

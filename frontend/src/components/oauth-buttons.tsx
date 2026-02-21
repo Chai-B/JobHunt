@@ -26,16 +26,21 @@ function GoogleIcon({ className }: { className?: string }) {
 }
 
 export function OAuthButtons() {
-    const { signIn } = useSignIn();
-    const { signUp } = useSignUp();
+    const { signIn, isLoaded: signInLoaded } = useSignIn();
+    const { signUp, isLoaded: signUpLoaded } = useSignUp();
     const [oauthLoading, setOauthLoading] = useState<string | null>(null);
 
+    const isReady = signInLoaded && signUpLoaded;
+
     const startOAuth = async (strategy: OAuthStrategy) => {
-        if (!signIn || !signUp) return;
+        if (!signIn || !signUp) {
+            toast.error("Authentication service is not ready. Please refresh the page.");
+            return;
+        }
 
         setOauthLoading(strategy);
         try {
-            const userExistsButNeedsToSignIn = signUp.verifications.externalAccount.status === "transferable" && signUp.verifications.externalAccount.error?.code === "external_account_exists";
+            const userExistsButNeedsToSignIn = signUp.verifications?.externalAccount?.status === "transferable" && signUp.verifications?.externalAccount?.error?.code === "external_account_exists";
 
             if (userExistsButNeedsToSignIn) {
                 const res = await signIn.create({ transfer: true });
@@ -50,7 +55,8 @@ export function OAuthButtons() {
                 });
             }
         } catch (err: any) {
-            toast.error(`OAuth failed: ${err.errors?.[0]?.longMessage || err.message || "An error occurred"}`);
+            const msg = err.errors?.[0]?.longMessage || err.errors?.[0]?.message || err.message || "OAuth failed";
+            toast.error(`Sign-in failed: ${msg}`);
             setOauthLoading(null);
         }
     };
@@ -61,7 +67,7 @@ export function OAuthButtons() {
                 type="button"
                 variant="outline"
                 onClick={() => startOAuth("oauth_google")}
-                disabled={!!oauthLoading}
+                disabled={!!oauthLoading || !isReady}
                 className="h-11 border-border text-foreground hover:bg-secondary transition-colors gap-2.5 font-medium"
             >
                 {oauthLoading === "oauth_google" ? (
@@ -75,7 +81,7 @@ export function OAuthButtons() {
                 type="button"
                 variant="outline"
                 onClick={() => startOAuth("oauth_github")}
-                disabled={!!oauthLoading}
+                disabled={!!oauthLoading || !isReady}
                 className="h-11 border-border text-foreground hover:bg-secondary transition-colors gap-2.5 font-medium"
             >
                 {oauthLoading === "oauth_github" ? (
