@@ -15,6 +15,7 @@ class UserSetting(Base):
     
     # AI Engine Settings
     gemini_api_keys = Column(String, nullable=True) # Stored as comma-separated string for fallback rotation
+    preferred_model = Column(String, nullable=True, default="gemini-2.0-flash")
     
     # External Database/Storage (e.g., Supabase integration)
     external_db_url = Column(String, nullable=True)

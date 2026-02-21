@@ -3,6 +3,7 @@ from typing import Optional
 
 class UserSettingBase(BaseModel):
     gemini_api_keys: Optional[str] = None
+    preferred_model: Optional[str] = "gemini-2.0-flash"
     external_db_url: Optional[str] = None
     external_db_auth_key: Optional[str] = None
     smtp_server: Optional[str] = None

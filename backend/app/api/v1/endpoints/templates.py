@@ -71,7 +71,8 @@ async def generate_ai_template(
     
     api_key = settings.gemini_api_keys.split(",")[0].strip()
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model_name = settings.preferred_model or "gemini-2.0-flash"
+    model = genai.GenerativeModel(model_name)
     
     target_info = ""
     if req.target_role:

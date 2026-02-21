@@ -217,7 +217,7 @@ def _parse_json_ld_jobs(soup):
             continue
     return jobs
 
-def _extract_jobs_with_ai(page_text: str, url: str, api_key: str) -> list:
+def _extract_jobs_with_ai(page_text: str, url: str, api_key: str, model_name: str = "gemini-2.0-flash") -> list:
     """Use Gemini AI to extract real job postings from page text."""
     if not api_key or not page_text.strip():
         return []
@@ -249,7 +249,7 @@ Webpage text:
 
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel(model_name)
         response = model.generate_content(prompt)
         raw = response.text.strip()
         
@@ -322,7 +322,7 @@ def _crawl_for_job_links(soup, base_url: str):
             job_urls.add(full_url)
     return list(job_urls)[:10]
 
-def _parse_generic_jobs(soup, url: str, api_key: str = None):
+def _parse_generic_jobs(soup, url: str, api_key: str = None, model_name: str = "gemini-2.0-flash"):
     """AI-powered generic parser: JSON-LD first (free) → Gemini AI extraction."""
     all_jobs = []
     
@@ -334,7 +334,7 @@ def _parse_generic_jobs(soup, url: str, api_key: str = None):
         page_text = _clean_page_text(soup)
         if len(page_text) > 100:  # Only if there's meaningful content
             existing = {j['title'].lower().strip() for j in all_jobs}
-            ai_jobs = _extract_jobs_with_ai(page_text, url, api_key)
+            ai_jobs = _extract_jobs_with_ai(page_text, url, api_key, model_name)
             for j in ai_jobs:
                 if j['title'].lower().strip() not in existing:
                     all_jobs.append(j)
@@ -401,6 +401,7 @@ async def run_scraping_agent_async(user_id: int, target_url: str, target_type: s
             user_settings = settings_res.scalars().first()
             if user_settings and user_settings.gemini_api_keys:
                 gemini_key = user_settings.gemini_api_keys.split(",")[0].strip()
+            gemini_model = (user_settings.preferred_model if user_settings and user_settings.preferred_model else "gemini-2.0-flash")
             
             if target_type == "jobs":
                 url_lower = target_url.lower()
@@ -411,7 +412,7 @@ async def run_scraping_agent_async(user_id: int, target_url: str, target_type: s
                 elif 'weworkremotely.com' in url_lower:
                     dataList = _parse_weworkremotely_jobs(soup)
                 else:
-                    dataList = _parse_generic_jobs(soup, target_url, gemini_key)
+                    dataList = _parse_generic_jobs(soup, target_url, gemini_key, gemini_model)
                 
                 # If few results, crawl linked job pages
                 if len(dataList) < 5:
@@ -421,7 +422,7 @@ async def run_scraping_agent_async(user_id: int, target_url: str, target_type: s
                         try:
                             sub_resp = _fetch_page(sub_url, retries=1, timeout=10)
                             sub_soup = BeautifulSoup(sub_resp.content, 'lxml')
-                            for j in _parse_generic_jobs(sub_soup, sub_url, gemini_key):
+                            for j in _parse_generic_jobs(sub_soup, sub_url, gemini_key, gemini_model):
                                 if j['title'].lower().strip() not in existing_t:
                                     j['source_url'] = sub_url
                                     dataList.append(j)
@@ -520,7 +521,8 @@ async def run_auto_apply_async(user_id: int, app_id: int):
             # Setup Gemini
             api_key = settings.gemini_api_keys.split(",")[0].strip()
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-1.5-pro') # Using Pro for complex reasoning
+            model_name = settings.preferred_model or "gemini-2.0-flash"
+            model = genai.GenerativeModel(model_name)
             
             user_profile_data = f"""
             Name: {user.full_name}
@@ -628,7 +630,8 @@ async def run_cold_mail_async(user_id: int, contact_id: int, template_id: int, r
             # Add Gemini customization
             api_key = settings.gemini_api_keys.split(",")[0].strip()
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model_name = settings.preferred_model or "gemini-2.0-flash"
+            model = genai.GenerativeModel(model_name)
             
             user_profile = f"Name: {user.full_name}, Bio: {user.bio} LinkedIn: {user.linkedin_url}"
             resume_text = resume.raw_text[:15000] if resume.raw_text else ""
@@ -813,7 +816,8 @@ async def run_daily_match_alerts_async():
                     # Use Gemini to find matches
                     api_key = settings.gemini_api_keys.split(",")[0].strip()
                     genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    model_name = user_settings.preferred_model or "gemini-2.0-flash"
+                    model = genai.GenerativeModel(model_name)
                     
                     job_descriptions = "\n".join([f"[{j.id}] {j.title} at {j.company}: {j.description[:500]}" for j in new_jobs])
                     
