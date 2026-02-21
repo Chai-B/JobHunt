@@ -22,6 +22,12 @@ class Settings(BaseSettings):
                 clean_url = clean_url.replace("postgresql://", "postgresql+asyncpg://", 1)
             elif clean_url.startswith("postgres://"):
                 clean_url = clean_url.replace("postgres://", "postgresql+asyncpg://", 1)
+                
+            # Supabase PgBouncer (6543) transaction mode doesn't support asyncpg prepared statements
+            if ":6543" in clean_url and "prepared_statement_cache_size=0" not in clean_url:
+                separator = "&" if "?" in clean_url else "?"
+                clean_url = f"{clean_url}{separator}prepared_statement_cache_size=0"
+                
             return clean_url
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
     
