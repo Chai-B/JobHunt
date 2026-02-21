@@ -1,8 +1,36 @@
 import json
+import re
 from loguru import logger
 import google.generativeai as genai
 from openai import AsyncOpenAI
 from app.db.models.setting import UserSetting
+
+def _extract_json_content(text: str) -> str:
+    """Extract JSON from a potentially chatty model response."""
+    text = text.strip()
+    # Find markdown blocks first
+    match = re.search(r'```(?:json)?\s*(\{[\s\S]*?\}|\[[\s\S]*?\])\s*```', text)
+    if match:
+        return match.group(1).strip()
+        
+    # Fallback to finding the first { or [ and last } or ]
+    start_idx = -1
+    end_idx = -1
+    
+    first_brace = text.find('{')
+    first_bracket = text.find('[')
+    
+    if first_brace != -1 and (first_bracket == -1 or first_brace < first_bracket):
+        start_idx = first_brace
+        end_idx = text.rfind('}')
+    elif first_bracket != -1:
+        start_idx = first_bracket
+        end_idx = text.rfind(']')
+        
+    if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+        return text[start_idx:end_idx+1].strip()
+        
+    return text
 
 async def call_llm(prompt: str, settings: UserSetting, is_json: bool = False, system_prompt: str = None) -> str:
     """
@@ -30,13 +58,8 @@ async def call_llm(prompt: str, settings: UserSetting, is_json: bool = False, sy
             response = model.generate_content(full_prompt)
             raw = response.text.strip()
             
-            # Clean markdown JSON wrappers if present
             if is_json:
-                if raw.startswith('```'):
-                    raw = raw.split('\n', 1)[-1]
-                    if raw.endswith('```'):
-                        raw = raw[:-3]
-                    raw = raw.strip()
+                raw = _extract_json_content(raw)
             return raw
             
         elif provider == "openai":
@@ -71,11 +94,7 @@ async def call_llm(prompt: str, settings: UserSetting, is_json: bool = False, sy
             raw = response.choices[0].message.content.strip()
             
             if is_json:
-                if raw.startswith('```'):
-                    raw = raw.split('\n', 1)[-1]
-                    if raw.endswith('```'):
-                        raw = raw[:-3]
-                    raw = raw.strip()
+                raw = _extract_json_content(raw)
             return raw
             
         else:
