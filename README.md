@@ -13,10 +13,11 @@ AI-powered job application automation platform. Scrape jobs, manage applications
 | AI | Google Gemini, sentence-transformers |
 | Auth | JWT + Clerk OAuth (optional) |
 
-## Quick Start (Docker)
+## Quick Start (Docker & Cloud)
 
-For detailed instructions on deploying to a live server (VPS or Cloud), see the [Deployment Guide](DEPLOYMENT_GUIDE.md).
+For detailed instructions on deploying to a live server for **$0/month**, see the [Zero-Cost Deployment Guide](DEPLOYMENT_GUIDE.md).
 
+### Local Setup (Docker)
 ```bash
 # 1. Clone and configure
 git clone https://github.com/YOUR_USERNAME/jobhunt.git

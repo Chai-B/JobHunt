@@ -1,99 +1,67 @@
-# JobHunt - Online Deployment Guide (Production)
+# JobHunt - Zero-Cost Deployment Guide
 
-This guide explains how to deploy JobHunt to a live server (VPS) using Docker Compose and Caddy for automatic SSL (HTTPS).
+This guide explains how to deploy the entire JobHunt stack for **$0/month** using "Free Forever" tiers from various cloud providers.
 
-## 1. Choose a Provider
+## 1. The Zero-Cost Stack
 
-For the best experience with this stack, use a VPS (Virtual Private Server) with at least **2GB RAM**.
-- **Low Cost/Free Tier Options**: DigitalOcean (Droplets), AWS (Lightsail/EC2), Hetzner, or Linode.
-- **PaaS Options**: If you prefer not to manage a server, you can use **Railway.app** or **Render.com** (though you would need to set up each service individually there).
+| Service | Provider | Free Tier Benefits |
+|---------|----------|-------------------|
+| **Database** | [Supabase](https://supabase.com) | Free Postgres + pgvector + 500MB storage |
+| **Redis** | [Upstash](https://upstash.com) | Free Serverless Redis (10k requests/day) |
+| **Frontend** | [Vercel](https://vercel.com) | Free Next.js hosting + SSL + Global CDN |
+| **API & Worker** | [Render](https://render.com) | Free Web Services (spins down after inactivity) |
 
 ---
 
-## 2. Server Preparation (VPS)
+## 2. Step-by-Step Setup
 
-Once you have your server (Ubuntu 22.04+ recommended):
+### Step 1: Database (Supabase)
+1. Create a project on [Supabase](https://supabase.com).
+2. Go to **Project Settings > Database**.
+3. Copy the **Connection String** (transaction mode, port 6543) and change the protocol to `postgresql+asyncpg://`.
+4. *Tip:* Supabase includes `pgvector` by default.
 
-1. **Install Docker and Docker Compose**:
+### Step 2: Redis (Upstash)
+1. Create a database on [Upstash](https://upstash.com).
+2. Copy the **REDIS_URL**. It will look like `redis://default:password@hostname:6379`.
+
+### Step 3: Backend & Worker (Render)
+1. Sign up for [Render](https://render.com).
+2. **New > Web Service**:
+   - Link your GitHub repo.
+   - Root Directory: `backend`
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+   - **Environment Variables**: Add everything from `.env.example`.
+3. **New > Background Worker** (Optional):
+   - Link same repo.
+   - Root Directory: `backend`
+   - Start Command: `celery -A app.worker.celery_app worker --loglevel=info --concurrency=1`
+   - *Note:* Render's free tier for workers is limited; you may need to run the worker on a separate platform like **Railway.app**'s trial or just use the API if you don't need background scraping immediately.
+
+### Step 4: Frontend (Vercel)
+1. Sign up for [Vercel](https://vercel.com).
+2. **New Project**: Select the `frontend` folder of your repo.
+3. **Framework Preset**: Next.js.
+4. **Environment Variables**:
+   - `NEXT_PUBLIC_API_URL`: Your Render backend URL.
+   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`: (Optional) From Clerk.
+5. Deploy!
+
+---
+
+## 3. Important Notes for Free Tiers
+
+1. **Cold Starts**: Render's free tier "sleeps" if not visited. The first request to the API might take 30 seconds to wake up.
+2. **Database Migrations**: You still need to run migrations. You can do this locally by pointing your local `DATABASE_URL` to your Supabase string and running:
    ```bash
-   curl -fsSL https://get.docker.com -o get-docker.sh
-   sudo sh get-docker.sh
+   alembic upgrade head
    ```
+3. **Secrets**: Never commit your `.env` file to GitHub. Always use the provider's Dashboard to set environment variables.
 
-2. **Clone the Project**:
-   ```bash
-   git clone https://github.com/Chai-B/JobHunt.git
-   cd JobHunt
-   ```
-
-3. **Configure Environment Variables**:
-   ```bash
-   cp .env.example .env
-   nano .env
-   ```
-   *Update `SECRET_KEY`, `POSTGRES_PASSWORD`, and `NEXT_PUBLIC_API_URL` (should be your domain or IP).*
-
----
-
-## 3. SSL & Reverse Proxy (Caddy)
-
-To make the app accessible over HTTPS (`https://yourdomain.com`), we recommend using **Caddy**. It handles SSL certificates automatically.
-
-1. **Create a `Caddyfile`** in the root directory:
-   ```text
-   yourdomain.com {
-       # Frontend
-       reverse_proxy localhost:3000
-
-       # Backend API (optional: expose directly or through a subpath)
-       handle /api/* {
-           reverse_proxy localhost:8000
-       }
-   }
-   ```
-
-2. **Add Caddy to Docker Compose** (or run it standalone). 
-
----
-
-## 4. Launching for Production
-
-1. **Build and Start**:
-   ```bash
-   docker compose -f docker-compose.yml up -d --build
-   ```
-
-2. **Run Migrations**:
-   ```bash
-   docker compose exec backend alembic upgrade head
-   ```
-
----
-
-## 5. Deployment Checklist
-
-- [ ] **Firewall**: Ensure ports `80` and `443` are open on your VPS.
-- [ ] **DNS**: Point your domain A record to your VPS IP address.
-- [ ] **Security**: Ensure `DEBUG` modes are off in your environment.
-- [ ] **AI Keys**: Log in to the app and set your Gemini API key in the **Settings** page.
-
----
-
-## 6. Maintenance & Updates
-
-When you push new code to GitHub:
-```bash
-git pull origin main
-docker compose up -d --build
-docker compose exec backend alembic upgrade head
-```
-
----
-
-## Alternative: Simple One-Click Deployments (PaaS)
-
-If setting up a VPS is too complex, we suggest **Railway.app**:
-1. Connect your GitHub repository.
-2. Railway will detect the `docker-compose.yml` or the Dockerfiles.
-3. Add your environment variables in the Railway dashboard.
-4. It will provide a public URL automatically.
+## 4. Summary Checklist
+- [ ] Connect Supabase DB (`pgvector` is ready).
+- [ ] Connect Upstash Redis.
+- [ ] Deploy Backend to Render.
+- [ ] Deploy Frontend to Vercel (point to Render URL).
+- [ ] Add Gemini API key inside the app Settings.
