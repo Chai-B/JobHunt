@@ -12,14 +12,10 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
-# Set up CORS middleware aggressively for local network accessibility
+# Set up CORS middleware — using broad origins since auth is via JWT headers
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "https://job-hunt-ebon.vercel.app",
-        "https://jobhunt-api.eastasia.cloudapp.azure.com"
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
