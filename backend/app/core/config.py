@@ -36,8 +36,10 @@ class Settings(BaseSettings):
     # Clerk (headless sync)
     CLERK_SECRET_KEY: str = ""
     
-    class Config:
-        case_sensitive = True
-        env_file = ".env"
+    model_config = {
+        "case_sensitive": True,
+        "env_file": ".env",
+        "extra": "ignore"
+    }
 
 settings = Settings()
