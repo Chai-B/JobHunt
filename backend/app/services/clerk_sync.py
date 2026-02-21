@@ -38,13 +38,13 @@ async def sync_user_to_clerk(email: str, password: str, full_name: str = "") -> 
         first_name = full_name.split(" ")[0] if full_name else email.split("@")[0]
         last_name = " ".join(full_name.split(" ")[1:]) if full_name and " " in full_name else ""
 
-        clerk_user = client.users.create(request={
-            "email_address": [email],
-            "password": password,
-            "first_name": first_name,
-            "last_name": last_name,
-            "skip_password_checks": True,
-        })
+        clerk_user = client.users.create(
+            email_address=[email],
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            skip_password_checks=True,
+        )
 
         logger.info(f"Clerk: User synced — {email} (clerk_id={clerk_user.id})")
         return {"clerk_id": clerk_user.id, "email": email}
