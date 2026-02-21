@@ -63,7 +63,7 @@ async def verify_user_with_clerk(email: str, password: str) -> Optional[dict]:
         return None
 
     try:
-        users = client.users.list(email_address=[email])
+        users = client.users.list(query=email)
         if users and len(users) > 0:
             clerk_user = users[0]
             logger.debug(f"Clerk: Found user {email} (clerk_id={clerk_user.id})")

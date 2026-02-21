@@ -40,4 +40,4 @@ class UserSetting(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    owner = relationship("User", backref=backref("settings", uselist=False))
+    user = relationship("User", back_populates="settings")
