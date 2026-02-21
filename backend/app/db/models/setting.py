@@ -14,8 +14,11 @@ class UserSetting(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
     
     # AI Engine Settings
+    llm_provider = Column(String, nullable=True, default="gemini") # "gemini", "openai", "openrouter", "custom"
     gemini_api_keys = Column(String, nullable=True) # Stored as comma-separated string for fallback rotation
     preferred_model = Column(String, nullable=True, default="gemini-2.0-flash")
+    openai_api_key = Column(String, nullable=True)
+    llm_base_url = Column(String, nullable=True)
     
     # External Database/Storage (e.g., Supabase integration)
     external_db_url = Column(String, nullable=True)

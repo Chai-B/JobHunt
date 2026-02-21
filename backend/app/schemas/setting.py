@@ -2,8 +2,11 @@ from pydantic import BaseModel, ConfigDict
 from typing import Optional
 
 class UserSettingBase(BaseModel):
+    llm_provider: Optional[str] = "gemini"
     gemini_api_keys: Optional[str] = None
     preferred_model: Optional[str] = "gemini-2.0-flash"
+    openai_api_key: Optional[str] = None
+    llm_base_url: Optional[str] = None
     external_db_url: Optional[str] = None
     external_db_auth_key: Optional[str] = None
     smtp_server: Optional[str] = None

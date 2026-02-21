@@ -66,13 +66,7 @@ async def generate_ai_template(
     if not settings or not settings.gemini_api_keys:
         raise HTTPException(status_code=400, detail="Configure a Gemini API Key in Settings first.")
     
-    import google.generativeai as genai
-    import json
-    
-    api_key = settings.gemini_api_keys.split(",")[0].strip()
-    genai.configure(api_key=api_key)
-    model_name = settings.preferred_model or "gemini-2.0-flash"
-    model = genai.GenerativeModel(model_name)
+    from app.services.llm import call_llm
     
     target_info = ""
     if req.target_role:
@@ -103,14 +97,10 @@ Return STRICTLY as JSON with these fields:
 }}
 """
     
+    import json
+    
     try:
-        ai_response = model.generate_content(prompt)
-        raw_json = ai_response.text.strip()
-        if raw_json.startswith('```json'):
-            raw_json = raw_json.split('```json')[1].split('```')[0].strip()
-        elif raw_json.startswith('```'):
-            raw_json = raw_json.split('```')[1].split('```')[0].strip()
-        
+        raw_json = await call_llm(prompt=prompt, settings=settings, is_json=True)
         result = json.loads(raw_json)
         return result
     except Exception as e:

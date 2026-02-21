@@ -16,6 +16,7 @@ from app.services.resume_parser import parse_and_embed_resume
 import requests
 from bs4 import BeautifulSoup
 import google.generativeai as genai
+from app.services.llm import call_llm
 import json
 import smtplib
 from email.mime.text import MIMEText
@@ -217,9 +218,9 @@ def _parse_json_ld_jobs(soup):
             continue
     return jobs
 
-def _extract_jobs_with_ai(page_text: str, url: str, api_key: str, model_name: str = "gemini-2.0-flash") -> list:
-    """Use Gemini AI to extract real job postings from page text."""
-    if not api_key or not page_text.strip():
+async def _extract_jobs_with_ai(page_text: str, url: str, settings) -> list:
+    """Use AI to extract real job postings from page text."""
+    if not settings or not page_text.strip():
         return []
     
     # Truncate to stay within token limits
@@ -248,18 +249,7 @@ Webpage text:
 {text_chunk}"""
 
     try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel(model_name)
-        response = model.generate_content(prompt)
-        raw = response.text.strip()
-        
-        # Clean markdown wrappers if present
-        if raw.startswith('```'):
-            raw = raw.split('\n', 1)[-1]  # remove first line
-            if raw.endswith('```'):
-                raw = raw[:-3]
-            raw = raw.strip()
-        
+        raw = await call_llm(prompt=prompt, settings=settings, is_json=True)
         jobs = json.loads(raw)
         if not isinstance(jobs, list):
             return []
@@ -322,19 +312,19 @@ def _crawl_for_job_links(soup, base_url: str):
             job_urls.add(full_url)
     return list(job_urls)[:10]
 
-def _parse_generic_jobs(soup, url: str, api_key: str = None, model_name: str = "gemini-2.0-flash"):
-    """AI-powered generic parser: JSON-LD first (free) → Gemini AI extraction."""
+async def _parse_generic_jobs(soup, url: str, settings=None):
+    """AI-powered generic parser: JSON-LD first (free) → Custom AI extraction."""
     all_jobs = []
     
     # Strategy 1: JSON-LD structured data (free, highest quality)
     all_jobs.extend(_parse_json_ld_jobs(soup))
     
     # Strategy 2: AI extraction (if JSON-LD didn't find enough)
-    if len(all_jobs) < 5 and api_key:
+    if len(all_jobs) < 5 and settings:
         page_text = _clean_page_text(soup)
         if len(page_text) > 100:  # Only if there's meaningful content
             existing = {j['title'].lower().strip() for j in all_jobs}
-            ai_jobs = _extract_jobs_with_ai(page_text, url, api_key, model_name)
+            ai_jobs = await _extract_jobs_with_ai(page_text, url, settings)
             for j in ai_jobs:
                 if j['title'].lower().strip() not in existing:
                     all_jobs.append(j)
@@ -394,15 +384,6 @@ async def run_scraping_agent_async(user_id: int, target_url: str, target_type: s
             soup = BeautifulSoup(response.content, 'lxml')
             dataList = []
             
-            # Fetch user's Gemini API key for AI extraction
-            gemini_key = None
-            from app.db.models.setting import UserSetting
-            settings_res = await db.execute(select(UserSetting).where(UserSetting.user_id == user_id))
-            user_settings = settings_res.scalars().first()
-            if user_settings and user_settings.gemini_api_keys:
-                gemini_key = user_settings.gemini_api_keys.split(",")[0].strip()
-            gemini_model = (user_settings.preferred_model if user_settings and user_settings.preferred_model else "gemini-2.0-flash")
-            
             if target_type == "jobs":
                 url_lower = target_url.lower()
                 if 'remoteok.com' in url_lower:
@@ -412,7 +393,7 @@ async def run_scraping_agent_async(user_id: int, target_url: str, target_type: s
                 elif 'weworkremotely.com' in url_lower:
                     dataList = _parse_weworkremotely_jobs(soup)
                 else:
-                    dataList = _parse_generic_jobs(soup, target_url, gemini_key, gemini_model)
+                    dataList = await _parse_generic_jobs(soup, target_url, user_settings)
                 
                 # If few results, crawl linked job pages
                 if len(dataList) < 5:
@@ -422,7 +403,7 @@ async def run_scraping_agent_async(user_id: int, target_url: str, target_type: s
                         try:
                             sub_resp = _fetch_page(sub_url, retries=1, timeout=10)
                             sub_soup = BeautifulSoup(sub_resp.content, 'lxml')
-                            for j in _parse_generic_jobs(sub_soup, sub_url, gemini_key, gemini_model):
+                            for j in await _parse_generic_jobs(sub_soup, sub_url, user_settings):
                                 if j['title'].lower().strip() not in existing_t:
                                     j['source_url'] = sub_url
                                     dataList.append(j)

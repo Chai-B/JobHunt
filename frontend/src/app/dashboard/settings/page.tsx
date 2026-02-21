@@ -21,7 +21,10 @@ export default function SettingsPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [formData, setFormData] = useState({
+        llm_provider: "gemini",
         gemini_api_keys: "",
+        openai_api_key: "",
+        llm_base_url: "",
         external_db_url: "",
         external_db_auth_key: "",
         smtp_server: "",
@@ -49,7 +52,10 @@ export default function SettingsPage() {
                 if (!res.ok) throw new Error("Failed to fetch settings");
                 const data = await res.json();
                 setFormData({
+                    llm_provider: data.llm_provider || "gemini",
                     gemini_api_keys: data.gemini_api_keys || "",
+                    openai_api_key: data.openai_api_key || "",
+                    llm_base_url: data.llm_base_url || "",
                     external_db_url: data.external_db_url || "",
                     external_db_auth_key: data.external_db_auth_key || "",
                     smtp_server: data.smtp_server || "",
@@ -198,17 +204,47 @@ export default function SettingsPage() {
                         <p className="text-xs text-muted-foreground mt-2 leading-relaxed">Provide your API keys. Comma separation enables automatic round-robin key rotation.</p>
                     </div>
                     <div className="col-span-3 grid gap-6 relative z-10">
-                        <div>
-                            <Label htmlFor="gemini_api_keys" className={labelClass}>Gemini API Keys <Tip text="Your Google Gemini API keys. Provide multiple keys separated by commas to enable automatic round-robin rotation when one key hits rate limits." /></Label>
-                            <Input id="gemini_api_keys" name="gemini_api_keys" value={formData.gemini_api_keys} onChange={handleChange} type="password" placeholder="AIzaSyA..., AIzaSyB..." className={`${inputClass} font-mono`} />
-                        </div>
-                        <div>
-                            <Label htmlFor="preferred_model" className={labelClass}>Preferred AI Model <Tip text="The default Gemini model to use for AI tasks. 'gemini-1.5-flash' is faster and cheaper; 'gemini-1.5-pro' is more accurate for complex reasoning." /></Label>
-                            <select id="preferred_model" name="preferred_model" value={formData.preferred_model} onChange={handleChange} className={`${inputClass} px-3 appearance-none cursor-pointer`}>
-                                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast)</option>
-                                <option value="gemini-1.5-pro">Gemini 1.5 Pro (Accurate)</option>
-                                <option value="gemini-2.0-flash">Gemini 2.0 Flash (Latest)</option>
-                            </select>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div className="md:col-span-2">
+                                <Label htmlFor="llm_provider" className={labelClass}>LLM Provider <Tip text="Choose which AI provider to use for parsing and generating content. 'Gemini' uses Google's models. 'OpenAI Compatible' allows you to use OpenAI, OpenRouter, Groq, or local models." /></Label>
+                                <select id="llm_provider" name="llm_provider" value={formData.llm_provider} onChange={handleChange} className={`${inputClass} px-3 appearance-none cursor-pointer max-w-xs`}>
+                                    <option value="gemini">Google Gemini</option>
+                                    <option value="openai">OpenAI Compatible (OpenRouter/Groq/etc)</option>
+                                </select>
+                            </div>
+
+                            {formData.llm_provider === "gemini" ? (
+                                <>
+                                    <div>
+                                        <Label htmlFor="gemini_api_keys" className={labelClass}>Gemini API Keys <Tip text="Your Google Gemini API keys. Provide multiple keys separated by commas to enable automatic round-robin rotation when one key hits rate limits." /></Label>
+                                        <Input id="gemini_api_keys" name="gemini_api_keys" value={formData.gemini_api_keys} onChange={handleChange} type="password" placeholder="AIzaSyA..., AIzaSyB..." className={`${inputClass} font-mono`} />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="preferred_model" className={labelClass}>Preferred AI Model <Tip text="The default Gemini model to use for AI tasks. 'gemini-1.5-flash' is faster and cheaper; 'gemini-1.5-pro' is more accurate for complex reasoning." /></Label>
+                                        <select id="preferred_model" name="preferred_model" value={formData.preferred_model} onChange={handleChange} className={`${inputClass} px-3 appearance-none cursor-pointer`}>
+                                            <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast)</option>
+                                            <option value="gemini-1.5-pro">Gemini 1.5 Pro (Accurate)</option>
+                                            <option value="gemini-2.0-flash">Gemini 2.0 Flash (Latest)</option>
+                                            <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (Cheapest)</option>
+                                        </select>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div>
+                                        <Label htmlFor="openai_api_key" className={labelClass}>Custom API Key <Tip text="API key for your chosen provider (e.g., sk-or-v1-... for OpenRouter, sk-... for OpenAI)." /></Label>
+                                        <Input id="openai_api_key" name="openai_api_key" value={formData.openai_api_key} onChange={handleChange} type="password" placeholder="sk-..." className={`${inputClass} font-mono`} />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="llm_base_url" className={labelClass}>Base URL <Tip text="The API endpoint for your provider. Example: https://openrouter.ai/api/v1 or https://api.openai.com/v1" /></Label>
+                                        <Input id="llm_base_url" name="llm_base_url" value={formData.llm_base_url} onChange={handleChange} placeholder="https://openrouter.ai/api/v1" className={`${inputClass} font-mono`} />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <Label htmlFor="preferred_model" className={labelClass}>Model Name <Tip text="The specific model ID to use on this provider. Example: google/gemini-2.0-flash-exp:free (OpenRouter) or gpt-4o-mini (OpenAI)" /></Label>
+                                        <Input id="preferred_model" name="preferred_model" value={formData.preferred_model} onChange={handleChange} placeholder="google/gemini-2.0-flash-exp:free" className={inputClass} />
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
