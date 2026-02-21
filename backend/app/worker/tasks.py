@@ -396,7 +396,7 @@ async def run_scraping_agent_async(user_id: int, target_url: str, target_type: s
             
             # Fetch user's Gemini API key for AI extraction
             gemini_key = None
-            from app.db.models.user_setting import UserSetting
+            from app.db.models.setting import UserSetting
             settings_res = await db.execute(select(UserSetting).where(UserSetting.user_id == user_id))
             user_settings = settings_res.scalars().first()
             if user_settings and user_settings.gemini_api_keys:
