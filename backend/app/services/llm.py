@@ -45,9 +45,6 @@ def _extract_json_content(text: str) -> str:
         # module requires strict escaping. Let's use strict=False when parsing upstream,
         # but here we can just fix the common LLaMA bug: raw newlines in string values.
         
-        # The best way to fix LLaMA's invalid JSON newlines without breaking structure:
-        import re
-        # Find newline characters that are inside quotes (poor man's JSON string parser)
         # Actually, python's json.loads(..., strict=False) handles unescaped control chars!
         # We don't need to regex it. We just need to make sure the endpoint uses strict=False.
         
