@@ -1,5 +1,4 @@
 import json
-from termcolor import colored
 from loguru import logger
 import google.generativeai as genai
 from openai import AsyncOpenAI
