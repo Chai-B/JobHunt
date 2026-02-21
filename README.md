@@ -15,6 +15,8 @@ AI-powered job application automation platform. Scrape jobs, manage applications
 
 ## Quick Start (Docker)
 
+For detailed instructions on deploying to a live server (VPS or Cloud), see the [Deployment Guide](DEPLOYMENT_GUIDE.md).
+
 ```bash
 # 1. Clone and configure
 git clone https://github.com/YOUR_USERNAME/jobhunt.git
