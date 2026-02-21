@@ -33,6 +33,7 @@ export default function TemplatesPage() {
     const [templates, setTemplates] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isOpen, setIsOpen] = useState(false);
+    const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
 
     const [name, setName] = useState("");
     const [subject, setSubject] = useState("");
@@ -108,12 +109,33 @@ export default function TemplatesPage() {
         setCustomTags(customTags.filter(t => t !== tag));
     };
 
+    const handleOpenCreate = () => {
+        setSelectedTemplateId(null);
+        setName("");
+        setSubject("");
+        setBodyText("");
+        setIsOpen(true);
+    };
+
+    const handleEdit = (t: any) => {
+        setSelectedTemplateId(t.id);
+        setName(t.name);
+        setSubject(t.subject);
+        setBodyText(t.body_text);
+        setIsOpen(true);
+    };
+
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
             const token = localStorage.getItem("token");
-            const res = await fetch(`${API_BASE_URL}/api/v1/templates/`, {
-                method: "POST",
+            const method = selectedTemplateId ? "PUT" : "POST";
+            const url = selectedTemplateId
+                ? `${API_BASE_URL}/api/v1/templates/${selectedTemplateId}`
+                : `${API_BASE_URL}/api/v1/templates/`;
+
+            const res = await fetch(url, {
+                method,
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`
@@ -122,11 +144,12 @@ export default function TemplatesPage() {
             });
             if (!res.ok) {
                 const err = await res.json();
-                throw new Error(err.detail || "Failed to create template.");
+                throw new Error(err.detail || "Failed to save template.");
             }
-            toast.success("Template created successfully.");
+            toast.success(selectedTemplateId ? "Template updated successfully." : "Template created successfully.");
             setIsOpen(false);
             setName(""); setSubject(""); setBodyText(""); setCustomTags([]);
+            setSelectedTemplateId(null);
             fetchTemplates();
         } catch (err: any) {
             toast.error(err.message);
@@ -176,7 +199,7 @@ export default function TemplatesPage() {
 
                 <Dialog open={isOpen} onOpenChange={setIsOpen}>
                     <DialogTrigger asChild>
-                        <Button className="flex items-center gap-2 bg-foreground text-background hover:opacity-90 transition-opacity rounded-md">
+                        <Button onClick={handleOpenCreate} className="flex items-center gap-2 bg-foreground text-background hover:opacity-90 transition-opacity rounded-md">
                             <Plus className="w-4 h-4" />
                             Create Template
                         </Button>
@@ -185,7 +208,7 @@ export default function TemplatesPage() {
                         <DialogHeader>
                             <DialogTitle className="text-xl font-semibold flex items-center gap-2">
                                 <Mail className="h-5 w-5" />
-                                New Template
+                                {selectedTemplateId ? "Edit Template" : "New Template"}
                             </DialogTitle>
                         </DialogHeader>
                         <form onSubmit={handleCreate} className="grid gap-5 py-4">
@@ -336,6 +359,7 @@ export default function TemplatesPage() {
                                         <TableHead className="text-muted-foreground font-medium">Subject</TableHead>
                                         <TableHead className="text-muted-foreground font-medium">Variables Used</TableHead>
                                         <TableHead className="text-muted-foreground font-medium">Created</TableHead>
+                                        <TableHead className="text-muted-foreground font-medium text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -356,6 +380,9 @@ export default function TemplatesPage() {
                                                 </TableCell>
                                                 <TableCell className="text-muted-foreground text-sm">
                                                     {new Date(t.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button variant="ghost" size="sm" onClick={() => handleEdit(t)} className="h-8 text-xs px-2 hover:bg-secondary border border-transparent hover:border-border text-foreground transition-all">Edit</Button>
                                                 </TableCell>
                                             </TableRow>
                                         );

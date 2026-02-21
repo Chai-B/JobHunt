@@ -51,6 +51,28 @@ async def list_templates(
     res = await db.execute(select(EmailTemplate).offset(skip).limit(limit))
     return res.scalars().all()
 
+@router.put("/{template_id}", response_model=EmailTemplateRead)
+async def update_template(
+    *,
+    db: AsyncSession = Depends(deps.get_personal_db),
+    template_id: int,
+    template_in: EmailTemplateUpdate,
+    current_user: User = Depends(deps.get_current_active_user)
+) -> Any:
+    res = await db.execute(select(EmailTemplate).where(EmailTemplate.id == template_id))
+    db_obj = res.scalars().first()
+    if not db_obj:
+        raise HTTPException(status_code=404, detail="Template not found")
+        
+    update_data = template_in.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(db_obj, field, value)
+        
+    db.add(db_obj)
+    await db.commit()
+    await db.refresh(db_obj)
+    return db_obj
+
 @router.post("/generate-ai")
 async def generate_ai_template(
     *,
