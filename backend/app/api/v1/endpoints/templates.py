@@ -1,0 +1,116 @@
+from typing import Any, List, Optional
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from pydantic import BaseModel
+
+from app.api import deps
+from app.db.models.user import User
+from app.db.models.email_template import EmailTemplate
+from app.db.models.setting import UserSetting
+from app.schemas.email_template import EmailTemplateCreate, EmailTemplateRead, EmailTemplateUpdate
+
+router = APIRouter()
+
+class AITemplateRequest(BaseModel):
+    purpose: str = "cold_outreach"
+    tone: str = "professional"
+    target_role: Optional[str] = None
+    target_company: Optional[str] = None
+
+@router.post("/", response_model=EmailTemplateRead)
+async def create_template(
+    *,
+    db: AsyncSession = Depends(deps.get_personal_db),
+    template_in: EmailTemplateCreate,
+    current_user: User = Depends(deps.get_current_active_user)
+) -> Any:
+    # Check name exists
+    res = await db.execute(select(EmailTemplate).where(EmailTemplate.name == template_in.name))
+    if res.scalars().first():
+        raise HTTPException(status_code=400, detail="Template with this name already exists")
+        
+    db_obj = EmailTemplate(
+        name=template_in.name,
+        subject=template_in.subject,
+        body_text=template_in.body_text,
+        is_active=template_in.is_active
+    )
+    db.add(db_obj)
+    await db.commit()
+    await db.refresh(db_obj)
+    return db_obj
+
+@router.get("/", response_model=List[EmailTemplateRead])
+async def list_templates(
+    db: AsyncSession = Depends(deps.get_personal_db),
+    skip: int = 0,
+    limit: int = 100,
+    current_user: User = Depends(deps.get_current_active_user)
+) -> Any:
+    res = await db.execute(select(EmailTemplate).offset(skip).limit(limit))
+    return res.scalars().all()
+
+@router.post("/generate-ai")
+async def generate_ai_template(
+    *,
+    req: AITemplateRequest,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_user)
+) -> Any:
+    """Generate an email template using Gemini AI."""
+    # Get user settings for API key
+    stmt = select(UserSetting).where(UserSetting.user_id == current_user.id)
+    settings = (await db.execute(stmt)).scalars().first()
+    
+    if not settings or not settings.gemini_api_keys:
+        raise HTTPException(status_code=400, detail="Configure a Gemini API Key in Settings first.")
+    
+    import google.generativeai as genai
+    import json
+    
+    api_key = settings.gemini_api_keys.split(",")[0].strip()
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    
+    target_info = ""
+    if req.target_role:
+        target_info += f"Target Role: {req.target_role}\n"
+    if req.target_company:
+        target_info += f"Target Company: {req.target_company}\n"
+    
+    prompt = f"""Generate a professional email template for {req.purpose.replace('_', ' ')}.
+    
+Tone: {req.tone}
+{target_info}
+
+The template MUST use these placeholder variables (use double curly brackets):
+- {{{{user_name}}}} - sender's name
+- {{{{company}}}} - target company name
+- {{{{job_title}}}} - target job title
+- {{{{contact_name}}}} - recipient's name
+- {{{{skills}}}} - sender's key skills
+- {{{{experience_years}}}} - years of experience
+- {{{{linkedin}}}} - LinkedIn URL
+- {{{{portfolio}}}} - portfolio URL
+
+Return STRICTLY as JSON with these fields:
+{{
+    "name": "A short template name (max 5 words)",
+    "subject": "Email subject line using variables",
+    "body_text": "Full email body using variables. Use line breaks for paragraphs."
+}}
+"""
+    
+    try:
+        ai_response = model.generate_content(prompt)
+        raw_json = ai_response.text.strip()
+        if raw_json.startswith('```json'):
+            raw_json = raw_json.split('```json')[1].split('```')[0].strip()
+        elif raw_json.startswith('```'):
+            raw_json = raw_json.split('```')[1].split('```')[0].strip()
+        
+        result = json.loads(raw_json)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
