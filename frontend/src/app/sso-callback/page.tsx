@@ -72,7 +72,10 @@ export default function OAuthCallbackPage() {
 
     return (
         <div className="flex h-screen items-center justify-center bg-background">
-            {/* The Clerk component that actually processes the OAuth redirect parameters in the background */}
+            {/* 
+              Force the callback component to stay on this page for the background processing 
+              instead of letting it auto-redirect to Clerk's hosted paths.
+            */}
             <AuthenticateWithRedirectCallback />
 
             <div className="flex flex-col items-center gap-4">
