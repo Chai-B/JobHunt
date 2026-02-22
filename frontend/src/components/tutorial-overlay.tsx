@@ -40,7 +40,7 @@ export function TutorialOverlay() {
         },
         {
             target: "a[href='/dashboard/templates']",
-            content: "Don't forget to configure your AI email templates for one-click cold outreach. Your linked variables will auto-fill!",
+            content: "Don't forget to configure your email templates for one-click cold outreach. Your linked variables will auto-fill!",
             placement: "right" as const,
         }
     ];

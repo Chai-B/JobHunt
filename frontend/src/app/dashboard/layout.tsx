@@ -110,7 +110,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <div>
                     <div className="flex items-center gap-3 px-2 mb-10">
                         <div className="h-8 w-8 rounded-md bg-secondary flex items-center justify-center border border-border">
-                            <TerminalSquare className="h-4 w-4 text-foreground" />
+                            <Briefcase className="h-4 w-4 text-foreground" />
                         </div>
                         <h1 className="text-xl font-semibold tracking-tight text-foreground">JobHunt</h1>
                     </div>

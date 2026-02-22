@@ -5,8 +5,13 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ClerkWrapper } from "@/components/clerk-wrapper";
 
 export const metadata: Metadata = {
-  title: "JobHunt Autonomous AI",
-  description: "Automated Application and Web Scraping Engine",
+  title: "JobHunt",
+  description: "Automated Job Application Engine",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/favicon.png",
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({

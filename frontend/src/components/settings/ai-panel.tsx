@@ -20,7 +20,7 @@ export function AIPanel({ formData, handleChange }: { formData: any, handleChang
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 p-8 bg-card border border-border shadow-sm rounded-xl relative overflow-hidden group">
             <div className="col-span-1 lg:col-span-1 lg:border-r border-border pr-6 relative z-10">
                 <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                    <BrainCircuit className="w-4 h-4" /> AI Integrations
+                    <BrainCircuit className="w-4 h-4" /> Model Providers
                 </h3>
                 <p className="text-xs text-muted-foreground mt-2 leading-relaxed">Provide your API keys. Comma separation enables automatic round-robin key rotation.</p>
             </div>
@@ -41,7 +41,7 @@ export function AIPanel({ formData, handleChange }: { formData: any, handleChang
                                 <Input id="gemini_api_keys" name="gemini_api_keys" value={formData.gemini_api_keys} onChange={handleChange} type="password" placeholder="AIzaSyA..., AIzaSyB..." className={`${inputClass} font-mono`} />
                             </div>
                             <div>
-                                <Label htmlFor="preferred_model" className={labelClass}>Preferred AI Model</Label>
+                                <Label htmlFor="preferred_model" className={labelClass}>Intelligence Model</Label>
                                 <select id="preferred_model" name="preferred_model" value={formData.preferred_model} onChange={handleChange} className={`${inputClass} px-3 appearance-none cursor-pointer`}>
                                     <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
                                     <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>

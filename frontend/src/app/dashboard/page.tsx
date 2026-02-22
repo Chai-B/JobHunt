@@ -105,8 +105,8 @@ export default function DashboardOverview() {
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div>
-                <h1 className="text-3xl font-semibold tracking-tight text-foreground mb-2">Command Center</h1>
-                <p className="text-muted-foreground text-sm">Real-time telemetry of your autonomous job application fleet.</p>
+                <h1 className="text-3xl font-semibold tracking-tight text-foreground mb-2 text-zinc-100">Command Center</h1>
+                <p className="text-muted-foreground text-sm">Real-time telemetry of your job application pipeline.</p>
             </div>
 
             <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">

@@ -138,7 +138,7 @@ export default function SettingsPage() {
                     <div>
                         <p className="font-semibold text-foreground">Secure Vault Integration</p>
                         <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                            API keys and credentials are encrypted at rest and never leave your environment. They are used exclusively server-side for AI operations and are never exposed to the client or third parties.
+                            API keys and credentials are encrypted at rest and never leave your environment. They are used exclusively for server-side processing and are never exposed to the client or third parties.
                         </p>
                     </div>
                 </div>
