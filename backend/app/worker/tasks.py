@@ -386,6 +386,8 @@ async def run_scraping_agent_async(user_id: int, target_url: str, target_type: s
             
             if target_type == "jobs":
                 url_lower = target_url.lower()
+                from app.services.spiders import scrape_jobs_headless
+                
                 if 'remoteok.com' in url_lower:
                     dataList = _parse_remoteok_jobs(soup)
                 elif 'news.ycombinator.com' in url_lower or 'ycombinator.com/jobs' in url_lower:
@@ -393,22 +395,22 @@ async def run_scraping_agent_async(user_id: int, target_url: str, target_type: s
                 elif 'weworkremotely.com' in url_lower:
                     dataList = _parse_weworkremotely_jobs(soup)
                 else:
-                    dataList = await _parse_generic_jobs(soup, target_url, user_settings)
+                    dataList = await scrape_jobs_headless(target_url)
                 
                 # If few results, crawl linked job pages
                 if len(dataList) < 5:
                     sub_urls = _crawl_for_job_links(soup, target_url)
                     existing_t = {j['title'].lower().strip() for j in dataList}
-                    for sub_url in sub_urls[:5]:
+                    for sub_url in sub_urls[:3]: # Cap at 3 for headless speed
                         try:
-                            sub_resp = _fetch_page(sub_url, retries=1, timeout=10)
-                            sub_soup = BeautifulSoup(sub_resp.content, 'lxml')
-                            for j in await _parse_generic_jobs(sub_soup, sub_url, user_settings):
+                            sub_data = await scrape_jobs_headless(sub_url)
+                            for j in sub_data:
                                 if j['title'].lower().strip() not in existing_t:
                                     j['source_url'] = sub_url
                                     dataList.append(j)
                                     existing_t.add(j['title'].lower().strip())
-                        except Exception:
+                        except Exception as e:
+                            logger.error(f"Failed to scrape suburl {sub_url}: {e}")
                             continue
                 
                 if keywords:

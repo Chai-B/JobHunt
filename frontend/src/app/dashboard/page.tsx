@@ -5,7 +5,16 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Briefcase, Send, Users, Globe, Activity, Cpu, Zap, MailPlus } from "lucide-react";
 import { toast } from "sonner";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Skeleton } from "@/components/ui/skeleton";
+import dynamic from "next/dynamic";
+
+const AreaChart = dynamic(() => import('recharts').then(mod => mod.AreaChart), { ssr: false });
+const Area = dynamic(() => import('recharts').then(mod => mod.Area), { ssr: false });
+const XAxis = dynamic(() => import('recharts').then(mod => mod.XAxis), { ssr: false });
+const YAxis = dynamic(() => import('recharts').then(mod => mod.YAxis), { ssr: false });
+const CartesianGrid = dynamic(() => import('recharts').then(mod => mod.CartesianGrid), { ssr: false });
+const Tooltip = dynamic(() => import('recharts').then(mod => mod.Tooltip), { ssr: false });
+const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
 
 export default function DashboardOverview() {
     const [metrics, setMetrics] = useState<any>(null);
@@ -27,7 +36,8 @@ export default function DashboardOverview() {
             } catch (err) {
                 console.error(err);
             } finally {
-                setLoading(false);
+                // Slight delay for smooth UX transition
+                setTimeout(() => setLoading(false), 500);
             }
         };
 
@@ -35,17 +45,55 @@ export default function DashboardOverview() {
     }, []);
 
     if (loading) return (
-        <div className="flex h-[80vh] items-center justify-center">
-            <div className="flex flex-col items-center gap-4">
-                <Activity className="h-6 w-6 text-muted-foreground animate-pulse" />
-                <p className="text-muted-foreground text-xs font-medium tracking-widest uppercase">Loading Metrics</p>
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <div>
+                <Skeleton className="h-10 w-64 mb-2" />
+                <Skeleton className="h-4 w-96" />
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+                {[1, 2, 3, 4].map(i => (
+                    <Card key={i} className="bg-card border-border shadow-sm">
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                            <Skeleton className="h-4 w-24" />
+                            <Skeleton className="h-8 w-8 rounded-md" />
+                        </CardHeader>
+                        <CardContent>
+                            <Skeleton className="h-10 w-16 mb-2" />
+                            <Skeleton className="h-3 w-32" />
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-7">
+                <Card className="col-span-4 bg-card border-border shadow-sm h-[400px]">
+                    <CardHeader>
+                        <Skeleton className="h-6 w-32 mb-2" />
+                        <Skeleton className="h-4 w-64" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-[250px] w-full rounded-lg mt-4" />
+                    </CardContent>
+                </Card>
+                <Card className="col-span-3 bg-card border-border shadow-sm h-[400px]">
+                    <CardHeader>
+                        <Skeleton className="h-6 w-32 mb-2" />
+                        <Skeleton className="h-4 w-64" />
+                    </CardHeader>
+                    <CardContent className="space-y-4 pt-4">
+                        <Skeleton className="h-20 w-full rounded-md" />
+                        <Skeleton className="h-20 w-full rounded-md" />
+                        <Skeleton className="h-20 w-full rounded-md" />
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );
 
     if (!metrics) return (
         <div className="flex h-[80vh] items-center justify-center text-destructive border border-destructive/20 bg-destructive/5 rounded-md">
-            <p className="font-medium text-sm">Failed to connect to dashboard metrics.</p>
+            <p className="font-medium text-sm">Failed to connect to dashboard telemetry layers.</p>
         </div>
     );
 
@@ -103,14 +151,14 @@ export default function DashboardOverview() {
 
                 <Card className="bg-card border-border shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Network Scope</CardTitle>
+                        <CardTitle className="text-sm font-medium text-muted-foreground">7d Growth</CardTitle>
                         <div className="p-2 bg-secondary rounded-md">
-                            <Globe className="h-4 w-4 text-foreground" />
+                            <Zap className="h-4 w-4 text-foreground" />
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-semibold text-foreground">Intl.</div>
-                        <p className="text-xs text-muted-foreground mt-1">Nodes synchronized globally</p>
+                        <div className="text-3xl font-semibold text-foreground">+{metrics.recent_apps_7d}</div>
+                        <p className="text-xs text-muted-foreground mt-1">Applications this week</p>
                     </CardContent>
                 </Card>
             </div>
@@ -156,54 +204,35 @@ export default function DashboardOverview() {
                     <CardHeader>
                         <CardTitle className="text-foreground font-semibold flex items-center gap-2">
                             <Cpu className="h-5 w-5 text-foreground" />
-                            Agent Status
+                            Activity Logs
                         </CardTitle>
                         <CardDescription className="text-muted-foreground">Live heartbeat of background execution layers.</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4 pt-4">
-                        <div className="flex items-start bg-secondary p-4 rounded-md border border-border">
-                            <span className="relative flex h-2.5 w-2.5 mr-4 mt-1 shrink-0">
-                                <span className="relative inline-flex rounded-full h-full w-full bg-foreground"></span>
-                            </span>
-                            <div>
-                                <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                                    Strategic Job Alerts <Zap className="h-3 w-3 text-muted-foreground" />
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">Checking for high-probability AI matching criteria globally.</p>
+                    <CardContent className="space-y-4 pt-4 max-h-[400px] overflow-y-auto pr-2">
+                        {metrics.recent_activities && metrics.recent_activities.length > 0 ? (
+                            metrics.recent_activities.map((log: any) => (
+                                <div key={log.id} className="flex items-start bg-secondary/50 p-4 rounded-md border border-border">
+                                    <span className={`relative flex h-2.5 w-2.5 mr-4 mt-1 shrink-0`}>
+                                        <span className={`relative inline-flex rounded-full h-full w-full ${log.status === 'success' ? 'bg-emerald-500' :
+                                            log.status === 'failed' ? 'bg-destructive' : 'bg-blue-500'
+                                            }`}></span>
+                                    </span>
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-center">
+                                            <p className="text-sm font-medium text-foreground capitalize">{log.action.replace('_', ' ')}</p>
+                                            <span className="text-[10px] text-muted-foreground">
+                                                {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed truncate max-w-[200px]">{log.message || "Operation completed."}</p>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="py-20 text-center text-muted-foreground border border-dashed border-border rounded-md">
+                                <p className="text-xs">No recent activity logged.</p>
                             </div>
-                        </div>
-
-                        <div className="flex items-start bg-secondary p-4 rounded-md border border-border">
-                            <span className="relative flex h-2.5 w-2.5 mr-4 mt-1 shrink-0">
-                                <span className="relative inline-flex rounded-full h-full w-full bg-foreground"></span>
-                            </span>
-                            <div>
-                                <p className="text-sm font-medium text-foreground">Global Discovery</p>
-                                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">Continuous background ingestion across standard pipelines.</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-start p-4 rounded-md border border-transparent opacity-60">
-                            <span className="relative flex h-2.5 w-2.5 mr-4 mt-1 shrink-0">
-                                <span className="relative inline-flex rounded-full h-full w-full bg-muted-foreground"></span>
-                            </span>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">LLM Application Engine</p>
-                                <p className="text-xs text-muted-foreground mt-1">Dormant state. Awaiting human trigger.</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-start p-4 rounded-md border border-transparent opacity-60">
-                            <span className="relative flex h-2.5 w-2.5 mr-4 mt-1 shrink-0">
-                                <span className="relative inline-flex rounded-full h-full w-full bg-muted-foreground"></span>
-                            </span>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                                    Outreach Module <MailPlus className="h-3 w-3" />
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-1">Idling in queue. Awaiting dispatched operations.</p>
-                            </div>
-                        </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>

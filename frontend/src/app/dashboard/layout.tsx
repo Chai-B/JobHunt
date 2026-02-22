@@ -4,8 +4,10 @@ import { API_BASE_URL } from "@/lib/config";
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Briefcase, FileText, Send, Mail, Settings, LogOut, UserCircle, Globe, TerminalSquare, Zap, Activity } from "lucide-react";
+import { LayoutDashboard, Briefcase, FileText, Send, Mail, Settings, LogOut, UserCircle, Globe, TerminalSquare, Zap, Activity, Users, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { OnboardingWizard } from "@/components/onboarding-wizard";
+import { TutorialOverlay } from "@/components/tutorial-overlay";
 
 const navigation = [
     { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
@@ -14,6 +16,8 @@ const navigation = [
     { name: "Applications", href: "/dashboard/applications", icon: Send },
     { name: "Cold Mail", href: "/dashboard/cold-mail", icon: Zap },
     { name: "Templates", href: "/dashboard/templates", icon: Mail },
+    { name: "Contacts", href: "/dashboard/contacts", icon: Users },
+    { name: "Extractor", href: "/dashboard/extract", icon: Sparkles },
     { name: "Resumes", href: "/dashboard/resumes", icon: FileText },
     { name: "Profile", href: "/dashboard/profile", icon: UserCircle },
     { name: "Settings", href: "/dashboard/settings", icon: Settings },
@@ -151,7 +155,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto w-full p-10 bg-background relative">
+            <main className="flex-1 overflow-y-auto w-full p-6 sm:p-10 bg-background relative">
+                {user && user.has_completed_onboarding === false && (
+                    <OnboardingWizard user={user} onComplete={() => setUser({ ...user, has_completed_onboarding: true })} />
+                )}
+                {user && user.has_completed_onboarding === true && (
+                    <TutorialOverlay />
+                )}
                 <div className="max-w-[1400px] mx-auto z-10 relative">
                     {children}
                 </div>

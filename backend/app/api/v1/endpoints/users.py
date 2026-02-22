@@ -5,8 +5,10 @@ from app.db.models.user import User
 from app.db.models.application import Application
 from app.db.models.contact import ScrapedContact
 from app.db.models.job_posting import JobPosting
+from app.db.models.action_log import ActionLog
 from app.schemas.user import UserRead, UserUpdate
 from app.api import deps
+from datetime import datetime, timedelta
 
 router = APIRouter()
 
@@ -58,22 +60,37 @@ async def get_dashboard_metrics(
     pipeline_stmt = select(Application.status, func.count(Application.id)).filter(Application.user_id == current_user.id).group_by(Application.status)
     pipeline_result = await db.execute(pipeline_stmt)
     pipeline = pipeline_result.all()
-    
     pipeline_dict = {status: count for status, count in pipeline}
     total_apps = sum(pipeline_dict.values())
     
     # Global Knowledge Pool Stats
-    contacts_stmt = select(func.count(ScrapedContact.id))
-    total_contacts = (await db.execute(contacts_stmt)).scalar() or 0
+    total_contacts = (await db.execute(select(func.count(ScrapedContact.id)))).scalar() or 0
+    total_jobs = (await db.execute(select(func.count(JobPosting.id)))).scalar() or 0
+
+    # Recent Activities
+    recent_logs_stmt = select(ActionLog).order_by(ActionLog.created_at.desc()).limit(10)
+    recent_logs = (await db.execute(recent_logs_stmt)).scalars().all()
     
-    jobs_stmt = select(func.count(JobPosting.id))
-    total_jobs = (await db.execute(jobs_stmt)).scalar() or 0
+    # Growth (Last 7 days)
+    seven_days_ago = datetime.now() - timedelta(days=7)
+    growth_stmt = select(func.count(Application.id)).filter(Application.user_id == current_user.id, Application.created_at >= seven_days_ago)
+    recent_apps = (await db.execute(growth_stmt)).scalar() or 0
     
     return {
         "pipeline": pipeline_dict,
         "total_applications": total_apps,
+        "recent_apps_7d": recent_apps,
         "global_knowledge": {
             "contacts": total_contacts,
             "jobs": total_jobs
-        }
+        },
+        "recent_activities": [
+            {
+                "id": log.id,
+                "action": log.action_type,
+                "status": log.status,
+                "message": log.message,
+                "created_at": log.created_at
+            } for log in recent_logs
+        ]
     }

@@ -102,28 +102,9 @@ async def generate_ai_template(
     if req.target_company:
         target_info += f"Target Company: {req.target_company}\n"
     
-    prompt = f"""Generate a professional email template for {req.purpose.replace('_', ' ')}.
-    
-Tone: {req.tone}
-{target_info}
-
-The template MUST use these placeholder variables (use double curly brackets):
-- {{{{user_name}}}} - sender's name
-- {{{{company}}}} - target company name
-- {{{{job_title}}}} - target job title
-- {{{{contact_name}}}} - recipient's name
-- {{{{skills}}}} - sender's key skills
-- {{{{experience_years}}}} - years of experience
-- {{{{linkedin}}}} - LinkedIn URL
-- {{{{portfolio}}}} - portfolio URL
-
-Return STRICTLY as JSON with these fields:
-{{
-    "name": "A short template name (max 5 words)",
-    "subject": "Email subject line using variables",
-    "body_text": "Full email body using variables. Use line breaks for paragraphs."
-}}
-"""
+    prompt = f"""Write a {req.tone} {req.purpose.replace('_', ' ')} email. {target_info}
+Use vars: {{{{user_name}}}}, {{{{company}}}}, {{{{job_title}}}}, {{{{contact_name}}}}, {{{{skills}}}}, {{{{experience_years}}}}, {{{{linkedin}}}}, {{{{portfolio}}}}.
+Return JSON: {{"name":"<5 word name>","subject":"...","body_text":"..."}}"""
     
     import json
     

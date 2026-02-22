@@ -12,6 +12,7 @@ class UserBase(BaseModel):
     portfolio_url: Optional[str] = None
     location: Optional[str] = None
     bio: Optional[str] = None
+    has_completed_onboarding: bool = False
 
 class UserCreate(UserBase):
     password: str
@@ -26,6 +27,7 @@ class UserUpdate(BaseModel):
     location: Optional[str] = None
     bio: Optional[str] = None
     password: Optional[str] = None
+    has_completed_onboarding: Optional[bool] = None
 
 class UserRead(UserBase):
     id: int

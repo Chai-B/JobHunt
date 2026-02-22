@@ -11,6 +11,7 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
+    has_completed_onboarding = Column(Boolean, default=False)
     
     # Comprehensive Profile Data
     full_name = Column(String, nullable=True)
