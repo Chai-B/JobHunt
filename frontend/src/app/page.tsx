@@ -19,12 +19,11 @@ export default function LoginPage() {
   const clerk = useClerk();
   const router = useRouter();
 
-  // If already signed in to Clerk but on the login page, 
-  // it likely means the local token is missing/expired.
-  // Redirect to sync to get a new local JWT.
+  // Redirect to sync if already signed in to Clerk but on the login page
   useEffect(() => {
     const localToken = localStorage.getItem("token");
     if (clerk?.session && !localToken) {
+      setLoading(true);
       router.push("/sso-callback");
     }
   }, [clerk?.session, router]);
@@ -95,7 +94,14 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <div className="p-8 bg-card border border-border rounded-xl shadow-sm relative overflow-hidden">
+        <div className="p-8 bg-card border border-border rounded-xl shadow-sm relative overflow-hidden min-h-[400px]">
+          {loading && clerk?.session ? (
+            <div className="absolute inset-0 z-50 bg-card flex flex-col items-center justify-center gap-4 animate-in fade-in duration-300">
+              <Briefcase className="h-8 w-8 text-foreground animate-pulse" />
+              <p className="text-xs font-medium tracking-widest uppercase text-muted-foreground">Syncing session...</p>
+            </div>
+          ) : null}
+
           {/* OAuth Buttons */}
           <OAuthButtons />
 

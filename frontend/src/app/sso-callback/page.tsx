@@ -13,10 +13,13 @@ export default function OAuthCallbackPage() {
     const { isLoaded, isSignedIn, user } = useUser();
     const hasSynced = useRef(false);
 
-    // Handle the Clerk OAuth redirect parameters manually
+    // 1. Manually process the OAuth parameters from the URL
     useEffect(() => {
         if (clerk && !hasSynced.current) {
+            // We call this manually to avoid the automatic AuthenticateWithRedirectCallback behavior
+            // which often triggers redirects to Hosted Forms if it thinks the session is incomplete.
             clerk.handleRedirectCallback({
+                // We keep them on this page to finish our local backend sync
                 signInForceRedirectUrl: "/sso-callback",
                 signUpForceRedirectUrl: "/sso-callback",
             }).catch((err) => {
@@ -25,19 +28,18 @@ export default function OAuthCallbackPage() {
         }
     }, [clerk]);
 
+    // 2. Once Clerk confirms sign-in, sync with our backend
     useEffect(() => {
         const syncOAuthUser = async () => {
             if (hasSynced.current) return;
 
-            // Even if isSignedIn is false, we might have enough info if the session is transferable
-            // but for simplicity, we wait for isSignedIn as it's more stable.
             if (isLoaded && isSignedIn && user) {
                 hasSynced.current = true;
-                setStatus("Syncing with JobHunt...");
+                setStatus("Finalizing sync...");
                 const email = user.primaryEmailAddress?.emailAddress || user.emailAddresses?.[0]?.emailAddress;
 
                 if (!email) {
-                    toast.error("No email address found.");
+                    toast.error("No email found.");
                     router.push("/");
                     return;
                 }
@@ -61,8 +63,10 @@ export default function OAuthCallbackPage() {
 
                     const data = await res.json();
                     localStorage.setItem("token", data.access_token);
+
+                    // Force a direct push to dashboard
                     toast.success("Welcome back!");
-                    router.push("/dashboard");
+                    window.location.href = "/dashboard";
                 } catch (err: any) {
                     console.error("Sync error:", err);
                     toast.error(err.message || "Callback failed.");
@@ -74,23 +78,19 @@ export default function OAuthCallbackPage() {
         syncOAuthUser();
     }, [isLoaded, isSignedIn, user, router]);
 
-    // Cleanup timeout
+    // Fallback if we get stuck
     useEffect(() => {
         const timer = setTimeout(() => {
-            if (isLoaded && !isSignedIn && !hasSynced.current) {
-                // If we are signed in to Clerk but just lingering here, push to dashboard
+            if (isLoaded && !hasSynced.current) {
                 const token = localStorage.getItem("token");
-                if (token) {
-                    router.push("/dashboard");
-                } else {
-                    toast.error("Sign-in timed out.");
-                    router.push("/");
+                if (token && isSignedIn) {
+                    window.location.href = "/dashboard";
                 }
             }
-        }, 10000);
+        }, 8000);
 
         return () => clearTimeout(timer);
-    }, [isLoaded, isSignedIn, router]);
+    }, [isLoaded, isSignedIn]);
 
     return (
         <div className="flex h-screen items-center justify-center bg-background">
