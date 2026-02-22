@@ -12,10 +12,7 @@ export function ClerkWrapper({ children }: { children: React.ReactNode }) {
     const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
     const pathname = usePathname();
 
-    // Skip Clerk entirely on dashboard routes — they use custom JWT auth
-    const isDashboard = pathname?.startsWith("/dashboard");
-
-    if (!publishableKey || isDashboard) {
+    if (!publishableKey) {
         return <>{children}</>;
     }
 

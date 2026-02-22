@@ -6,6 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { LayoutDashboard, Briefcase, FileText, Send, Mail, Settings, LogOut, UserCircle, Globe, TerminalSquare, Zap, Activity, Users, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { useClerk } from "@clerk/nextjs";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { TutorialOverlay } from "@/components/tutorial-overlay";
 
@@ -26,6 +27,7 @@ const navigation = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
+    const clerk = useClerk();
     const pathname = usePathname();
     const [user, setUser] = useState<any>(null);
     const [runningProcesses, setRunningProcesses] = useState<any[]>([]);
@@ -88,10 +90,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         return () => clearInterval(interval);
     }, [user]);
 
-    const handleLogout = () => {
-        localStorage.removeItem("token");
-        toast.info("Logged out successfully");
-        router.push("/");
+    const handleLogout = async () => {
+        try {
+            await clerk.signOut();
+            localStorage.removeItem("token");
+            toast.info("Logged out successfully");
+            router.push("/");
+        } catch (err) {
+            console.error("Logout error:", err);
+            // Fallback: clear local token even if clerk signout fails
+            localStorage.removeItem("token");
+            router.push("/");
+        }
     };
 
     if (!user) return (
