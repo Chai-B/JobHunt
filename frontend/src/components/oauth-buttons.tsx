@@ -49,12 +49,13 @@ export function OAuthButtons() {
             }
 
             // Trigger redirect-based OAuth
-            const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/sso-callback` : "/sso-callback";
+            const origin = typeof window !== 'undefined' ? window.location.origin : 'https://job-hunt-ebon.vercel.app';
+            const absoluteRedirectUrl = `${origin}/sso-callback`;
 
             await signIn.authenticateWithRedirect({
                 strategy,
-                redirectUrl: redirectUrl,
-                redirectUrlComplete: redirectUrl,
+                redirectUrl: absoluteRedirectUrl,
+                redirectUrlComplete: absoluteRedirectUrl,
             });
         } catch (err: any) {
             console.error("Clerk OAuth Error:", err);
