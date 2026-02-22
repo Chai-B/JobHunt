@@ -40,6 +40,12 @@ export function OAuthButtons() {
 
         setOauthLoading(strategy);
         try {
+            // Check if there's already an active session to avoid "Session already exists" error
+            if (signIn?.status === "complete") {
+                window.location.href = "/sso-callback";
+                return;
+            }
+
             const userExistsButNeedsToSignIn = signUp.verifications?.externalAccount?.status === "transferable" && signUp.verifications?.externalAccount?.error?.code === "external_account_exists";
 
             if (userExistsButNeedsToSignIn) {
