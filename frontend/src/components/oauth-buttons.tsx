@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSignIn, useSignUp } from "@clerk/nextjs";
+import { useSignIn, useSignUp, useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { OAuthStrategy } from "@clerk/types";
@@ -28,41 +28,38 @@ function GoogleIcon({ className }: { className?: string }) {
 export function OAuthButtons() {
     const { signIn, isLoaded: signInLoaded } = useSignIn();
     const { signUp, isLoaded: signUpLoaded } = useSignUp();
+    const { isSignedIn } = useUser();
     const [oauthLoading, setOauthLoading] = useState<string | null>(null);
 
     const isReady = signInLoaded && signUpLoaded;
 
     const startOAuth = async (strategy: OAuthStrategy) => {
         if (!signIn || !signUp) {
-            toast.error("Authentication service is not ready. Please refresh the page.");
+            toast.error("Authentication service is not ready. Please refresh.");
             return;
         }
 
         setOauthLoading(strategy);
+
         try {
-            // Check if there's already an active session to avoid "Session already exists" error
-            if (signIn?.status === "complete") {
+            // Check if user is already signed in to Clerk
+            if (isSignedIn) {
                 window.location.href = "/sso-callback";
                 return;
             }
 
-            const userExistsButNeedsToSignIn = signUp.verifications?.externalAccount?.status === "transferable" && signUp.verifications?.externalAccount?.error?.code === "external_account_exists";
+            // Trigger redirect-based OAuth
+            const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/sso-callback` : "/sso-callback";
 
-            if (userExistsButNeedsToSignIn) {
-                const res = await signIn.create({ transfer: true });
-                if (res.status === "complete") {
-                    window.location.href = "/sso-callback";
-                }
-            } else {
-                await signIn.authenticateWithRedirect({
-                    strategy,
-                    redirectUrl: "/sso-callback",
-                    redirectUrlComplete: "/sso-callback",
-                });
-            }
+            await signIn.authenticateWithRedirect({
+                strategy,
+                redirectUrl: redirectUrl,
+                redirectUrlComplete: redirectUrl,
+            });
         } catch (err: any) {
-            const msg = err.errors?.[0]?.longMessage || err.errors?.[0]?.message || err.message || "OAuth failed";
-            toast.error(`Sign-in failed: ${msg}`);
+            console.error("Clerk OAuth Error:", err);
+            const msg = err.errors?.[0]?.longMessage || err.errors?.[0]?.message || err.message || "OAuth initiation failed";
+            toast.error(`Auth failed: ${msg}`);
             setOauthLoading(null);
         }
     };

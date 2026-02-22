@@ -1,6 +1,6 @@
 "use client";
 import { API_BASE_URL } from "@/lib/config";
-import { useUser } from "@clerk/nextjs";
+import { useClerk } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
-  const { isLoaded: clerkLoaded, isSignedIn: clerkSignedIn } = useUser();
+  const clerk = useClerk();
   const router = useRouter();
 
   // If already signed in to Clerk but on the login page, 
@@ -24,10 +24,10 @@ export default function LoginPage() {
   // Redirect to sync to get a new local JWT.
   useEffect(() => {
     const localToken = localStorage.getItem("token");
-    if (clerkLoaded && clerkSignedIn && !localToken) {
+    if (clerk?.session && !localToken) {
       router.push("/sso-callback");
     }
-  }, [clerkLoaded, clerkSignedIn, router]);
+  }, [clerk?.session, router]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
