@@ -62,18 +62,65 @@ export function TutorialOverlay() {
             continuous
             showProgress
             showSkipButton
+            disableScrolling={false}
+            scrollOffset={100}
             callback={handleJoyrideCallback}
             styles={{
                 options: {
-                    primaryColor: '#10b981', // emerald-500
-                    textColor: '#1f2937',
-                    backgroundColor: '#ffffff',
-                    overlayColor: 'rgba(0, 0, 0, 0.65)',
+                    primaryColor: '#ffffff', // Black/White theme
+                    textColor: '#ffffff',
+                    backgroundColor: '#09090b', // card background
+                    overlayColor: 'rgba(0, 0, 0, 0.8)',
                     zIndex: 10000,
                 },
+                tooltip: {
+                    borderRadius: '12px',
+                    border: '1px solid #27272a', // border-border
+                    padding: '24px',
+                    backgroundColor: '#09090b',
+                    boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+                },
                 tooltipContainer: {
-                    textAlign: "left"
+                    textAlign: "left",
+                    fontFamily: 'inherit',
+                },
+                tooltipTitle: {
+                    fontSize: '18px',
+                    fontWeight: 600,
+                    marginBottom: '10px',
+                    color: '#ffffff',
+                },
+                tooltipContent: {
+                    padding: '0',
+                    fontSize: '14px',
+                    lineHeight: '1.6',
+                    color: '#a1a1aa', // muted-foreground
+                },
+                buttonNext: {
+                    backgroundColor: '#ffffff',
+                    color: '#000000',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    padding: '10px 24px',
+                    outline: 'none',
+                },
+                buttonBack: {
+                    color: '#ffffff',
+                    marginRight: '12px',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                },
+                buttonSkip: {
+                    color: '#71717a', // muted-foreground
+                    fontSize: '13px',
+                    fontWeight: 500,
                 }
+            }}
+            locale={{
+                last: "Go to Dashboard",
+                next: "Next",
+                skip: "Skip Tour"
             }}
         />
     );
