@@ -39,20 +39,24 @@ async def connect_gmail(request: Request, current_user: User = Depends(get_curre
         }
     }
     
-    flow = google_auth_oauthlib.flow.Flow.from_client_config(
-        client_config, scopes=SCOPES
-    )
-    
-    # Needs to match the authorized redirect URI
-    flow.redirect_uri = client_config["web"]["redirect_uris"][0]
-    
-    authorization_url, state = flow.authorization_url(
-        access_type='offline',
-        include_granted_scopes='true',
-        prompt='consent'
-    )
-    
-    return {"auth_url": authorization_url, "state": state}
+    try:
+        flow = google_auth_oauthlib.flow.Flow.from_client_config(
+            client_config, scopes=SCOPES
+        )
+        
+        # Needs to match the authorized redirect URI
+        flow.redirect_uri = client_config["web"]["redirect_uris"][0]
+        
+        authorization_url, state = flow.authorization_url(
+            access_type='offline',
+            include_granted_scopes='true',
+            prompt='consent'
+        )
+        
+        return {"auth_url": authorization_url, "state": state}
+    except Exception as e:
+        logger.error(f"Failed to generate Google Auth URL: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Google OAuth configuration error: {str(e)}")
 
 @router.get("/callback")
 async def gmail_callback(request: Request, code: str, state: str, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
@@ -74,10 +78,14 @@ async def gmail_callback(request: Request, code: str, state: str, current_user: 
         }
     }
     
-    flow = google_auth_oauthlib.flow.Flow.from_client_config(
-        client_config, scopes=SCOPES, state=state
-    )
-    flow.redirect_uri = client_config["web"]["redirect_uris"][0]
+    try:
+        flow = google_auth_oauthlib.flow.Flow.from_client_config(
+            client_config, scopes=SCOPES, state=state
+        )
+        flow.redirect_uri = client_config["web"]["redirect_uris"][0]
+    except Exception as e:
+        logger.error(f"Failed to configure Google Auth flow in callback: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Google OAuth configuration error: {str(e)}")
     
     try:
         flow.fetch_token(code=code)
