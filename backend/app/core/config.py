@@ -42,6 +42,11 @@ class Settings(BaseSettings):
     # Clerk (headless sync)
     CLERK_SECRET_KEY: str = ""
     
+    # Google OAuth
+    GOOGLE_CLIENT_ID: str | None = None
+    GOOGLE_CLIENT_SECRET: str | None = None
+    BACKEND_CORS_ORIGINS: list[str] | str | None = None
+    
     model_config = {
         "case_sensitive": True,
         "env_file": ".env",
