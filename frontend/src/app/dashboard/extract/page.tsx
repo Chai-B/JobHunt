@@ -56,12 +56,11 @@ export default function ExtractorPage() {
                 endpoint = "/api/v1/contacts/";
                 payload = { ...entity.data, is_verified: false, source_url: "Universal Extractor" };
             } else if (entity.type === "job") {
-                endpoint = "/api/v1/jobs/";
+                endpoint = "/api/v1/jobs/ingest/manual";
                 payload = {
-                    ...entity.data,
-                    source: "manual",
-                    source_url: "Universal Extractor",
-                    is_active: true
+                    title: entity.data.title || "Unknown Title",
+                    company: entity.data.company || "Unknown Company",
+                    description: entity.data.description || `Extracted role: ${entity.data.title || "Unknown"} at ${entity.data.company || "Unknown"}`,
                 };
             }
 

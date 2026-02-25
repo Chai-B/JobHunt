@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, resumes, jobs, templates, applications, users, settings, scraper, logs, contacts, extract
+from app.api.v1.endpoints import auth, resumes, jobs, templates, applications, users, settings, scraper, logs, contacts, extract, gmail_auth
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
@@ -13,3 +13,4 @@ api_router.include_router(scraper.router, prefix="/scraper", tags=["scraper"])
 api_router.include_router(logs.router, prefix="/logs", tags=["logs"])
 api_router.include_router(contacts.router, prefix="/contacts", tags=["contacts"])
 api_router.include_router(extract.router, prefix="/extract", tags=["extract"])
+api_router.include_router(gmail_auth.router, prefix="/gmail", tags=["gmail"])

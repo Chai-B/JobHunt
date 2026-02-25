@@ -30,4 +30,12 @@ celery_app.conf.beat_schedule = {
         'task': 'run_daily_match_alerts_task',
         'schedule': crontab(hour=9, minute=0), # Run every day at 9:00 AM
     },
+    'run-user-configured-scraping': {
+        'task': 'run_user_configured_scraping_task',
+        'schedule': crontab(minute=0, hour='*/4'), # Every 4 hours
+    },
+    'run-scheduled-cold-mail': {
+        'task': 'run_scheduled_cold_mail_task',
+        'schedule': crontab(minute=30, hour='*/6'), # Every 6 hours
+    },
 }

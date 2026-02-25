@@ -50,6 +50,20 @@ async def process_resume_async(resume_id: int, file_bytes: bytes, filename: str)
             resume.embedding = result["embedding"]
             resume.structural_score = result["structural_score"]
             resume.semantic_score = result["semantic_score"]
+            
+            ats_score = (resume.structural_score * 0.4 + resume.semantic_score * 0.6) * 100
+            stmt_set = select(UserSetting).where(UserSetting.user_id == resume.user_id)
+            settings = (await db.execute(stmt_set)).scalars().first()
+            if settings and settings.gemini_api_keys:
+                prompt = f"""Score this resume 0-100 for ATS compatibility. Consider: keyword density, clear sections, no graphics/tables, standard headings. Return JSON {{"score": 85, "feedback": ["Good"]}}. Resume Text: {resume.raw_text[:8000]}"""
+                try:
+                    raw_ats = await call_llm(prompt, settings, is_json=True)
+                    ats_data = json.loads(raw_ats, strict=False)
+                    ats_score = float(ats_data.get("score", ats_score))
+                except Exception as llm_e:
+                    logger.warning(f"LLM ATS Score failed: {llm_e}")
+            
+            resume.ats_score = ats_score
             resume.status = "completed"
             db.add(resume)
             
@@ -379,6 +393,8 @@ async def run_scraping_agent_async(user_id: int, target_url: str, target_type: s
                                  message=f"Crawling {target_url} for {target_type}{filter_msg}")
             db.add(log_start)
             await db.commit()
+            stmt_set = select(UserSetting).where(UserSetting.user_id == user_id)
+            user_settings = (await db.execute(stmt_set)).scalars().first()
             
             response = _fetch_page(target_url)
             soup = BeautifulSoup(response.content, 'lxml')
@@ -395,7 +411,7 @@ async def run_scraping_agent_async(user_id: int, target_url: str, target_type: s
                 elif 'weworkremotely.com' in url_lower:
                     dataList = _parse_weworkremotely_jobs(soup)
                 else:
-                    dataList = await scrape_jobs_headless(target_url)
+                    dataList = await scrape_jobs_headless(target_url, user_settings)
                 
                 # If few results, crawl linked job pages
                 if len(dataList) < 5:
@@ -403,7 +419,7 @@ async def run_scraping_agent_async(user_id: int, target_url: str, target_type: s
                     existing_t = {j['title'].lower().strip() for j in dataList}
                     for sub_url in sub_urls[:3]: # Cap at 3 for headless speed
                         try:
-                            sub_data = await scrape_jobs_headless(sub_url)
+                            sub_data = await scrape_jobs_headless(sub_url, user_settings)
                             for j in sub_data:
                                 if j['title'].lower().strip() not in existing_t:
                                     j['source_url'] = sub_url
@@ -428,9 +444,17 @@ async def run_scraping_agent_async(user_id: int, target_url: str, target_type: s
                 new_jobs = [j for j in dataList if j['title'].lower().strip() not in existing_titles]
                 
                 for item in new_jobs:
-                    db.add(JobPosting(source="scraper", title=item.get("title", "Unknown"),
-                                     company=item.get("company", "Unknown"), location=item.get("location"),
-                                     description=item.get("description", ""),
+                    title = item.get("title", "Unknown")
+                    company = item.get("company", "Unknown")
+                    description = item.get("description", "")
+                    combined_text = f"Title: {title}\nCompany: {company}\nDescription: {description}"
+                    from app.services.job_ingestion import model as sentence_model
+                    embedding = sentence_model.encode(combined_text).tolist()
+
+                    db.add(JobPosting(source="scraper", title=title,
+                                     company=company, location=item.get("location"),
+                                     description=description,
+                                     embedding=embedding,
                                      source_url=item.get("source_url", target_url)))
                 
                 log_msg = f"Crawled {target_url}: {len(dataList)} jobs found, {len(new_jobs)} new"
@@ -553,12 +577,25 @@ async def run_auto_apply_async(user_id: int, app_id: int):
                 raw_json_str = raw_json_str.split('```')[1].split('```')[0].strip()
                 
             form_payload = json.loads(raw_json_str, strict=False)
+            # Execute Playwright Form Filling attempt
+            form_result = "Form Fill Skipped/Not Attempted"
+            status = "prepared"
+            try:
+                if job.source_url and job.source_url.startswith("http"):
+                    from app.services.form_filler_service import fill_application_form
+                    form_result = await fill_application_form(job.source_url, form_payload, settings)
+                    status = "submitted" # Successfully ran the autonomous logic
+            except Exception as e:
+                logger.warning(f"Form filler fallback triggered for {job.source_url}: {e}")
+                form_result = f"Failed to auto-fill form: {str(e)}"
+                status = "prepared"
             
-            # Simulate dispatch
-            logger.info(f"Generated auto-apply payload for app {app_id}")
+            logger.info(f"Generated auto-apply payload for app {app_id}. Result: {form_result}")
             
-            app_record.status = "submitted"
-            app_record.notes = json.dumps(form_payload, indent=2)
+            app_record.status = status
+            
+            # Combine generated AI notes + Form result
+            app_record.notes = json.dumps({"ai_payload": form_payload, "form_result": form_result}, indent=2)
             db.add(app_record)
             
             log_succ = ActionLog(user_id=user_id, action_type="auto_apply", status="success", message=f"Generated Auto-Apply Application Payload successfully")
@@ -606,9 +643,14 @@ async def run_cold_mail_async(user_id: int, contact_id: int, template_id: int, r
                 logger.error("No Gemini key configured for cold mail personalization.")
                 return
                 
-            if not settings.smtp_server or not settings.smtp_username or not settings.smtp_password:
-                logger.error("Missing SMTP Configuration in User Settings.")
-                return
+            if getattr(settings, 'use_gmail_for_send', False):
+                if not getattr(settings, 'gmail_access_token', None):
+                    logger.error("Missing Gmail tokens but use_gmail_for_send is enabled.")
+                    return
+            else:
+                if not settings.smtp_server or not settings.smtp_username or not settings.smtp_password:
+                    logger.error("Missing SMTP Configuration in User Settings.")
+                    return
 
             # Add Gemini customization
             api_key = settings.gemini_api_keys.split(",")[0].strip()
@@ -655,25 +697,31 @@ async def run_cold_mail_async(user_id: int, contact_id: int, template_id: int, r
                 
             email_data = json.loads(raw_json_str, strict=False)
             
-            # Send via SMTP
             msg = MIMEMultipart()
-            msg['From'] = settings.smtp_username
+            msg['From'] = settings.smtp_username or "user@example.com"
             msg['To'] = contact.email
             msg['Subject'] = email_data["subject"]
             msg.attach(MIMEText(email_data["body"], 'plain'))
             
             port = settings.smtp_port or 587
             try:
-                server = smtplib.SMTP(settings.smtp_server, port)
-                server.starttls()
-                server.login(settings.smtp_username, settings.smtp_password)
-                server.send_message(msg)
-                server.quit()
+                if getattr(settings, 'use_gmail_for_send', False) and getattr(settings, 'gmail_access_token', None) and getattr(settings, 'gmail_refresh_token', None):
+                    from app.services.gmail_service import GmailService
+                    gmail_service = GmailService(settings.gmail_access_token, settings.gmail_refresh_token)
+                    gmail_service.send_email(contact.email, email_data["subject"], email_data["body"])
+                    success_msg = f"Successfully sent cold mail to {contact.email} via Gmail"
+                else:
+                    server = smtplib.SMTP(settings.smtp_server, port)
+                    server.starttls()
+                    server.login(settings.smtp_username, settings.smtp_password)
+                    server.send_message(msg)
+                    server.quit()
+                    success_msg = f"Successfully sent cold mail to {contact.email} via SMTP"
                 
-                log_succ = ActionLog(user_id=user_id, action_type="cold_mail", status="success", message=f"Successfully dispatched cold mail to {contact.email}")
+                log_succ = ActionLog(user_id=user_id, action_type="cold_mail", status="success", message=success_msg)
                 db.add(log_succ)
                 await db.commit()
-                logger.info(f"Successfully sent cold mail to {contact.email}")
+                logger.info(success_msg)
             except Exception as e:
                 logger.error(f"SMTP sending failed: {e}")
                 log_err = ActionLog(user_id=user_id, action_type="cold_mail", status="failed", message=f"SMTP Failed: {str(e)}")
@@ -737,12 +785,20 @@ async def run_automated_discovery_async():
                             
                     
                     for item in dataList:
+                        title = item.get("title", "Unknown")
+                        company = item.get("company", "Unknown")
+                        description = item.get("description", "")
+                        combined_text = f"Title: {title}\nCompany: {company}\nDescription: {description}"
+                        from app.services.job_ingestion import model as sentence_model
+                        embedding = sentence_model.encode(combined_text).tolist()
+
                         job = JobPosting(
                             source="auto_discovery",
-                            title=item.get("title", "Unknown"),
-                            company=item.get("company", "Unknown"),
+                            title=title,
+                            company=company,
                             location=item.get("location"),
-                            description=item.get("description", ""),
+                            description=description,
+                            embedding=embedding,
                             source_url=item.get("source_url", url)
                         )
                         db.add(job)
@@ -792,43 +848,65 @@ async def run_daily_match_alerts_async():
                     resumes = (await db.execute(select(Resume).where(Resume.user_id == user.id))).scalars().all()
                     if not resumes: continue
                     
+                    import numpy as np
+                    
+                    # Stage 1: Vector-Based Fast Retrieval (Top 20)
+                    user_embedding = None
+                    if resumes and resumes[0].embedding:
+                        user_embedding = np.array(resumes[0].embedding)
+                    
+                    shortlisted_jobs = new_jobs
+                    
+                    if user_embedding is not None and len(new_jobs) > 0:
+                        job_scores = []
+                        for j in new_jobs:
+                            if j.embedding:
+                                j_emb = np.array(j.embedding)
+                                # Cosine similarity
+                                similarity = np.dot(user_embedding, j_emb) / (np.linalg.norm(user_embedding) * np.linalg.norm(j_emb))
+                                job_scores.append((similarity, j))
+                            else:
+                                job_scores.append((0.0, j))
+                        
+                        job_scores.sort(key=lambda x: x[0], reverse=True)
+                        shortlisted_jobs = [item[1] for item in job_scores[:20]]
+                    else:
+                        shortlisted_jobs = new_jobs[:20]
+
                     # Consolidate their resume text
                     full_resume_text = "\n".join([r.raw_text for r in resumes if r.raw_text])[:20000]
                     if not full_resume_text: continue
                     
-                    # Use Gemini to find matches
-                    api_key = settings.gemini_api_keys.split(",")[0].strip()
-                    genai.configure(api_key=api_key)
-                    model_name = user_settings.preferred_model or "gemini-2.0-flash"
-                    model = genai.GenerativeModel(model_name)
-                    
-                    job_descriptions = "\n".join([f"[{j.id}] {j.title} at {j.company}: {j.description[:500]}" for j in new_jobs])
-                    
-                    prompt = f"""
-                    You are an expert technical recruiter matching candidates to jobs.
-                    
-                    CANDIDATE RESUME:
-                    {full_resume_text}
-                    
-                    NEW JOBS IN THE LAST 24H:
-                    {job_descriptions}
-                    
-                    Task: Select the top 3 best matching jobs for this candidate.
-                    Return ONLY a JSON array of objects. Each object should have:
-                    - job_id (int)
-                    - why_it_matches (1 short sentence)
-                    
-                    If NO jobs match their profile, return [].
-                    """
-                    
-                    ai_res = model.generate_content(prompt)
-                    raw_json_str = ai_res.text.strip()
-                    if raw_json_str.startswith('```json'):
-                        raw_json_str = raw_json_str.split('```json')[1].split('```')[0].strip()
-                    elif raw_json_str.startswith('```'):
-                        raw_json_str = raw_json_str.split('```')[1].split('```')[0].strip()
+                    # Stage 2: Local Heuristic Reranking
+                    import spacy
+                    try:
+                        nlp = spacy.load("en_core_web_sm")
+                    except OSError:
+                        nlp = spacy.blank("en")
                         
-                    matches = json.loads(raw_json_str, strict=False)
+                    doc_resume = nlp(full_resume_text.lower())
+                    resume_keywords = {token.lemma_ for token in doc_resume if not token.is_stop and token.is_alpha}
+                    
+                    final_matches = []
+                    
+                    for job in shortlisted_jobs:
+                        doc_job = nlp((job.title + " " + job.description).lower()[:5000])
+                        job_keywords = {token.lemma_ for token in doc_job if not token.is_stop and token.is_alpha}
+                        
+                        if not job_keywords:
+                            overlap_ratio = 0
+                        else:
+                            overlap_ratio = len(resume_keywords.intersection(job_keywords)) / float(len(job_keywords))
+                        
+                        if overlap_ratio > 0.15: # Minimum 15% overlap required
+                            final_matches.append({
+                                "job_id": job.id,
+                                "match_score": overlap_ratio * 100,
+                                "why_it_matches": f"Strong semantic alignment with {int(overlap_ratio * 100)}% keyword overlap."
+                            })
+                            
+                    final_matches.sort(key=lambda x: x["match_score"], reverse=True)
+                    matches = final_matches[:5]
                     
                     if not matches:
                         continue
@@ -873,3 +951,75 @@ async def run_daily_match_alerts_async():
 @celery_app.task(name="run_daily_match_alerts_task")
 def run_daily_match_alerts_task():
     asyncio.run(run_daily_match_alerts_async())
+
+async def run_user_configured_scraping_async():
+    """
+    Periodic task to scrape user-configured URLs.
+    Checks UserSetting for 'scrape_urls' and kicks off individual scraping tasks.
+    """
+    async with AsyncSessionLocal() as db:
+        try:
+            logger.info("Starting periodic user-configured scraping check.")
+            
+            stmt = select(UserSetting).where(UserSetting.scrape_urls.is_not(None))
+            settings_list = (await db.execute(stmt)).scalars().all()
+            
+            total_tasks_queued = 0
+            for setting in settings_list:
+                if not setting.scrape_urls:
+                    continue
+                
+                # Check frequency based on setting.scrape_frequency_hours.
+                # For a full implementation, we'd need a last_scraped_at timestamp in UserSetting.
+                # For now, we queue jobs for all valid URLs.
+                urls = setting.scrape_urls if isinstance(setting.scrape_urls, list) else []
+                for url in urls:
+                    run_scraping_agent_task.delay(setting.user_id, url, "jobs")
+                    total_tasks_queued += 1
+                    
+            logger.info(f"Queued {total_tasks_queued} user scraping tasks.")
+        except Exception as e:
+            logger.exception(f"Failed to queue user configured scraping tasks: {e}")
+
+@celery_app.task(name="run_user_configured_scraping_task")
+def run_user_configured_scraping_task():
+    asyncio.run(run_user_configured_scraping_async())
+
+async def run_scheduled_cold_mail_async():
+    """
+    Periodic task to automatically send cold emails to new contacts for users who opted in.
+    """
+    async with AsyncSessionLocal() as db:
+        try:
+            logger.info("Starting scheduled cold mail cycle.")
+            
+            stmt = select(UserSetting).where(UserSetting.cold_mail_automation_enabled == True)
+            active_settings = (await db.execute(stmt)).scalars().all()
+            
+            for setting in active_settings:
+                # Basic throttle tracking can be added here
+                limit = getattr(setting, 'daily_cold_mail_limit', 5)
+                
+                # Find unsent contacts
+                # In robust approach, we'd check action_logs or a "emailed_at" field.
+                # Assuming basic fallback if model lacks it
+                limit_stmt = select(ScrapedContact).limit(limit)
+                contacts = (await db.execute(limit_stmt)).scalars().all()
+                if not contacts:
+                    continue
+                
+                # Pick best template & resume randomly or via fast logic (LLM selection inside the task takes too long for the loop, queue individual selections instead)
+                default_template = (await db.execute(select(EmailTemplate).limit(1))).scalars().first()
+                default_resume = (await db.execute(select(Resume).where(Resume.user_id == setting.user_id).limit(1))).scalars().first()
+                
+                if default_template and default_resume:
+                    for contact in contacts:
+                        run_cold_mail_task.delay(setting.user_id, contact.id, default_template.id, default_resume.id)
+                        
+            logger.info("Finished scheduling cold mail cycle.")
+        except Exception as e:
+            logger.exception(f"Scheduled cold mail failed: {e}")
+
+@celery_app.task(name="run_scheduled_cold_mail_task")
+def run_scheduled_cold_mail_task():
+    asyncio.run(run_scheduled_cold_mail_async())

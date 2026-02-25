@@ -78,6 +78,40 @@ async def list_resumes(
     
     return {"items": items, "total": total}
 
+@router.post("/{resume_id}/extract-to-profile")
+async def extract_resume_to_profile(
+    resume_id: int,
+    db: AsyncSession = Depends(deps.get_personal_db),
+    current_user: User = Depends(deps.get_current_active_user)
+) -> Any:
+    """Uses LLM to extract profile information from the parsed resume text to auto-fill the profile."""
+    res = await db.execute(select(Resume).where(Resume.id == resume_id, Resume.user_id == current_user.id))
+    resume = res.scalars().first()
+    if not resume or not resume.raw_text:
+        raise HTTPException(status_code=404, detail="Resume not found or not fully parsed yet.")
+        
+    from app.db.models.setting import UserSetting
+    from app.services.llm import call_llm
+    import json
+    
+    settings_res = await db.execute(select(UserSetting).where(UserSetting.user_id == current_user.id))
+    settings = settings_res.scalars().first()
+    
+    if not settings or not settings.gemini_api_keys:
+        raise HTTPException(status_code=400, detail="Gemini API Key required in Settings to run AI extraction.")
+        
+    prompt = f"""Extract the following profile information from this resume text. If you cannot find a certain field, leave it empty.
+Return strictly valid JSON: {{"full_name": "", "email": "", "phone": "", "location": "", "linkedin_url": "", "bio": "", "skills": ""}}.
+Resume Text:
+{resume.raw_text[:10000]}"""
+
+    try:
+        raw_json = await call_llm(prompt, settings, is_json=True)
+        data = json.loads(raw_json, strict=False)
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LLM Profile Extraction failed: {str(e)}")
+
 @router.put("/{resume_id}", response_model=ResumeRead)
 async def update_resume(
     resume_id: int,

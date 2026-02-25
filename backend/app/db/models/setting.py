@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Float, JSON
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql import func
 from app.db.base import Base
@@ -31,10 +31,21 @@ class UserSetting(Base):
     smtp_password = Column(String, nullable=True) # In a real prod environment, encrypt this.
 
     # Advanced Job Constraints
+    scrape_urls = Column(JSON, nullable=True) # List of specific URLs to scrape periodically
+    match_threshold = Column(Float, nullable=True, default=70.0) # min score to auto-shortlist
+    auto_apply_enabled = Column(Boolean, nullable=True, default=False)
+    cold_mail_automation_enabled = Column(Boolean, nullable=True, default=False)
+
     target_roles = Column(String, nullable=True, default="Software Engineer, Full Stack Developer")
     target_locations = Column(String, nullable=True, default="Remote, USA")
     daily_apply_limit = Column(Integer, nullable=True, default=10)
+    daily_cold_mail_limit = Column(Integer, nullable=True, default=5)
     scrape_frequency_hours = Column(Integer, nullable=True, default=24)
+
+    # Gmail Integration
+    gmail_refresh_token = Column(String, nullable=True) # In a real app, encrypt this
+    gmail_access_token = Column(String, nullable=True) # In a real app, encrypt this
+    use_gmail_for_send = Column(Boolean, nullable=True, default=False)
 
     # Audit timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())

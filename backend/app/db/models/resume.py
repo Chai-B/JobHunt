@@ -22,6 +22,7 @@ class Resume(Base):
     embedding = Column(Vector(384)) # matches all-MiniLM-L6-v2 dimensionality
     structural_score = Column(Float, nullable=True)
     semantic_score = Column(Float, nullable=True)
+    ats_score = Column(Float, nullable=True)
 
     status = Column(String, default="pending") # pending, processing, completed, error
     

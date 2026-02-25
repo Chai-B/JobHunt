@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { User, Link as LinkIcon, BriefcaseBusiness, Activity, Info } from "lucide-react";
+import { User, Link as LinkIcon, BriefcaseBusiness, Activity, Info, Bot } from "lucide-react";
 
 const Tip = ({ text }: { text: string }) => (
     <span className="relative inline-flex items-center ml-1.5 cursor-help group/tip">
@@ -90,6 +90,38 @@ export default function ProfilePage() {
         }
     };
 
+    const handleAutoFill = async () => {
+        setLoading(true);
+        try {
+            const token = localStorage.getItem("token");
+            const rs = await fetch(`${API_BASE_URL}/api/v1/resumes/`, { headers: { Authorization: `Bearer ${token}` } });
+            const rData = await rs.json();
+            if (!rData.items || rData.items.length === 0) throw new Error("Please upload a resume first.");
+
+            const extractRes = await fetch(`${API_BASE_URL}/api/v1/resumes/${rData.items[0].id}/extract-to-profile`, {
+                method: "POST", headers: { Authorization: `Bearer ${token}` }
+            });
+            if (!extractRes.ok) {
+                const errData = await extractRes.json();
+                throw new Error(errData.detail || "Extraction failed - ensure Gemini Key is saved in Settings.");
+            }
+            const ed = await extractRes.json();
+            setFormData(prev => ({
+                ...prev,
+                full_name: ed.full_name || prev.full_name,
+                phone: ed.phone || prev.phone,
+                location: ed.location || prev.location,
+                bio: ed.bio || prev.bio,
+                linkedin_url: ed.linkedin_url || prev.linkedin_url
+            }));
+            toast.success("Form filled! Review values and Save.");
+        } catch (e: any) {
+            toast.error(e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     if (loading) return <div className="p-10 flex items-center justify-center text-muted-foreground"><Activity className="w-5 h-5 mr-3 animate-pulse" /> Loading profile data...</div>;
 
     const inputClass = "bg-background border-border focus-visible:ring-ring text-foreground h-11 w-full rounded-md shadow-sm transition-colors focus:border-ring placeholder:text-muted-foreground";
@@ -102,7 +134,12 @@ export default function ProfilePage() {
                     <User className="w-7 h-7" />
                     Profile
                 </h1>
-                <p className="text-sm text-muted-foreground mt-2 max-w-2xl">Manage your personal information and links used for job applications.</p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
+                    <p className="text-sm text-muted-foreground max-w-2xl">Manage your personal information and links used for job applications.</p>
+                    <Button type="button" variant="outline" onClick={handleAutoFill} disabled={loading} className="gap-2 self-start sm:self-auto shadow-sm">
+                        <Bot className="w-4 h-4" /> AI Auto-Fill from Latest Resume
+                    </Button>
+                </div>
             </div>
 
             <form onSubmit={handleSave} className="space-y-10">

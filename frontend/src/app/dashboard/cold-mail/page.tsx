@@ -75,7 +75,7 @@ export default function ColdMailPage() {
         setSendingId(contactId);
         try {
             const token = localStorage.getItem("token");
-            const res = await fetch(`${API_BASE_URL}/api/v1/scraper/cold-mail`, {
+            const res = await fetch(`${API_BASE_URL}/api/v1/scraper/dispatch-mail`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -110,7 +110,7 @@ export default function ColdMailPage() {
         for (const contact of contacts.slice(0, 10)) {
             try {
                 const token = localStorage.getItem("token");
-                await fetch(`${API_BASE_URL}/api/v1/scraper/cold-mail`, {
+                await fetch(`${API_BASE_URL}/api/v1/scraper/dispatch-mail`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",

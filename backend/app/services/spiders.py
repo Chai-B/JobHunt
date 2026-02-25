@@ -2,8 +2,7 @@ import os
 import re
 import json
 import logging
-import asyncio
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 try:
     from playwright.async_api import async_playwright
@@ -15,7 +14,7 @@ from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
-# Load spaCy NLP engine statically (lazy load)
+# Lazy load spaCy engine
 _nlp = None
 
 def get_nlp():
@@ -24,13 +23,16 @@ def get_nlp():
         try:
             _nlp = spacy.load("en_core_web_sm")
         except OSError:
-            logger.warning("spaCy model 'en_core_web_sm' not found. Ensure it was downloaded.")
-            _nlp = spacy.blank("en") # fallback to blank tokenizer
+            logger.warning("spaCy 'en_core_web_sm' missing. Run: python -m spacy download en_core_web_sm")
+            _nlp = spacy.blank("en")
     return _nlp
 
 def extract_entities(text: str) -> Dict[str, set]:
-    """Use spaCy NER to find orgs and locations from text block"""
+    """Extract Orgs and Locations using local ML NER"""
     nlp = get_nlp()
+    # Spacy max length guard
+    if len(text) > 100000:
+        text = text[:100000]
     doc = nlp(text)
     orgs = set()
     locs = set()
@@ -42,7 +44,7 @@ def extract_entities(text: str) -> Dict[str, set]:
     return {"orgs": orgs, "locs": locs}
 
 def is_job_title(text: str) -> bool:
-    """Heuristics to identify if a short string is a likely job title"""
+    """Fast local heuristic for detecting job titles."""
     text = text.lower().strip()
     if len(text) < 5 or len(text) > 80:
         return False
@@ -55,28 +57,28 @@ def is_job_title(text: str) -> bool:
     ]
     return any(kw in text for kw in keywords)
 
-async def scrape_jobs_headless(url: str) -> List[Dict[str, Any]]:
+async def scrape_jobs_headless(url: str, user_settings=None) -> List[Dict[str, Any]]:
     """
-    Spins up Playwright, loads the JS-heavy career page, 
-    and uses ML heuristics to extract job postings.
+    Cost-free, high-speed local scraping sequence:
+    1. Fast Playwright DOM snapshot
+    2. Try Schema.org JSON-LD parsing (Industry Standard)
+    3. Fallback to DOM traversal + spaCy local ML Entity Recognition
+    NO LLM TOKEN USAGE.
     """
     jobs = []
-    logger.info(f"Starting headless scrape for: {url}")
+    logger.info(f"Starting Local ML Scrape for: {url}")
     
     try:
         async with async_playwright() as p:
-            # We use chromium, headless, and block media/images for speed
             browser = await p.chromium.launch(args=["--disable-gpu", "--no-sandbox", "--disable-dev-shm-usage"])
             context = await browser.new_context(
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             )
             
-            # Block images and CSS
+            # Block heavy assets for speed
             await context.route("**/*", lambda route: route.continue_() if route.request.resource_type in ["document", "script", "xhr", "fetch"] else route.abort())
             
             page = await context.new_page()
-            
-            # Navigate and wait for network idle to ensure JS framework renders
             response = await page.goto(url, wait_until="networkidle", timeout=30000)
             
             if not response or not response.ok:
@@ -84,17 +86,13 @@ async def scrape_jobs_headless(url: str) -> List[Dict[str, Any]]:
                 await browser.close()
                 return jobs
                 
-            # Allow a tiny bit more time for custom render loops
             await page.wait_for_timeout(2000)
-            
-            # Extract fully rendered HTML
             content = await page.content()
             await browser.close()
             
-            # Parse HTML
             soup = BeautifulSoup(content, 'html.parser')
             
-            # Strategy 1: JSON-LD (Always the best if it exists)
+            # --- STRATEGY 1: JSON-LD (Perfect Accuracy, 0 Cost) ---
             for script in soup.find_all('script', type='application/ld+json'):
                 try:
                     data = json.loads(script.string)
@@ -109,7 +107,6 @@ async def scrape_jobs_headless(url: str) -> List[Dict[str, Any]]:
                         item_type = str(item.get('@type', ''))
                         if 'JobPosting' in item_type:
                             title = str(item.get('title') or item.get('name', '')).strip()
-                            
                             org = item.get('hiringOrganization', {})
                             company = str(org.get('name', '')) if isinstance(org, dict) else ''
                             
@@ -124,48 +121,40 @@ async def scrape_jobs_headless(url: str) -> List[Dict[str, Any]]:
                             
                             if title:
                                 jobs.append({
-                                    "title": title,
-                                    "company": company or "Unknown",
-                                    "location": location or "Not specified",
-                                    "description": BeautifulSoup(desc, 'html.parser').get_text(separator=' ', strip=True)[:500] if desc else title
+                                    "title": title[:200],
+                                    "company": company[:200] or "Unknown Company",
+                                    "location": location[:200] or "Not specified",
+                                    "description": BeautifulSoup(desc, 'html.parser').get_text(separator=' ', strip=True)[:1000] if desc else title
                                 })
-                except Exception as e:
-                    logger.debug(f"JSON-LD parse error: {e}")
+                except Exception as eval_e:
+                    logger.debug(f"JSON-LD pass skipped: {eval_e}")
                     
             if jobs:
-                logger.info(f"Found {len(jobs)} jobs via JSON-LD on {url}")
-                # Remove duplicates by title
                 unique_jobs = {j['title'].lower(): j for j in jobs}.values()
+                logger.info(f"Successfully extracted {len(unique_jobs)} via schema.org JSON-LD.")
                 return list(unique_jobs)[:50]
                 
-            # Strategy 2: NLP/Heuristic DOM Traversal
-            # Since JSON-LD failed, we parse tags (a, h2, h3, li, div) that look like job cards
-            logger.info("Falling back to DOM Heuristics + NLP")
+            # --- STRATEGY 2: Local ML DOM Traversal (High Accuracy, 0 Cost) ---
+            logger.info("JSON-LD failed. Falling back to Local ML (spaCy) DOM parser.")
             
-            # Finding typical job card containers
-            for element in soup.find_all(['a', 'h2', 'h3', 'li', 'div']):
+            for element in soup.find_all(['a', 'h2', 'h3', 'li', 'div', 'article']):
                 text = element.get_text(separator=" ", strip=True)
                 
-                # Fast regex bailout
-                if len(text) < 5 or len(text) > 300:
+                if len(text) < 10 or len(text) > 800:
                     continue
                     
-                # Often the element itself is the title, or it's a card containing title + location
-                # We check the first distinct string
                 parts = [p.strip() for p in text.split('\n') if p.strip()]
                 if not parts:
                     continue
                     
                 candidate_title = parts[0]
                 if is_job_title(candidate_title):
-                    # We found a job card! Let's use NLP on the whole text block to identify company/loc
                     entities = extract_entities(text)
                     
-                    company = "Unknown"
+                    company = "Unknown Company"
                     location = "Not specified"
                     
                     if entities["orgs"]:
-                        # Pick the first org, assuming it's the hiring company
                         company = list(entities["orgs"])[0]
                     if entities["locs"]:
                         location = list(entities["locs"])[0]
@@ -174,13 +163,13 @@ async def scrape_jobs_headless(url: str) -> List[Dict[str, Any]]:
                         
                     jobs.append({
                         "title": candidate_title[:200],
-                        "company": company,
-                        "location": location,
-                        "description": text[:500]
+                        "company": company[:200],
+                        "location": location[:200],
+                        "description": text[:1000]
                     })
                     
-            # Deduplicate heuristics
             unique_jobs = {j['title'].lower(): j for j in jobs}.values()
+            logger.info(f"Successfully extracted {len(unique_jobs)} via local heuristics.")
             return list(unique_jobs)[:50]
 
     except Exception as e:
