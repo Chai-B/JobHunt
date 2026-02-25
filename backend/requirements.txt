@@ -125,3 +125,5 @@ vine==5.1.0
 watchfiles==1.1.1
 wcwidth==0.6.0
 websockets==16.0
+pandas>=2.0.0
+google-auth-oauthlib>=1.2.0
