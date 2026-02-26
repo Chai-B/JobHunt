@@ -16,6 +16,7 @@ from app.db.models.application import Application
 from app.db.models.email_template import EmailTemplate
 from app.db.models.action_log import ActionLog
 from app.services.resume_parser import parse_and_embed_resume
+from app.core.config import settings as app_settings
 import requests
 from bs4 import BeautifulSoup
 import google.generativeai as genai
@@ -772,7 +773,7 @@ Return STRICTLY valid JSON ONLY:
                 body = body.replace(tag, str(value) if value else "")
 
             # Resolve Disk-based Resume Attachment using absolute path from settings
-            UPLOAD_DIR = settings.UPLOAD_DIR
+            UPLOAD_DIR = app_settings.UPLOAD_DIR
             file_path = UPLOAD_DIR / f"{resume.id}_{resume.filename}"
             has_attachment = file_path.exists()
             logger.info(f"Checking for resume at {file_path}. Exists: {has_attachment}")

@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 
 from app.api import deps
+from app.core.config import settings
 from app.db.models.user import User
 from app.db.models.resume import Resume
 from app.schemas.resume import ResumeRead, ResumeList, ResumeUpdate
