@@ -46,6 +46,7 @@ class UserSetting(Base):
     gmail_refresh_token = Column(String, nullable=True) # In a real app, encrypt this
     gmail_access_token = Column(String, nullable=True) # In a real app, encrypt this
     use_gmail_for_send = Column(Boolean, nullable=True, default=False)
+    last_inbox_sync_time = Column(DateTime(timezone=True), nullable=True)
 
     # Audit timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())

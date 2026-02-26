@@ -76,7 +76,7 @@ async def dispatch_cold_mail(
     
     from app.worker.tasks import run_cold_mail_async
     task = asyncio.create_task(
-        run_cold_mail_async(current_user.id, req.contact_id, req.template_id, req.resume_id)
+        run_cold_mail_async(current_user.id, req.contact_id, req.template_id, req.resume_id, req.attach_resume)
     )
     task_id = register_task(current_user.id, "cold_mail", task)
     return {"message": f"Cold Mail Agent dispatched for {contact.email}.", "task_id": task_id}

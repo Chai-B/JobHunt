@@ -8,10 +8,15 @@ class Application(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    job_id = Column(Integer, ForeignKey("job_postings.id", ondelete="CASCADE"), nullable=False, index=True)
+    job_id = Column(Integer, ForeignKey("job_postings.id", ondelete="CASCADE"), nullable=True, index=True)
     resume_id = Column(Integer, ForeignKey("resumes.id", ondelete="SET NULL"), nullable=True) # Resume used
     
-    # State Machine: discovered, shortlisted, prepared, submitted, acknowledged, responded, closed
+    # Ad-hoc application details (e.g. for Cold Mails without a formal JobPosting)
+    company_name = Column(String, nullable=True)
+    job_title = Column(String, nullable=True)
+    application_type = Column(String, default="Standard") # 'Standard', 'Cold Mail'
+
+    # State Machine: discovered, shortlisted, prepared, submitted, acknowledged, responded, closed, interviewing, rejected, offer
     status = Column(String, nullable=False, default="shortlisted", index=True)
     
     notes = Column(Text, nullable=True)

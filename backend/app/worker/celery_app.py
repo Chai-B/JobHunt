@@ -38,4 +38,8 @@ celery_app.conf.beat_schedule = {
         'task': 'run_scheduled_cold_mail_task',
         'schedule': crontab(minute=30, hour='*/6'), # Every 6 hours
     },
+    'run-periodic-inbox-sync': {
+        'task': 'run_periodic_inbox_sync_task',
+        'schedule': crontab(minute=0, hour='*/2'), # Every 2 hours
+    },
 }

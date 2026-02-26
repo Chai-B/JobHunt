@@ -659,7 +659,7 @@ async def run_auto_apply_async(user_id: int, app_id: int):
 def run_auto_apply_task(user_id: int, app_id: int):
     asyncio.run(run_auto_apply_async(user_id, app_id))
 
-async def run_cold_mail_async(user_id: int, contact_id: int, template_id: int, resume_id: int):
+async def run_cold_mail_async(user_id: int, contact_id: int, template_id: int, resume_id: int, attach_resume: bool = True):
     async with AsyncSessionLocal() as db:
         try:
             logger.info(f"User {user_id} starting cold-mail dispatch for contact {contact_id}")
@@ -722,54 +722,8 @@ async def run_cold_mail_async(user_id: int, contact_id: int, template_id: int, r
             subject = template.subject
             body = template.body_text
             
-            # We want to smartly remove sentences that contain tags with NO data
-            # Doing this via LLM is safest to maintain grammar and punctuation.
-            # Use regex to find ALL tags effectively
-            all_tags = set(re.findall(r'{{(.*?)}}', subject + "\n" + body))
-            missing_tags = [
-                tag.strip() for tag in all_tags 
-                if tag.strip() in val_map and (not val_map[tag.strip()] or str(val_map[tag.strip()]).strip() == "")
-            ]
-            
-            if missing_tags and settings.gemini_api_keys:
-                fallback_prompt = f"""You are a precise email text processor.
-The following email template contains un-handled double-bracket variables.
-The specific variables listed in MISSING_TAGS have no user data available.
-
-CRITICAL INSTRUCTIONS:
-1. You must CAREFULLY delete or rewrite ONLY the specific clause, sentence, or phrase that relied on the missing variables listed below.
-2. If a variable is missing, you must also remove any introductory or descriptive phrases associated with it (e.g., "My portfolio, which includes {{portfolio}}," should be deleted entirely if {{portfolio}} is missing).
-3. DO NOT modify, resolve, or remove ANY OTHER `{{{{variables}}}}` present in the text. You must output all other `{{{{variables}}}}` EXACTLY as they appear in the original template.
-4. If the subject contains the missing tag, modify the subject.
-5. Fix any resulting orphaned punctuation (e.g., double spaces, trailing commas, or weird periods).
-6. Do not invent replacement fake names or data. Just structure the sentence around the gap.
-
-MISSING_TAGS: {', '.join(missing_tags)}
-
-SUBJECT_TEMPLATE:
-{subject}
-
-BODY_TEMPLATE:
-{body}
-
-Return STRICTLY valid JSON ONLY:
-{{
-  "subject": "<Cleaned Subject line>",
-  "body_text": "<Cleaned Body text>"
-}}
-"""
-                try:
-                    from app.services.llm import call_llm
-                    import json
-                    # Force temperature=0 for deterministic proofreading
-                    cleaned_str = await call_llm(fallback_prompt, settings, is_json=True, temperature=0.0)
-                    cleaned_data = json.loads(cleaned_str, strict=False)
-                    subject = cleaned_data.get("subject", subject)
-                    body = cleaned_data.get("body_text", body)
-                except Exception as e:
-                    logger.warning(f"Fallback cleaner failed: {e}. Defaulting to string replacement.")
-
             # Do final standard replacement for all tags with regex for space tolerance
+            import re
             def replace_tag(match):
                 tag_name = match.group(1).strip()
                 return str(val_map.get(tag_name, match.group(0))) # Fallback to original if not in map
@@ -787,15 +741,24 @@ Return STRICTLY valid JSON ONLY:
             # Actually, the string replacement above handles filling them with "". 
             # The LLM step above is the primary cleaner. 
             
-            # Resolve Disk-based Resume Attachment using absolute path from settings
-            UPLOAD_DIR = app_settings.UPLOAD_DIR
-            file_path = UPLOAD_DIR / f"{resume.id}_{resume.filename}"
-            has_attachment = file_path.exists()
-            logger.info(f"Checking for resume at {file_path}. Exists: {has_attachment}")
+            # Handle Attachments
             attachment_data = None
-            if has_attachment:
-                with open(file_path, "rb") as f:
-                    attachment_data = f.read()
+            has_attachment = False
+            if attach_resume:
+                # 1. Prioritize Cloud Native byte storage
+                if getattr(resume, "file_data", None):
+                    attachment_data = resume.file_data
+                    has_attachment = True
+                    logger.info(f"Loaded resume {resume.id} from Database Cache.")
+                else:
+                    # 2. Fallback to Disk
+                    UPLOAD_DIR = app_settings.UPLOAD_DIR
+                    file_path = UPLOAD_DIR / f"{resume.id}_{resume.filename}"
+                    if file_path.exists():
+                        with open(file_path, "rb") as f:
+                            attachment_data = f.read()
+                        has_attachment = True
+                        logger.info(f"Loaded resume {resume.id} from Disk Fallback.")
 
             msg = MIMEMultipart()
             msg['From'] = settings.smtp_username or "user@example.com"
@@ -828,6 +791,24 @@ Return STRICTLY valid JSON ONLY:
                 
                 log_succ = ActionLog(user_id=user_id, action_type="cold_mail", status="success", message=success_msg)
                 db.add(log_succ)
+                
+                # --- Tracker: Create Application Record ---
+                from app.db.models.application import Application
+                from sqlalchemy.sql import func
+                new_app = Application(
+                    user_id=user_id,
+                    job_id=None,
+                    resume_id=resume.id,
+                    company_name=contact.company,
+                    job_title=contact.role or "General Application",
+                    application_type="Cold Mail",
+                    status="applied",
+                    notes=f"Cold Mail successfully sent to {contact.name} ({contact.email}).",
+                    applied_at=func.now()
+                )
+                db.add(new_app)
+                # ------------------------------------------
+
                 await db.commit()
                 logger.info(success_msg)
             except Exception as e:
@@ -1131,3 +1112,26 @@ async def run_scheduled_cold_mail_async():
 @celery_app.task(name="run_scheduled_cold_mail_task")
 def run_scheduled_cold_mail_task():
     asyncio.run(run_scheduled_cold_mail_async())
+
+async def run_periodic_inbox_sync_async():
+    """
+    Periodic task to automatically scan for job updates (Interviewing, Rejected, Offer)
+    using the zero-LLM heuristic crawler across all active users.
+    """
+    async with AsyncSessionLocal() as db:
+        try:
+            logger.info("Starting global periodic Heuristic Inbox Sync")
+            stmt = select(UserSetting).where(UserSetting.gmail_access_token.is_not(None))
+            active_settings = (await db.execute(stmt)).scalars().all()
+            
+            for setting in active_settings:
+                # Fire the sync async pipeline
+                await run_inbox_scanner_async(setting.user_id)
+                
+            logger.info("Finished global periodic Heuristic Inbox Sync")
+        except Exception as e:
+            logger.exception(f"Global periodic inbox sync failed: {e}")
+
+@celery_app.task(name="run_periodic_inbox_sync_task")
+def run_periodic_inbox_sync_task():
+    asyncio.run(run_periodic_inbox_sync_async())

@@ -9,6 +9,9 @@ from app.db.models.application import Application
 from app.schemas.application import ApplicationCreate, ApplicationRead, ApplicationUpdate
 from app.services.application_engine import ApplicationEngine
 from app.worker.tasks import run_auto_apply_task
+from app.services.inbox_scanner import run_inbox_scanner_async
+from app.services.task_registry import register_task
+import asyncio
 
 router = APIRouter()
 
@@ -98,3 +101,17 @@ async def trigger_auto_apply(
     
     run_auto_apply_task.delay(current_user.id, app_id)
     return {"message": "Autonomous Agent dispatched to apply for this job."}
+
+@router.post("/sync-inbox", status_code=202)
+async def trigger_inbox_sync(
+    current_user: User = Depends(deps.get_current_active_user)
+) -> Any:
+    """
+    Triggers the Inbox Scanner service to look for job tracking updates.
+    """
+    task = asyncio.create_task(
+        run_inbox_scanner_async(current_user.id)
+    )
+    task_id = register_task(current_user.id, "inbox_sync", task)
+    
+    return {"message": "Inbox sync started. Check Logs for processing updates.", "task_id": task_id}

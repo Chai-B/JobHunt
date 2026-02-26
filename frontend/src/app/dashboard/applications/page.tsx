@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { PlayCircle, CheckCircle, Flag, XCircle, Mail, Send, Activity, Briefcase, Settings, Info, Zap } from "lucide-react";
+import { PlayCircle, CheckCircle, Flag, XCircle, Mail, Send, Activity, Briefcase, Settings, Info, Zap, RefreshCw } from "lucide-react";
 
 const Tip = ({ text }: { text: string }) => (
     <span className="relative inline-flex items-center ml-1.5 cursor-help group/tip">
@@ -101,6 +101,20 @@ export default function ApplicationsPage() {
         }
     };
 
+    const syncInbox = async () => {
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${API_BASE_URL}/api/v1/applications/sync-inbox`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error("Failed to trigger inbox sync.");
+            toast.success("Inbox Scanner dispatched. Updates will appear shortly.");
+        } catch (err: any) {
+            toast.error(err.message);
+        }
+    };
+
     const bulkAutoApply = async () => {
         const prepared = applications.filter((a: any) => a.status === "prepared");
         if (prepared.length === 0) {
@@ -117,7 +131,11 @@ export default function ApplicationsPage() {
             case "shortlisted": return <Badge variant="secondary" className="bg-secondary text-muted-foreground border-border">Awaiting Review</Badge>;
             case "prepared": return <Badge variant="outline" className="border-border text-foreground">Ready to Apply</Badge>;
             case "processing": return <Badge variant="outline" className="border-foreground text-foreground animate-pulse">Processing...</Badge>;
+            case "applied":
             case "submitted": return <Badge variant="default" className="bg-foreground text-background">Applied</Badge>;
+            case "interviewing": return <Badge variant="default" className="bg-primary text-primary-foreground border-primary">Interviewing</Badge>;
+            case "offer": return <Badge variant="default" className="bg-green-600/90 hover:bg-green-600 text-white border-green-700">Offer Received</Badge>;
+            case "rejected": return <Badge variant="destructive" className="bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20">Rejected</Badge>;
             case "error": return <Badge variant="destructive" className="bg-destructive text-destructive-foreground">Error</Badge>;
             case "acknowledged": return <Badge variant="outline" className="border-border text-foreground font-medium">Acknowledged</Badge>;
             case "responded": return <Badge variant="default" className="bg-foreground text-background">Lead Captured</Badge>;
@@ -140,12 +158,15 @@ export default function ApplicationsPage() {
                     <p className="text-muted-foreground mt-1 text-sm">Track and manage your application pipeline.</p>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setShowConfig(!showConfig)} className="gap-2 border-border text-foreground">
-                        <Settings className="w-4 h-4" /> Config
+                    <Button variant="outline" size="sm" onClick={syncInbox} className="gap-2 border-border text-foreground hover:bg-secondary rounded-lg">
+                        <RefreshCw className="w-3.5 h-3.5" /> Sync Inbox
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setShowConfig(!showConfig)} className="gap-2 border-border text-foreground rounded-lg">
+                        <Settings className="w-3.5 h-3.5" /> Config
                     </Button>
                     {preparedCount > 0 && (
-                        <Button size="sm" onClick={bulkAutoApply} className="gap-2 bg-foreground text-background hover:opacity-90">
-                            <Zap className="w-4 h-4" /> Auto-Apply All ({preparedCount})
+                        <Button size="sm" onClick={bulkAutoApply} className="gap-2 bg-foreground text-background hover:opacity-90 rounded-lg shadow-md">
+                            <Zap className="w-3.5 h-3.5" /> Auto ({preparedCount})
                         </Button>
                     )}
                 </div>
@@ -228,10 +249,12 @@ export default function ApplicationsPage() {
                                     )}
                                 </div>
                                 <div className="text-xl font-medium text-foreground mb-1">
-                                    Job ID: {app.job_id}
+                                    {app.job_title || `Job ID: ${app.job_id}`}
+                                    {app.company_name && <span className="text-muted-foreground ml-2">@ {app.company_name}</span>}
                                 </div>
-                                <div className="text-sm text-muted-foreground">
-                                    Using Resume: <span className="text-foreground font-medium">#{app.resume_id || 'NULL'}</span>
+                                <div className="text-sm flex gap-4 text-muted-foreground">
+                                    <span>Type: <span className="text-foreground font-medium">{app.application_type || "Standard"}</span></span>
+                                    <span>Resume: <span className="text-foreground font-medium">#{app.resume_id || 'NULL'}</span></span>
                                 </div>
                                 {app.status === "submitted" && app.notes && (
                                     <div className="mt-4 p-4 bg-secondary/50 rounded-md border border-border text-foreground font-mono text-xs overflow-auto max-h-48 whitespace-pre-wrap">

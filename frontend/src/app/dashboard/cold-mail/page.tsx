@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -109,6 +110,7 @@ export default function ColdMailPage() {
     const [userProfile, setUserProfile] = useState<any>(null);
     const [showValidationDialog, setShowValidationDialog] = useState(false);
     const [missingTags, setMissingTags] = useState<string[]>([]);
+    const [attachResume, setAttachResume] = useState(true);
     const [manualTagValues, setManualTagValues] = useState<Record<string, string>>({});
     const [pendingDispatch, setPendingDispatch] = useState<{ type: 'single' | 'batch', id?: number } | null>(null);
 
@@ -233,7 +235,8 @@ export default function ColdMailPage() {
                 body: JSON.stringify({
                     contact_id: contactId,
                     template_id: parseInt(selectedTemplate),
-                    resume_id: parseInt(selectedResume)
+                    resume_id: parseInt(selectedResume),
+                    attach_resume: attachResume
                 })
             });
 
@@ -349,7 +352,8 @@ export default function ColdMailPage() {
                     body: JSON.stringify({
                         contact_id: id,
                         template_id: parseInt(selectedTemplate),
-                        resume_id: parseInt(selectedResume)
+                        resume_id: parseInt(selectedResume),
+                        attach_resume: attachResume
                     })
                 });
                 if (res.ok) sent++;
@@ -434,6 +438,17 @@ export default function ColdMailPage() {
                                     />
                                 </div>
                                 <p className="text-[10px] text-muted-foreground leading-snug">Ensure template variables match your contact data for optimal delivery.</p>
+                            </div>
+
+                            <div className="flex items-center space-x-3 pt-2">
+                                <Checkbox
+                                    id="attach-resume"
+                                    checked={attachResume}
+                                    onCheckedChange={(checked) => setAttachResume(checked === true)}
+                                />
+                                <Label htmlFor="attach-resume" className="text-sm font-medium text-foreground cursor-pointer">
+                                    Attach Resume to Dispatched Emails
+                                </Label>
                             </div>
                         </div>
                     </CardContent>

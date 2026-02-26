@@ -11,3 +11,4 @@ class ColdMailDispatchRequest(BaseModel):
     contact_id: int
     template_id: int
     resume_id: int
+    attach_resume: bool = True

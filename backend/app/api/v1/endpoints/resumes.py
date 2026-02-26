@@ -44,7 +44,8 @@ async def upload_resume(
         filename=file.filename,
         format=ext,
         label=label,
-        status="pending"
+        status="pending",
+        file_data=file_bytes
     )
     db.add(new_resume)
     await db.commit()
