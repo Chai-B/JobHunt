@@ -3,6 +3,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ClerkWrapper } from "@/components/clerk-wrapper";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "JobHunt",
@@ -36,6 +37,7 @@ export default function RootLayout({
             <Toaster toastOptions={{ className: 'dark:bg-[#050505] dark:border-[#27272a] dark:text-white' }} />
           </ThemeProvider>
         </ClerkWrapper>
+        <Analytics />
       </body>
     </html>
   );
