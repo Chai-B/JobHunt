@@ -16,8 +16,8 @@ class Application(Base):
     job_title = Column(String, nullable=True)
     application_type = Column(String, default="Standard") # 'Standard', 'Cold Mail'
 
-    # State Machine: discovered, shortlisted, prepared, submitted, acknowledged, responded, closed, interviewing, rejected, offer
-    status = Column(String, nullable=False, default="shortlisted", index=True)
+    # State Machine: applied, interviewed, assessment, rejected, selected
+    status = Column(String, nullable=False, default="applied", index=True)
     
     notes = Column(Text, nullable=True)
     

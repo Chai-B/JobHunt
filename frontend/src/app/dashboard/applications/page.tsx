@@ -175,23 +175,8 @@ const ApplicationCard = ({ app, getStatusBadge, onUpdateStatus, onAutoApply }: a
                                 )}
 
                                 <div className="pt-4 flex flex-wrap gap-4">
-                                    {app.status === "shortlisted" && (
-                                        <Button size="sm" variant="outline" onClick={() => onUpdateStatus(app.id, "prepared")} className="rounded-full shadow-sm">
-                                            <PlayCircle className="w-4 h-4 mr-2" /> Prepare Application
-                                        </Button>
-                                    )}
-                                    {app.status === "prepared" && (
-                                        <Button size="sm" onClick={() => onAutoApply(app.id)} className="rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20">
-                                            <Mail className="w-4 h-4 mr-2" /> Dispatch Auto-Apply
-                                        </Button>
-                                    )}
-                                    {app.status === "submitted" && (
-                                        <Button size="sm" variant="outline" onClick={() => onUpdateStatus(app.id, "acknowledged")} className="rounded-full">
-                                            <CheckCircle className="w-4 h-4 mr-2" /> Mark Acknowledged
-                                        </Button>
-                                    )}
-                                    <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 rounded-full" onClick={() => onUpdateStatus(app.id, "closed")}>
-                                        <XCircle className="w-4 h-4 mr-2" /> Archive
+                                    <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 rounded-full" onClick={() => onUpdateStatus(app.id, "rejected")}>
+                                        <XCircle className="w-4 h-4 mr-2" /> Archive / Reject
                                     </Button>
                                 </div>
                             </div>
@@ -346,29 +331,18 @@ export default function ApplicationsPage() {
         }
     };
 
-    const bulkAutoApply = async () => {
-        const prepared = applications.filter((a: any) => a.status === "prepared");
-        if (prepared.length === 0) {
-            toast.error("No prepared applications to auto-apply.");
-            return;
-        }
-        for (const app of prepared) {
-            await autoApply(app.id);
-        }
+    const bulkSync = async () => {
+        await syncInbox();
     };
 
     const getStatusBadge = (status: string) => {
-        switch (status) {
-            case "shortlisted": return <Badge variant="secondary" className="bg-secondary/30 text-muted-foreground border-border uppercase tracking-tighter text-[10px]">Review Pending</Badge>;
-            case "prepared": return <Badge variant="outline" className="border-border text-foreground uppercase tracking-tighter text-[10px]">Ready for Dispatch</Badge>;
-            case "processing": return <Badge variant="outline" className="border-primary/50 text-primary animate-pulse uppercase tracking-tighter text-[10px]">Intelligence Sync</Badge>;
-            case "applied":
-            case "submitted": return <Badge variant="default" className="bg-foreground text-background uppercase tracking-tighter text-[10px]">Dispatched</Badge>;
-            case "interviewing": return <Badge variant="default" className="bg-primary/20 text-primary border-primary/20 hover:bg-primary/30 uppercase tracking-tighter text-[10px]">Active Evaluation</Badge>;
-            case "offer": return <Badge variant="default" className="bg-green-500/20 text-green-500 border-green-500/20 uppercase tracking-tighter text-[10px]">Decision Pending</Badge>;
-            case "rejected": return <Badge variant="destructive" className="bg-destructive/10 text-destructive border-destructive/10 uppercase tracking-tighter text-[10px]">Closed / Archive</Badge>;
-            case "acknowledged": return <Badge variant="outline" className="border-primary/20 text-primary uppercase tracking-tighter text-[10px]">Recruiter Engaged</Badge>;
-            case "responded": return <Badge variant="default" className="bg-foreground text-background uppercase tracking-tighter text-[10px]">High Interest</Badge>;
+        const s = status.toLowerCase();
+        switch (s) {
+            case "applied": return <Badge variant="secondary" className="bg-secondary/30 text-muted-foreground border-border uppercase tracking-tighter text-[10px]">Applied</Badge>;
+            case "interviewed": return <Badge variant="default" className="bg-primary/20 text-primary border-primary/20 hover:bg-primary/30 uppercase tracking-tighter text-[10px]">Interviewed</Badge>;
+            case "assessment": return <Badge variant="outline" className="border-indigo-500/50 text-indigo-500 bg-indigo-500/5 uppercase tracking-tighter text-[10px]">Assessment</Badge>;
+            case "selected": return <Badge variant="default" className="bg-green-500/20 text-green-500 border-green-500/20 uppercase tracking-tighter text-[10px]">Selected</Badge>;
+            case "rejected": return <Badge variant="destructive" className="bg-destructive/10 text-destructive border-destructive/10 uppercase tracking-tighter text-[10px]">Rejected</Badge>;
             default: return <Badge variant="secondary" className="uppercase tracking-tighter text-[10px]">{status}</Badge>;
         }
     };
@@ -395,11 +369,9 @@ export default function ApplicationsPage() {
                     <Button variant="outline" size="lg" onClick={() => setShowConfig(!showConfig)} className="rounded-2xl border-border px-6 transition-all duration-300">
                         <Settings className="w-4 h-4" />
                     </Button>
-                    {preparedCount > 0 && (
-                        <Button size="lg" onClick={bulkAutoApply} className="gap-3 bg-primary text-primary-foreground hover:opacity-90 rounded-2xl px-8 shadow-xl shadow-primary/20 transition-all duration-300">
-                            <Zap className="w-4 h-4" /> Mass Dispatch ({preparedCount})
-                        </Button>
-                    )}
+                    <Button size="lg" onClick={syncInbox} className="gap-3 bg-primary text-primary-foreground hover:opacity-90 rounded-2xl px-8 shadow-xl shadow-primary/20 transition-all duration-300">
+                        <RefreshCw className="w-4 h-4" /> Sync Intelligence
+                    </Button>
                 </div>
             </div>
 

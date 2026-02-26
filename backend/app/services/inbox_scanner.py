@@ -106,10 +106,11 @@ async def run_inbox_scanner_async(user_id: int):
             known_companies = {a.company_name.lower().strip(): a for a in applications if a.company_name}
             
             status_heuristics = {
-                "rejected": [r"unfortunately", r"not moving forward", r"other candidates", r"regret to inform"],
-                "offer": [r"offer", r"congratulations", r"compensation package", r"letter"],
-                "interviewing": [r"interview", r"schedule", r"availability", r"next steps", r"invite", r"chat", r"call", r"calendly", r"assessment", r"online test", r"hacker rank", r"hackerrank"],
-                "applied": [r"received", r"thank you for applying", r"confirmed"]
+                "assessment": [r"case study", r"pre-hiring evaluation", r"test", r"task", r"assignment", r"presentation", r"shortlisted for hr round 1"],
+                "interviewed": [r"interview", r"schedule", r"huddle", r"meeting room", r"timings", r"office address", r"round 1"],
+                "rejected": [r"not moving forward", r"unfortunate", r"wish you all the best", r"another candidate", r"won't be able to move forward", r"not move forward"],
+                "selected": [r"offer", r"congratulations", r"onboard", r"welcome", r"hired", r"package", r"selected"],
+                "applied": [r"received", r"thank you for applying", r"application was sent", r"confirmed", r"interest in the"]
             }
 
             matched_count = 0
@@ -129,35 +130,44 @@ async def run_inbox_scanner_async(user_id: int):
                 extracted_role = None
                 extracted_location = None
                 
-                # Role Extraction from Subject
-                # e.g., "Application for Software Engineer", "Your application to Meta for Data Scientist"
-                role_match = re.search(r'application for (.+?)(?: at |$)|application to .+? for (.+?)$|interest in the (.+?) position', subject_lower)
+                # Role Extraction
+                # e.g., "Application for Software Engineer", "Your application to Meta for Data Scientist", "Machine Learning Engineer at ..."
+                role_match = re.search(r'application for (.+?)(?: at |$)|application to .+? for (.+?)$|interest in the (.+?) position|update from .+?\s+(.+?)\s+at|sent to .+?\s+(.+?)\s+-\s+india', subject_lower)
                 if role_match:
                     groups = [g for g in role_match.groups() if g]
                     if groups:
                         extracted_role = groups[0].strip().title()
+                
+                # Try finding role in Body if subject failed (common for LinkedIn)
+                if not extracted_role:
+                    role_body_match = re.search(r'^([A-Z][\w\s]+ Engineer|[A-Z][\w\s]+ Developer|[A-Z][\w\s]+ Analyst)', email['body'], re.MULTILINE)
+                    if role_body_match:
+                        extracted_role = role_body_match.group(1).strip()
 
                 # Location Heuristics
                 if "remote" in text_to_check:
                     extracted_location = "Remote"
                 else:
-                    # Look for specific city patterns if needed, but default to Remote/Hybrid check for now
-                    loc_match = re.search(r'based in (.+?)(?:\.|,|$)|location: (.+?)(?:\.|,|$)', text_to_check)
+                    loc_match = re.search(r'based in (.+?)(?:\.|,|$)|location: (.+?)(?:\.|,|$)|([\w\s]+) · India', email['body'])
                     if loc_match:
                         groups = [g for g in loc_match.groups() if g]
                         if groups:
-                            extracted_location = groups[0].strip().title()
+                            extracted_location = groups[-1].strip().title()
 
                 # Company Extraction (Existing Logic...)
-                # Check 1: LinkedIn Easy Apply & Generic Application Confirmations
-                # Subject examples: "Your application to Stripe was sent", "Application for Software Engineer at Meta", "We have received your application for Google"
-                app_subject_match = re.search(r'application to (.+?) (?:was sent|for)|application for .+? at (.+?)\b|application for (.+?)\b|applying to (.+?)\b|interest in (.+?)\b', subject_lower)
+                # Company Extraction
+                # Check 1: LinkedIn & Direct Application Confirmations
+                app_subject_match = re.search(r'application to (.+?) (?:was sent|for)|application for .+? at (.+?)\b|application for (.+?)\b|applying to (.+?)\b|update from (.+?)(?:\s|$)|sent to (.*?)(?:\s|$)', subject_lower)
                 if app_subject_match:
-                    # Filter out the capture groups to find the actual match
                     groups = [g for g in app_subject_match.groups() if g]
-                    # The company is usually the last match in our generic OR groups above ("Stripe", "Meta", "Google")
                     if groups:
                         extracted_company = groups[-1].strip().title()
+                
+                # Try body for LinkedIn: "Company · Location"
+                if not extracted_company:
+                    body_comp_match = re.search(r'^([A-Z][\w\s]+) · India', email['body'], re.MULTILINE)
+                    if body_comp_match:
+                        extracted_company = body_comp_match.group(1).strip().title()
 
                 # Check 2: Try simple domain extraction and ATS Filtering
                 if not extracted_company:
@@ -172,16 +182,24 @@ async def run_inbox_scanner_async(user_id: int):
                             extracted_company = domain.title()
                 
                 # Check 3: If domain is ATS or generic (like LinkedIn/Greenhouse), look at the Sender Name
-                # e.g., "Stripe via Greenhouse" or "Recruiting | Meta"
+                # e.g., "Stripe via Greenhouse" or "Recruiter | Meta"
                 if not extracted_company:
                     name_part = sender.split('<')[0].strip().lower()
                     
-                    # Try to strip "via ATS" syntax
-                    via_match = re.search(r'(.+?) via |recruiting [\-\|] (.+?)$|(.+?) recruiting', name_part)
-                    if via_match:
-                        groups = [g for g in via_match.groups() if g]
+                    # Try to parse "Name | Company" or "Name from Company"
+                    name_comp_match = re.search(r'\| (.+?)$|@ (.+?)$|from (.+?)$|at (.+?)$', name_part)
+                    if name_comp_match:
+                        groups = [g for g in name_comp_match.groups() if g]
                         if groups:
                             extracted_company = groups[-1].strip().title()
+                    
+                    if not extracted_company:
+                        # Try to strip "via ATS" syntax
+                        via_match = re.search(r'(.+?) via |recruiting [\-\|] (.+?)$|(.+?) recruiting', name_part)
+                        if via_match:
+                            groups = [g for g in via_match.groups() if g]
+                            if groups:
+                                extracted_company = groups[-1].strip().title()
                     
                     # Fallback to checking against our DB known companies
                     if not extracted_company:
@@ -249,11 +267,12 @@ async def run_inbox_scanner_async(user_id: int):
                         
                 if detected_status:
                     logger.info(f"Match found for {extracted_company}. Status: {detected_status}")
-                    # Rank maps
-                    ranks = {"applied": 1, "interviewing": 2, "rejected": 3, "offer": 4}
+                    # Rank maps (only 5 strictly allowed)
+                    ranks = {"applied": 1, "interviewed": 2, "assessment": 3, "rejected": 4, "selected": 5}
                     curr_rank = ranks.get(target_app.status, 0)
                     new_rank = ranks.get(detected_status, 0)
                     
+                    # Selected and Rejected are terminal but Selected is higher rank
                     if new_rank > curr_rank or detected_status == "rejected":
                         target_app.status = detected_status
                     
