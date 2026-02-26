@@ -10,23 +10,36 @@ from app.services.task_registry import cancel_user_tasks, get_running_tasks
 
 router = APIRouter()
 
-@router.get("/", response_model=List[ActionLogResponse])
+@router.get("/", response_model=dict)
 async def get_logs(
     status: Optional[str] = Query(None, description="Filter logs by status (e.g. 'running')"),
     action_type: Optional[str] = Query(None, description="Filter by action type"),
+    skip: int = 0,
+    limit: int = 50,
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_user)
 ):
     """Retrieve background action logs for the current user."""
-    query = select(ActionLog).where(ActionLog.user_id == current_user.id)
+    from sqlalchemy import func
+    
+    # Base condition
+    condition = ActionLog.user_id == current_user.id
     if status:
-        query = query.where(ActionLog.status == status)
+        condition = condition & (ActionLog.status == status)
     if action_type:
-        query = query.where(ActionLog.action_type == action_type)
-    query = query.order_by(ActionLog.created_at.desc()).limit(100)
+        condition = condition & (ActionLog.action_type == action_type)
+        
+    # Get total count
+    count_stmt = select(func.count(ActionLog.id)).where(condition)
+    total = (await db.execute(count_stmt)).scalar() or 0
+
+    # Get paginated logs
+    query = select(ActionLog).where(condition).order_by(ActionLog.created_at.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
     logs = result.scalars().all()
-    return logs
+    
+    # Convert to dict for response
+    return {"items": logs, "total": total}
 
 @router.post("/stop-all", status_code=200)
 async def stop_all_tasks(

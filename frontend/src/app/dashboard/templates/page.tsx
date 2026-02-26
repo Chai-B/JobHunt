@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Mail, LayoutTemplate, Tag, X, Copy, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Mail, LayoutTemplate, Tag, X, Copy, Bot, ChevronLeft, ChevronRight } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -266,15 +266,15 @@ export default function TemplatesPage() {
                             {/* Left Column: AI & Tags */}
                             <div className="md:col-span-5 space-y-5">
                                 {/* AI Generation Section */}
-                                <div className="bg-secondary/30 border border-border p-4 rounded-xl shadow-sm space-y-4">
+                                <div className="bg-card border border-border p-5 rounded-xl shadow-sm space-y-5">
                                     <div className="flex items-center gap-2 text-[11px] font-semibold text-foreground uppercase tracking-wider">
-                                        <div className="w-5 h-5 flex items-center justify-center rounded bg-primary/20 text-primary">
-                                            <Sparkles className="w-3.5 h-3.5" />
+                                        <div className="w-5 h-5 flex items-center justify-center rounded bg-primary/10 text-primary">
+                                            <Bot className="w-3.5 h-3.5" />
                                         </div>
-                                        Generate with AI
+                                        AI Writing Assistant
                                     </div>
-                                    <div className="grid grid-cols-1 gap-3">
-                                        <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-1 gap-4">
+                                        <div className="grid grid-cols-2 gap-4">
                                             <Select value={aiPurpose} onValueChange={setAiPurpose}>
                                                 <SelectTrigger className="bg-background border-border text-foreground text-xs h-9">
                                                     <SelectValue />
@@ -322,9 +322,9 @@ export default function TemplatesPage() {
                                                 </SelectContent>
                                             </Select>
                                         </div>
-                                        <Button type="button" onClick={generateWithAI} disabled={generating} className="h-9 w-full text-xs font-semibold gap-1.5 bg-foreground text-background hover:bg-foreground/90 shadow-sm transition-all rounded-md mt-1">
-                                            <Sparkles className={`w-3.5 h-3.5 ${generating ? 'animate-spin' : ''}`} />
-                                            {generating ? "Crafting Message..." : "Generate Magic Template"}
+                                        <Button type="button" onClick={generateWithAI} disabled={generating} className="h-10 w-full text-xs font-semibold gap-2 bg-foreground text-background hover:bg-foreground/90 shadow-sm transition-all rounded-lg mt-2">
+                                            <Bot className={`w-3.5 h-3.5 ${generating ? 'animate-bounce' : ''}`} />
+                                            {generating ? "Drafting..." : "Generate Draft"}
                                         </Button>
                                     </div>
                                 </div>

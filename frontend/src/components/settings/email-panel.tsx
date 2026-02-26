@@ -15,9 +15,9 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const Tip = ({ text }: { text: string }) => (
-    <span className="relative inline-flex items-center ml-1.5 cursor-help group/tip">
+    <span className="relative inline-flex items-center ml-1.5 cursor-help group/tip z-50">
         <Info className="w-3.5 h-3.5 text-muted-foreground/60 group-hover/tip:text-foreground transition-colors" />
-        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2.5 text-xs text-foreground bg-card border border-border rounded-lg shadow-lg opacity-0 invisible group-hover/tip:opacity-100 group-hover/tip:visible transition-all duration-200 pointer-events-none z-50 leading-relaxed">
+        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 text-xs text-foreground bg-card border border-border/50 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] opacity-0 invisible group-hover/tip:opacity-100 group-hover/tip:visible transition-all duration-200 pointer-events-none z-[100] leading-relaxed backdrop-blur-md">
             {text}
         </span>
     </span>
@@ -47,30 +47,30 @@ export function EmailPanel({ formData, handleChange, setFormData, handleGmailCon
                             {formData.gmail_connected ? (
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                        <button type="button" className="w-full flex items-center justify-center gap-2 h-11 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 text-sm font-medium transition-colors cursor-pointer">
-                                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                                            Gmail Connected
+                                        <button type="button" className="w-full flex items-center justify-center gap-2 h-11 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 text-sm font-semibold transition-all cursor-pointer shadow-sm group/btn">
+                                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                                            <span className="group-hover/btn:hidden">Gmail Connected</span>
+                                            <span className="hidden group-hover/btn:inline">Reconnect Gmail</span>
                                         </button>
                                     </AlertDialogTrigger>
                                     <AlertDialogContent className="bg-card border-border text-foreground">
                                         <AlertDialogHeader>
-                                            <AlertDialogTitle>Re-authenticate Gmail?</AlertDialogTitle>
+                                            <AlertDialogTitle>Invoke Re-Authentication?</AlertDialogTitle>
                                             <AlertDialogDescription>
-                                                You are already connected to Gmail. Do you want to re-authenticate or connect a different account?
-                                                This will redirect you to Google to select an account.
+                                                You are currently connected to Gmail. Do you want to authenticate again or switch to a different Google account?
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
-                                            <AlertDialogCancel className="bg-transparent border-border text-foreground hover:bg-secondary">Cancel</AlertDialogCancel>
+                                            <AlertDialogCancel className="bg-transparent border-border text-foreground hover:bg-secondary">Keep Current</AlertDialogCancel>
                                             <AlertDialogAction onClick={handleGmailConnect} className="bg-foreground hover:opacity-90 text-background">
-                                                Re-authenticate
+                                                Invoke Connection
                                             </AlertDialogAction>
                                         </AlertDialogFooter>
                                     </AlertDialogContent>
                                 </AlertDialog>
                             ) : (
-                                <button type="button" onClick={handleGmailConnect} className="bg-background border-border focus-visible:ring-ring text-foreground hover:bg-muted h-11 px-4 py-2 w-full rounded-md shadow-sm transition-colors border text-sm font-medium">
-                                    Connect Gmail API
+                                <button type="button" onClick={handleGmailConnect} className="bg-foreground text-background focus-visible:ring-ring hover:opacity-90 h-11 px-4 py-2 w-full rounded-md shadow-md transition-all text-sm font-bold flex items-center justify-center gap-2">
+                                    <Mail className="w-4 h-4" /> Connect to Gmail
                                 </button>
                             )}
                         </div>

@@ -110,33 +110,33 @@ async def generate_ai_template(
     if req.target_company:
         target_info += f"Target Company: {req.target_company}\n"
     
-    prompt = f"""You are an elite, world-class executive communication strategist and top-tier technical recruiter copywriter.
-    Your goal is to write a highly persuasive, psychological, and high-converting {req.purpose.replace('_', ' ')} email.
+    prompt = f"""You are a top-tier executive communication expert.
+    Your goal is to write a highly realistic, human-sounding, and concise {req.purpose.replace('_', ' ')} email.
 
     PARAMETERS:
     - Tone constraint: {req.tone}
-    - Length Configuration: Produce text that is explicitly {req.length} (short: 3-4 sentences max, medium: 2-3 short paragraphs, long: detailed and comprehensive).
-    - Primary Focus: Emphasize {req.focus} intensely.
+    - Length Configuration: Produce text that is explicitly {req.length} (short: 3-4 sentences max, medium: 2 paragraphs, long: detailed).
+    - Primary Focus: Emphasize {req.focus}.
     {target_info}
     
     CRITICAL INSTRUCTION - VARIABLE INJECTION:
-    You MUST aggressively and naturally weave the following exact literal variables into the text. Do NOT replace them. Ensure grammar remains flawless even if a variable evaluates to empty later. Do NOT make up new [brackets].
+    You MUST naturally weave the following exact literal variables into the text without making it sound like an AI fill-in-the-blank form.
     {{{{user_name}}}}, {{{{user_email}}}}, {{{{user_phone}}}}, {{{{linkedin}}}}, {{{{github}}}}, {{{{portfolio}}}}
     {{{{job_title}}}}, {{{{company}}}}, {{{{contact_name}}}}
     {{{{skills}}}}, {{{{experience_years}}}}, {{{{education}}}}, {{{{recent_role}}}}, {{{{top_projects}}}}, {{{{certifications}}}}
 
-    WRITING RULES:
-    1. No corporate fluff or generic buzzwords. Be incredibly specific, punchy, and memorable.
-    2. The Subject Line MUST have an open-rate-optimized structure (e.g., provoke curiosity or establish immediate extreme relevance). Use variables like {{{{job_title}}}} or {{{{company}}}} in the subject.
-    3. The Body MUST follow a hook -> value proposition -> concise evidence -> low-friction call-to-action structure.
-    4. Seamlessly incorporate {{{{experience_years}}}} of experience, current/past role as {{{{recent_role}}}}, and top projects: {{{{top_projects}}}} into the prose.
-    5. Do NOT include placeholders like [Your Name] or [Date]. ONLY use the exact {{{{variable}}}} formatted tags provided.
+    WRITING RULES (NON-NEGOTIABLE):
+    1. Write exactly like a human professional. NEVER use AI-sounding corporate fluff (e.g., "thrilled", "dive deep", "game-changer", "landscape", "pivotal", "catalyst").
+    2. Be extremely concise. Do not use 10 words when 4 will do.
+    3. The Subject Line MUST be simple, clear, and look like it was typed manually by a busy person.
+    4. Seamlessly incorporate {{{{experience_years}}}}, current/past role as {{{{recent_role}}}}, and top projects: {{{{top_projects}}}} into the prose natively.
+    5. Do NOT include placeholders like [Your Name]. ONLY use the exact {{{{variable}}}} formatted tags.
     
     Return STRICTLY valid JSON ONLY:
     {{
-      "name": "<A short 3-5 word internal name for this template>",
-      "subject": "<Compelling Email Subject Line>",
-      "body_text": "<The actual email body string with variables>"
+      "name": "<Short 3-5 word internal name>",
+      "subject": "<Simple, human email subject>",
+      "body_text": "<The raw email string>"
     }}
     """
     

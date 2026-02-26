@@ -2,13 +2,14 @@
 import { API_BASE_URL } from "@/lib/config";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Terminal, Activity, RefreshCw, StopCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { formatDistanceToNow } from 'date-fns';
+import { Pagination } from "@/components/ui/pagination";
 
 export default function LogsPage() {
     const [logs, setLogs] = useState<any[]>([]);
@@ -16,12 +17,22 @@ export default function LogsPage() {
     const [stopping, setStopping] = useState(false);
     const [runningCount, setRunningCount] = useState(0);
 
+    // Pagination
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const [pageSize, setPageSize] = useState(50);
+
+    const handlePageSizeChange = (newSize: number) => {
+        setPageSize(newSize);
+        setPage(1);
+    };
+
     const fetchLogs = async () => {
         setLoading(true);
         try {
             const token = localStorage.getItem("token");
             const [logsRes, runningRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/v1/logs/`, {
+                fetch(`${API_BASE_URL}/api/v1/logs/?skip=${(page - 1) * pageSize}&limit=${pageSize}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 }),
                 fetch(`${API_BASE_URL}/api/v1/logs/running`, {
@@ -30,7 +41,12 @@ export default function LogsPage() {
             ]);
             if (logsRes.ok) {
                 const data = await logsRes.json();
-                setLogs(Array.isArray(data) ? data : []);
+                if (data.items) {
+                    setLogs(data.items);
+                    setTotal(data.total || 0);
+                } else {
+                    setLogs(Array.isArray(data) ? data : []);
+                }
             } else {
                 toast.error("Failed to fetch system logs.");
             }
@@ -71,7 +87,7 @@ export default function LogsPage() {
         fetchLogs();
         const interval = setInterval(fetchLogs, 5000); // 5s auto-refresh
         return () => clearInterval(interval);
-    }, []);
+    }, [page, pageSize]);
 
     const getStatusStyle = (status: string) => {
         switch (status) {
@@ -160,6 +176,14 @@ export default function LogsPage() {
                                     ))}
                                 </TableBody>
                             </Table>
+                            <Pagination
+                                currentPage={page}
+                                totalCount={total}
+                                pageSize={pageSize}
+                                onPageChange={setPage}
+                                onPageSizeChange={handlePageSizeChange}
+                                disabled={loading}
+                            />
                         </div>
                     )}
                 </CardContent>
