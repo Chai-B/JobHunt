@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Mail, Send, Users, Activity, Info, RefreshCw, Zap, CheckCircle2, ChevronRight, MousePointer2 } from "lucide-react";
+import { Mail, Send, Users, Activity, Info, RefreshCw, Zap, CheckCircle2, ChevronRight, MousePointer2, Search } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -91,14 +92,19 @@ export default function ColdMailPage() {
     // Selection state
     const [selectedContactIds, setSelectedContactIds] = useState<Set<number>>(new Set());
 
+    // Search
+    const [searchQuery, setSearchQuery] = useState("");
+
     const fetchData = async () => {
         setLoading(true);
         try {
             const token = localStorage.getItem("token");
             const headers = { Authorization: `Bearer ${token}` };
 
+            const searchParam = searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : "";
+
             const [contactsRes, templatesRes, resumesRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/v1/contacts/?skip=${(page - 1) * pageSize}&limit=${pageSize}`, { headers }),
+                fetch(`${API_BASE_URL}/api/v1/contacts/?skip=${(page - 1) * pageSize}&limit=${pageSize}${searchParam}`, { headers }),
                 fetch(`${API_BASE_URL}/api/v1/templates/`, { headers }),
                 fetch(`${API_BASE_URL}/api/v1/resumes/`, { headers }),
             ]);
@@ -124,8 +130,11 @@ export default function ColdMailPage() {
     };
 
     useEffect(() => {
-        fetchData();
-    }, [page]);
+        const timeoutId = setTimeout(() => {
+            fetchData();
+        }, 300);
+        return () => clearTimeout(timeoutId);
+    }, [page, searchQuery]);
 
     const toggleSelectAll = useCallback(() => {
         setSelectedContactIds(prev => {
@@ -306,6 +315,16 @@ export default function ColdMailPage() {
                                 <Users className="w-5 h-5 text-primary/70" />
                                 Lead Collection
                             </CardTitle>
+                            <div className="relative w-64 max-w-sm">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    type="text"
+                                    placeholder="Filter attributes..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="pl-10 h-10 bg-background/50 border-border/50 focus:border-primary/50 text-sm placeholder:text-muted-foreground/50 rounded-xl transition-all font-sans"
+                                />
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent className="p-0">
