@@ -1,7 +1,9 @@
 import asyncio
 from loguru import logger
 from sqlalchemy import select
-
+import os
+from email.mime.base import MIMEBase
+from email import encoders
 from app.worker.celery_app import celery_app
 from app.db.session import AsyncSessionLocal
 from app.db.models.resume import Resume
