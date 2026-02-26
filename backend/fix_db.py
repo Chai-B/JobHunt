@@ -1,21 +1,54 @@
 import sys
-sys.path.append("/app")
+import os
 import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text, inspect
-from app.core.config import settings
-from app.db.base import Base
-# Import all models to ensure Base metadata is fully populated
-from app.db.models import user, resume, email_template, job_posting, contact, application, setting, action_log
+from loguru import logger
 
-async def migrate_missing_columns():
-    async_url = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+# Ensure we can import app
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append("/app")
+
+try:
+    from app.core.config import settings
+    from app.db.base import Base
+    # Import all models to ensure Base metadata is fully populated
+    from app.db.models import user, resume, email_template, job_posting, contact, application, setting, action_log
+except ImportError as e:
+    print(f"Import Error: {e}. Ensure script is run from backend directory.")
+    sys.exit(1)
+
+async def sync_db_schema():
+    """
+    Forcefully syncs the physical Postgres schema with SQLAlchemy models.
+    Bypasses Alembic for critical hotfixes like the job_id constraint.
+    """
+    db_url = settings.DATABASE_URL
+    if not db_url.startswith("postgresql+asyncpg://"):
+        db_url = db_url.replace("postgresql://", "postgresql+asyncpg://")
+    
     engine = create_async_engine(
-        async_url,
+        db_url,
         connect_args={"prepared_statement_cache_size": 0, "statement_cache_size": 0}
     )
 
-    async def _inspect_and_alter(conn):
+    async with engine.begin() as conn:
+        print("\n" + "="*40)
+        print("DATABASE SCHEMA RECOVERY TOOL")
+        print("="*40)
+        
+        # 1. Critical Hotfix: applications.job_id NOT NULL
+        print("\nStep 1: Checking applications table constraints...")
+        try:
+            # Using raw SQL to be absolutely certain we bypass any SQLAlchemy cached state
+            await conn.execute(text("ALTER TABLE applications ALTER COLUMN job_id DROP NOT NULL;"))
+            print("SUCCESS: 'job_id' is now NULLABLE (if it wasn't already).")
+        except Exception as e:
+            print(f"INFO: Constraint modification skipped: {e}")
+
+        # 2. Synchronize missing columns
+        print("\nStep 2: Checking for missing columns across all tables...")
+        
         def sync_inspect(connection):
             inspector = inspect(connection)
             updates = []
@@ -26,8 +59,7 @@ async def migrate_missing_columns():
                 "VARCHAR": "VARCHAR",
                 "TEXT": "TEXT",
                 "BOOLEAN": "BOOLEAN",
-                "TIMESTAMP": "TIMESTAMP WITH TIME ZONE", # For DateTime(timezone=True)
-                "DATETIME": "TIMESTAMP WITHOUT TIME ZONE",
+                "TIMESTAMP": "TIMESTAMP WITH TIME ZONE",
                 "JSONB": "JSONB",
                 "BYTEA": "BYTEA",
                 "FLOAT": "DOUBLE PRECISION"
@@ -35,14 +67,13 @@ async def migrate_missing_columns():
 
             for table_name, table in Base.metadata.tables.items():
                 if not inspector.has_table(table_name):
-                    print(f"Skipping missing table: {table_name}")
                     continue
                     
                 existing_columns = {col['name'] for col in inspector.get_columns(table_name)}
                 
                 for column in table.columns:
                     if column.name not in existing_columns:
-                        # Best effort type resolution
+                        # Extract base type name
                         col_type = str(column.type).split("(")[0].upper()
                         pg_type = type_map.get(col_type, col_type)
                         
@@ -51,43 +82,22 @@ async def migrate_missing_columns():
             
             return updates
 
-        return await conn.run_sync(sync_inspect)
-
-    try:
-        async with engine.begin() as conn:
-            missing_sqls = await _inspect_and_alter(conn)
-            
-            if not missing_sqls:
-                print("Database is perfectly synced! No missing columns found.")
-            else:
-                for sql in missing_sqls:
-                    print(f"Executing: {sql}")
+        missing_sqls = await conn.run_sync(sync_inspect)
+        
+        if not missing_sqls:
+            print("Result: No missing columns detected.")
+        else:
+            print(f"Found {len(missing_sqls)} missing column(s). Applying...")
+            for sql in missing_sqls:
+                try:
+                    print(f"  > Executing: {sql}")
                     await conn.execute(text(sql))
-                print("\nSuccessfully applied all missing columns!")
-                
-    except Exception as e:
-        print(f"Migration script crashed: {e}")
+                except Exception as loop_e:
+                    print(f"  ! Failed to apply {sql}: {loop_e}")
+
+        print("\n" + "="*40)
+        print("SCHEMA RECOVERY COMPLETE")
+        print("="*40 + "\n")
 
 if __name__ == "__main__":
-    asyncio.run(migrate_missing_columns())
-import asyncio
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy import text
-from app.core.config import settings
-
-async def remove_job_id_constraint():
-    async_url = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
-    engine = create_async_engine(
-        async_url,
-        connect_args={"prepared_statement_cache_size": 0, "statement_cache_size": 0}
-    )
-    async with engine.begin() as conn:
-        print("Dropping NOT NULL constraint on applications.job_id...")
-        try:
-            await conn.execute(text("ALTER TABLE applications ALTER COLUMN job_id DROP NOT NULL;"))
-            print("Successfully dropped constraint.")
-        except Exception as e:
-            print(f"Error dropping constraint: {e}")
-
-if __name__ == "__main__":
-    asyncio.run(remove_job_id_constraint())
+    asyncio.run(sync_db_schema())

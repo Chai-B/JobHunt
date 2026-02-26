@@ -1,7 +1,6 @@
 import json
 import re
 from loguru import logger
-import google.generativeai as genai
 from openai import AsyncOpenAI
 from app.db.models.setting import UserSetting
 
@@ -62,6 +61,7 @@ async def call_llm(prompt: str, settings: UserSetting, is_json: bool = False, sy
 
     try:
         if provider == "gemini":
+            import google.generativeai as genai
             if not settings.gemini_api_keys:
                 raise ValueError("Gemini API key is required but not set in Settings.")
             
