@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Header
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
-from app.db.session import get_db
 from app.api.deps import get_current_user, reusable_oauth2
 from app.db.models.user import User
 from app.db.models.setting import UserSetting
@@ -10,6 +9,11 @@ from app.core.config import settings
 import google_auth_oauthlib.flow
 from loguru import logger
 from sqlalchemy import select
+import os
+
+# Google strictly injects 'openid' and profile scopes on authorization.
+# We must disable oauthlib's strict scope equivalence checks to prevent 400 Bad Requests.
+os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
 router = APIRouter()
 
