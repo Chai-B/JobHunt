@@ -66,6 +66,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             }
         };
         checkAuth();
+
+        // Listen for cross-tab login/logout events
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === "token") {
+                if (!e.newValue) {
+                    // Token was removed in another tab
+                    router.push("/");
+                } else {
+                    // Token was added/updated in another tab, re-verify
+                    checkAuth();
+                }
+            }
+        };
+
+        window.addEventListener("storage", handleStorageChange);
+        return () => window.removeEventListener("storage", handleStorageChange);
     }, [router]);
 
     // Poll for running background processes (in-memory task registry)
