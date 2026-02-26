@@ -192,7 +192,7 @@ export default function ColdMailPage() {
 
         const bodyTags = t.body_text.match(/{{(.*?)}}/g) || [];
         const subjectTags = t.subject.match(/{{(.*?)}}/g) || [];
-        const needed = Array.from(new Set([...bodyTags, ...subjectTags])).map(tag => tag.replace(/{{|}}/g, ''));
+        const needed = Array.from(new Set([...bodyTags, ...subjectTags])).map(tag => tag.replace(/{{|}}/g, '').trim());
 
         const resumeParsed = r.parsed_json || {};
         const missing: string[] = [];
@@ -201,9 +201,15 @@ export default function ColdMailPage() {
             // Skip contact-specific tags as they are external
             if (['contact_name', 'job_title', 'company'].includes(tag)) return;
 
-            const val = resumeParsed[tag] || userProfile?.[tag] || (tag === 'user_name' ? userProfile?.full_name : null) || (tag === 'linkedin' ? userProfile?.linkedin_url : null) || (tag === 'github' ? userProfile?.github_url : null) || (tag === 'portfolio' ? userProfile?.portfolio_url : null) || (tag === 'user_email' ? userProfile?.email : null) || (tag === 'user_phone' ? userProfile?.phone : null);
+            const val = resumeParsed[tag] || userProfile?.[tag] ||
+                (tag === 'user_name' ? userProfile?.full_name : null) ||
+                (tag === 'linkedin' ? userProfile?.linkedin_url : null) ||
+                (tag === 'github' ? userProfile?.github_url : null) ||
+                (tag === 'portfolio' ? userProfile?.portfolio_url : null) ||
+                (tag === 'user_email' ? userProfile?.email : null) ||
+                (tag === 'user_phone' ? userProfile?.phone : null);
 
-            if (!val || String(val).trim() === "") {
+            if (val === undefined || val === null || String(val).trim() === "") {
                 missing.push(tag);
             }
         });
@@ -299,14 +305,24 @@ export default function ColdMailPage() {
         const r = resumes.find(res => String(res.id) === selectedResume);
         if (!t || !r) return;
 
-        const allTags = Array.from(new Set([...(t.body_text.match(/{{(.*?)}}/g) || []), ...(t.subject.match(/{{(.*?)}}/g) || [])])).map(tag => tag.replace(/{{|}}/g, ''));
+        const allTags = Array.from(new Set([
+            ...(t.body_text.match(/{{(.*?)}}/g) || []),
+            ...(t.subject.match(/{{(.*?)}}/g) || [])
+        ])).map(tag => tag.replace(/{{|}}/g, '').trim());
+
         const resumeParsed = r.parsed_json || {};
         const missing: string[] = [];
 
         allTags.forEach(tag => {
             if (['contact_name', 'job_title', 'company'].includes(tag)) return;
-            const val = resumeParsed[tag] || userProfile?.[tag] || (tag === 'user_name' ? userProfile?.full_name : null) || (tag === 'linkedin' ? userProfile?.linkedin_url : null) || (tag === 'github' ? userProfile?.github_url : null) || (tag === 'portfolio' ? userProfile?.portfolio_url : null) || (tag === 'user_email' ? userProfile?.email : null) || (tag === 'user_phone' ? userProfile?.phone : null);
-            if (!val || String(val).trim() === "") missing.push(tag);
+            const val = resumeParsed[tag] || userProfile?.[tag] ||
+                (tag === 'user_name' ? userProfile?.full_name : null) ||
+                (tag === 'linkedin' ? userProfile?.linkedin_url : null) ||
+                (tag === 'github' ? userProfile?.github_url : null) ||
+                (tag === 'portfolio' ? userProfile?.portfolio_url : null) ||
+                (tag === 'user_email' ? userProfile?.email : null) ||
+                (tag === 'user_phone' ? userProfile?.phone : null);
+            if (val === undefined || val === null || String(val).trim() === "") missing.push(tag);
         });
 
         if (missing.length > 0) {

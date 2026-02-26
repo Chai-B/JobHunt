@@ -33,6 +33,8 @@ services:
       redis:
         condition: service_started
     restart: unless-stopped
+    volumes:
+      - uploads_data:/app/app/uploads
 
   celery-worker:
     build: ./backend
@@ -44,6 +46,8 @@ services:
       redis:
         condition: service_started
     restart: unless-stopped
+    volumes:
+      - uploads_data:/app/app/uploads
 
   frontend:
     build:
@@ -60,3 +64,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  uploads_data:

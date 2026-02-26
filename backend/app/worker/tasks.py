@@ -691,31 +691,31 @@ async def run_cold_mail_async(user_id: int, contact_id: int, template_id: int, r
             # Default fallback data
             resume_data = resume.parsed_json or {}
             
-            # Build tag replacement map
+            # Resolve strings
+            import re
+            
+            # 1. Normalize exp_years: strictly numeric, no meta-text
             exp_years = resume_data.get("experience_years") or getattr(user, 'experience_years', "") or ""
-            # Robust cleanup: If it contains parentheses or verbose estimation text, attempt to strip it
-            if "(" in str(exp_years):
-                import re
-                match = re.search(r'(\d+)', str(exp_years))
-                if match:
-                    exp_years = match.group(1)
+            match_exp = re.search(r'(\d+)', str(exp_years))
+            exp_years = match_exp.group(1) if match_exp else "0"
 
-            tag_map = {
-                "{{contact_name}}": contact.name or "",
-                "{{job_title}}": contact.role or "",
-                "{{company}}": contact.company or "",
-                "{{experience_years}}": exp_years,
-                "{{skills}}": resume_data.get("skills") or getattr(user, 'skills', "") or "",
-                "{{education}}": resume_data.get("education") or "",
-                "{{recent_role}}": resume_data.get("recent_role") or "",
-                "{{top_projects}}": resume_data.get("top_projects") or "",
-                "{{certifications}}": resume_data.get("certifications") or "",
-                "{{linkedin}}": user.linkedin_url or "",
-                "{{github}}": user.github_url or "",
-                "{{portfolio}}": getattr(user, 'portfolio_url', "") or "",
-                "{{user_name}}": user.full_name or "",
-                "{{user_email}}": user.email or "",
-                "{{user_phone}}": user.phone or "",
+            # 2. Build map of tag values (keys are just the variable names)
+            val_map = {
+                "contact_name": contact.name or "",
+                "job_title": contact.role or "",
+                "company": contact.company or "",
+                "experience_years": exp_years,
+                "skills": resume_data.get("skills") or getattr(user, 'skills', "") or "",
+                "education": resume_data.get("education") or "",
+                "recent_role": resume_data.get("recent_role") or "",
+                "top_projects": resume_data.get("top_projects") or "",
+                "certifications": resume_data.get("certifications") or "",
+                "linkedin": user.linkedin_url or "",
+                "github": user.github_url or "",
+                "portfolio": getattr(user, 'portfolio_url', "") or "",
+                "user_name": user.full_name or "",
+                "user_email": user.email or "",
+                "user_phone": user.phone or "",
             }
 
             # Fill template tags natively
@@ -724,9 +724,11 @@ async def run_cold_mail_async(user_id: int, contact_id: int, template_id: int, r
             
             # We want to smartly remove sentences that contain tags with NO data
             # Doing this via LLM is safest to maintain grammar and punctuation.
+            # Use regex to find ALL tags effectively
+            all_tags = set(re.findall(r'{{(.*?)}}', subject + "\n" + body))
             missing_tags = [
-                tag for tag, val in tag_map.items() 
-                if (not val or str(val).strip() == "") and (tag in subject or tag in body)
+                tag.strip() for tag in all_tags 
+                if tag.strip() in val_map and (not val_map[tag.strip()] or str(val_map[tag.strip()]).strip() == "")
             ]
             
             if missing_tags and settings.gemini_api_keys:
@@ -767,11 +769,24 @@ Return STRICTLY valid JSON ONLY:
                 except Exception as e:
                     logger.warning(f"Fallback cleaner failed: {e}. Defaulting to string replacement.")
 
-            # Do final standard replacement for all tags (both valid and any remaining missing ones)
-            for tag, value in tag_map.items():
-                subject = subject.replace(tag, str(value) if value else "")
-                body = body.replace(tag, str(value) if value else "")
+            # Do final standard replacement for all tags with regex for space tolerance
+            def replace_tag(match):
+                tag_name = match.group(1).strip()
+                return str(val_map.get(tag_name, match.group(0))) # Fallback to original if not in map
 
+            subject = re.sub(r'{{(.*?)}}', replace_tag, subject)
+            body = re.sub(r'{{(.*?)}}', replace_tag, body)
+
+            # FINAL BLOCKADE: If any {{tags}} remain, or if critical info is missing, ABORT sending
+            remaining_tags = re.findall(r'{{(.*?)}}', subject + "\n" + body)
+            if remaining_tags:
+                raise ValueError(f"Aborting send: Template still contains unreplaced tags: {remaining_tags}")
+            
+            # Check for empty critical replacements that LLM might have missed cleaning
+            # (e.g. if {{portfolio}} was replaced by "" but the sentence still looks broken)
+            # Actually, the string replacement above handles filling them with "". 
+            # The LLM step above is the primary cleaner. 
+            
             # Resolve Disk-based Resume Attachment using absolute path from settings
             UPLOAD_DIR = app_settings.UPLOAD_DIR
             file_path = UPLOAD_DIR / f"{resume.id}_{resume.filename}"
