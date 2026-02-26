@@ -16,7 +16,7 @@ async def extract_from_text(
     req: ExtractRequest,
     current_user: User = Depends(deps.get_current_active_user)
 ) -> Any:
-    lines = [L.strip() for L in text.split('\n') if L.strip() and not L.startswith('Email\tName')]
+    lines = [L.strip() for L in req.text.split('\n') if L.strip() and not L.startswith('Email\tName')]
     entities = []
     nlp = get_nlp()
     
