@@ -124,7 +124,7 @@ export default function ApplicationsPage() {
         const loadingToast = toast.loading("Syncing Intelligence...");
         try {
             const token = localStorage.getItem("token");
-            const res = await fetch(`${API_BASE_URL}/api/v1/logs/inbox-sync`, {
+            const res = await fetch(`${API_BASE_URL}/api/v1/applications/sync-inbox`, {
                 method: "POST",
                 headers: { Authorization: `Bearer ${token}` }
             });
