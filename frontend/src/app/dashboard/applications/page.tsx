@@ -1,6 +1,45 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ExternalLink, Globe, MapPin, User as UserIcon, Calendar, MessageSquare, Clock } from "lucide-react";
+import {
+    ChevronDown,
+    ExternalLink,
+    Globe,
+    MapPin,
+    User as UserIcon,
+    Calendar,
+    MessageSquare,
+    Clock,
+    Briefcase,
+    Activity,
+    PlayCircle,
+    Mail,
+    CheckCircle,
+    XCircle,
+    RefreshCw,
+    Zap,
+    Settings
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from "@/components/ui/select";
+import { API_BASE_URL } from "@/lib/config";
+import { toast } from "sonner";
 
 // --- Components ---
 
