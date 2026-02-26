@@ -27,6 +27,10 @@ async def connect_gmail(request: Request, current_user: User = Depends(get_curre
     if not hasattr(settings, "GOOGLE_CLIENT_ID") or not settings.GOOGLE_CLIENT_ID:
         raise HTTPException(status_code=500, detail="Google OAuth not configured on server.")
         
+    base_url = str(request.base_url).rstrip('/')
+    if "localhost" not in base_url and "127.0.0.1" not in base_url and base_url.startswith("http://"):
+        base_url = base_url.replace("http://", "https://")
+        
     client_config = {
         "web": {
             "client_id": settings.GOOGLE_CLIENT_ID,
@@ -35,7 +39,7 @@ async def connect_gmail(request: Request, current_user: User = Depends(get_curre
             "token_uri": "https://oauth2.googleapis.com/token",
             "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
             "client_secret": getattr(settings, "GOOGLE_CLIENT_SECRET", ""),
-            "redirect_uris": [f"{str(request.base_url).rstrip('/')}/api/v1/gmail/callback"]
+            "redirect_uris": [f"{base_url}/api/v1/gmail/callback"]
         }
     }
     
@@ -66,6 +70,10 @@ async def gmail_callback(request: Request, code: str, state: str, current_user: 
     if not code:
         raise HTTPException(status_code=400, detail="No code provided.")
         
+    base_url = str(request.base_url).rstrip('/')
+    if "localhost" not in base_url and "127.0.0.1" not in base_url and base_url.startswith("http://"):
+        base_url = base_url.replace("http://", "https://")
+        
     client_config = {
         "web": {
             "client_id": settings.GOOGLE_CLIENT_ID,
@@ -74,7 +82,7 @@ async def gmail_callback(request: Request, code: str, state: str, current_user: 
             "token_uri": "https://oauth2.googleapis.com/token",
             "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
             "client_secret": getattr(settings, "GOOGLE_CLIENT_SECRET", ""),
-            "redirect_uris": [f"{str(request.base_url).rstrip('/')}/api/v1/gmail/callback"]
+            "redirect_uris": [f"{base_url}/api/v1/gmail/callback"]
         }
     }
     
