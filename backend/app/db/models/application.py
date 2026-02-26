@@ -21,6 +21,13 @@ class Application(Base):
     
     notes = Column(Text, nullable=True)
     
+    # Enrichment fields for better tracking and sync
+    contact_name = Column(String, nullable=True)
+    contact_email = Column(String, nullable=True)
+    contact_role = Column(String, nullable=True)
+    source_url = Column(String, nullable=True)
+    location = Column(String, nullable=True)
+    
     applied_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

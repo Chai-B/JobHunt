@@ -18,6 +18,11 @@ class ApplicationRead(ApplicationBase):
     user_id: int
     status: str
     notes: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_role: Optional[str] = None
+    source_url: Optional[str] = None
+    location: Optional[str] = None
     applied_at: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None

@@ -124,12 +124,34 @@ async def run_inbox_scanner_async(user_id: int):
                 sender = email['sender'].lower()
                 subject_lower = email['subject'].lower()
                 
-                # Heuristic 1: Extract Company Name
+                # Heuristic 1: Extract Company Name, Role, and Location
                 extracted_company = None
+                extracted_role = None
+                extracted_location = None
                 
+                # Role Extraction from Subject
+                # e.g., "Application for Software Engineer", "Your application to Meta for Data Scientist"
+                role_match = re.search(r'application for (.+?)(?: at |$)|application to .+? for (.+?)$|interest in the (.+?) position', subject_lower)
+                if role_match:
+                    groups = [g for g in role_match.groups() if g]
+                    if groups:
+                        extracted_role = groups[0].strip().title()
+
+                # Location Heuristics
+                if "remote" in text_to_check:
+                    extracted_location = "Remote"
+                else:
+                    # Look for specific city patterns if needed, but default to Remote/Hybrid check for now
+                    loc_match = re.search(r'based in (.+?)(?:\.|,|$)|location: (.+?)(?:\.|,|$)', text_to_check)
+                    if loc_match:
+                        groups = [g for g in loc_match.groups() if g]
+                        if groups:
+                            extracted_location = groups[0].strip().title()
+
+                # Company Extraction (Existing Logic...)
                 # Check 1: LinkedIn Easy Apply & Generic Application Confirmations
                 # Subject examples: "Your application to Stripe was sent", "Application for Software Engineer at Meta", "We have received your application for Google"
-                app_subject_match = re.search(r'application to (.+?) was sent|application for (.+?) at (.+?)\b|application for (.+?)\b|applying to (.+?)\b|interest in (.+?)\b', subject_lower)
+                app_subject_match = re.search(r'application to (.+?) (?:was sent|for)|application for .+? at (.+?)\b|application for (.+?)\b|applying to (.+?)\b|interest in (.+?)\b', subject_lower)
                 if app_subject_match:
                     # Filter out the capture groups to find the actual match
                     groups = [g for g in app_subject_match.groups() if g]
@@ -182,12 +204,34 @@ async def run_inbox_scanner_async(user_id: int):
                 # If STILL no match, auto-create the Application row so the user doesn't lose the data!
                 if not target_app:
                     logger.info(f"Auto-creating missing application for: {extracted_company}")
+                    
+                    # Extract contact details from sender: "Name <email@example.com>"
+                    contact_email = None
+                    contact_name = None
+                    email_match = re.search(r'<(.*?)>', email['sender'])
+                    if email_match:
+                        contact_email = email_match.group(1).strip()
+                        contact_name = email['sender'].split('<')[0].strip()
+                    else:
+                        contact_email = email['sender'].strip()
+                        contact_name = contact_email.split('@')[0]
+
+                    # Heuristic for Source (e.g., LinkedIn, Indeed)
+                    source_url = None
+                    if "linkedin" in email['sender'].lower() or "linkedin" in email['body'].lower():
+                        source_url = "https://www.linkedin.com"
+                    
                     target_app = Application(
                         user_id=user_id,
                         job_id=None,
                         company_name=extracted_company,
                         application_type="Discovered (Email)",
                         status="applied",
+                        contact_name=contact_name,
+                        contact_email=contact_email,
+                        contact_role=extracted_role,
+                        location=extracted_location,
+                        source_url=source_url,
                         notes=f"Auto-imported by Heuristic Engine from Gmail on {datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
                     )
                     db.add(target_app)
