@@ -1,11 +1,11 @@
-from typing import Any, List
+from typing import Any, List, Optional
 import io
 import csv
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from fastapi.responses import StreamingResponse
 import pandas as pd
 
@@ -22,14 +22,34 @@ async def list_contacts(
     db: AsyncSession = Depends(deps.get_personal_db),
     skip: int = 0,
     limit: int = 200,
+    search: Optional[str] = None,
     current_user: User = Depends(deps.get_current_active_user)
 ) -> Any:
+    # Build filter conditions
+    filters = []
+    if search:
+        search_term = f"%{search}%"
+        filters.append(
+            or_(
+                ScrapedContact.name.ilike(search_term),
+                ScrapedContact.email.ilike(search_term),
+                ScrapedContact.role.ilike(search_term),
+                ScrapedContact.company.ilike(search_term)
+            )
+        )
+
     # Get total count
     count_stmt = select(func.count(ScrapedContact.id))
+    if filters:
+        count_stmt = count_stmt.where(*filters)
     count_res = await db.execute(count_stmt)
     total = count_res.scalar() or 0
 
-    res = await db.execute(select(ScrapedContact).order_by(ScrapedContact.created_at.desc()).offset(skip).limit(limit))
+    # Get items
+    stmt = select(ScrapedContact).order_by(ScrapedContact.created_at.desc()).offset(skip).limit(limit)
+    if filters:
+        stmt = stmt.where(*filters)
+    res = await db.execute(stmt)
     items = res.scalars().all()
     return {"items": items, "total": total}
 

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Users, Plus, Upload, Download, Trash2, Edit } from "lucide-react";
+import { Users, Plus, Upload, Download, Trash2, Edit, Search } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -19,6 +19,7 @@ export default function ContactsPage() {
     const [isOpen, setIsOpen] = useState(false);
     const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [searchQuery, setSearchQuery] = useState("");
 
     // Pagination
     const [page, setPage] = useState(1);
@@ -39,7 +40,11 @@ export default function ContactsPage() {
         setLoading(true);
         try {
             const token = localStorage.getItem("token");
-            const res = await fetch(`${API_BASE_URL}/api/v1/contacts/?skip=${(page - 1) * pageSize}&limit=${pageSize}`, {
+            let url = `${API_BASE_URL}/api/v1/contacts/?skip=${(page - 1) * pageSize}&limit=${pageSize}`;
+            if (searchQuery.trim() !== "") {
+                url += `&search=${encodeURIComponent(searchQuery.trim())}`;
+            }
+            const res = await fetch(url, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.ok) {
@@ -56,8 +61,11 @@ export default function ContactsPage() {
     };
 
     useEffect(() => {
-        fetchContacts();
-    }, [page, pageSize]);
+        const timer = setTimeout(() => {
+            fetchContacts();
+        }, 300); // 300ms debounce
+        return () => clearTimeout(timer);
+    }, [page, pageSize, searchQuery]);
 
     const handleOpenCreate = () => {
         setSelectedContactId(null);
@@ -222,7 +230,28 @@ export default function ContactsPage() {
                     <p className="text-muted-foreground mt-1 text-sm">Manage your networking contacts and scraped leads.</p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="relative w-full sm:w-64 mr-2">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="text"
+                            placeholder="Search contacts..."
+                            className="pl-9 h-10 w-full bg-background"
+                            value={searchQuery}
+                            onChange={(e) => {
+                                setSearchQuery(e.target.value);
+                                setPage(1); // Reset to page 1 on new search
+                            }}
+                        />
+                    </div>
+
+                    {selectedIds.length > 0 && (
+                        <Button variant="destructive" onClick={handleBulkDelete} className="flex items-center gap-2 shadow-sm rounded-md font-medium h-10 px-4 mr-2">
+                            <Trash2 className="w-4 h-4" />
+                            Delete ({selectedIds.length})
+                        </Button>
+                    )}
+
                     <Label htmlFor="import-csv" className="cursor-pointer">
                         <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 gap-2">
                             <Upload className="w-4 h-4" /> Import CSV
