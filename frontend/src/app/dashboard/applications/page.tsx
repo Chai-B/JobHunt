@@ -356,21 +356,18 @@ export default function ApplicationsPage() {
                 <div>
                     <h1 className="text-4xl font-medium tracking-tight text-foreground flex items-center gap-4">
                         <Activity className="h-8 w-8 text-primary" />
-                        Application Pipeline
+                        Application
                     </h1>
                     <p className="text-muted-foreground mt-2 text-base max-w-lg leading-relaxed">
                         High-precision status tracking powered by heuristic inbox intelligence.
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                    <Button variant="outline" size="lg" onClick={syncInbox} className="gap-3 border-border text-foreground hover:bg-secondary rounded-2xl px-6 transition-all duration-300">
-                        <RefreshCw className="w-4 h-4" /> Sync Intelligence
-                    </Button>
                     <Button variant="outline" size="lg" onClick={() => setShowConfig(!showConfig)} className="rounded-2xl border-border px-6 transition-all duration-300">
                         <Settings className="w-4 h-4" />
                     </Button>
                     <Button size="lg" onClick={syncInbox} className="gap-3 bg-primary text-primary-foreground hover:opacity-90 rounded-2xl px-8 shadow-xl shadow-primary/20 transition-all duration-300">
-                        <RefreshCw className="w-4 h-4" /> Sync Intelligence
+                        <RefreshCw className="w-4 h-4" /> Sync Now
                     </Button>
                 </div>
             </div>
