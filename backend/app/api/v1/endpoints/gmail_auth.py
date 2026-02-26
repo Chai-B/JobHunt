@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Header
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
-from app.api.deps import get_current_user
+from app.db.session import get_db
+from app.api.deps import get_current_user, reusable_oauth2
 from app.db.models.user import User
 from app.db.models.setting import UserSetting
 from app.core.config import settings
@@ -19,7 +20,7 @@ SCOPES = [
 ]
 
 @router.get("/connect")
-async def connect_gmail(request: Request, current_user: User = Depends(get_current_user)):
+async def connect_gmail(request: Request, current_user: User = Depends(get_current_user), token: str = Depends(reusable_oauth2)):
     """
     Initiates the OAuth flow to connect a Gmail account.
     Returns the authorization URL.
@@ -54,7 +55,8 @@ async def connect_gmail(request: Request, current_user: User = Depends(get_curre
         authorization_url, state = flow.authorization_url(
             access_type='offline',
             include_granted_scopes='true',
-            prompt='consent'
+            prompt='consent',
+            state=token # Pass the JWT as state so we can read it on callback
         )
         
         return {"auth_url": authorization_url, "state": state}
@@ -63,12 +65,15 @@ async def connect_gmail(request: Request, current_user: User = Depends(get_curre
         raise HTTPException(status_code=500, detail=f"Google OAuth configuration error: {str(e)}")
 
 @router.get("/callback")
-async def gmail_callback(request: Request, code: str, state: str, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def gmail_callback(request: Request, code: str, state: str, db: AsyncSession = Depends(get_db)):
     """
     Handles the OAuth callback from Google.
+    `state` contains the user's JWT token.
     """
-    if not code:
-        raise HTTPException(status_code=400, detail="No code provided.")
+    if not code or not state:
+        raise HTTPException(status_code=400, detail="No code or state provided.")
+        
+    current_user = await get_current_user(db=db, token=state)
         
     base_url = str(request.base_url).rstrip('/')
     if "localhost" not in base_url and "127.0.0.1" not in base_url and base_url.startswith("http://"):
@@ -113,7 +118,10 @@ async def gmail_callback(request: Request, code: str, state: str, current_user: 
         
         await db.commit()
         
-        return {"message": "Gmail connected successfully.", "success": True}
+        await db.commit()
+        
+        # Once successful, close the popup and notify frontend
+        return {"message": "Gmail connected successfully. You can close this window.", "success": True}
         
     except Exception as e:
         logger.error(f"Failed to fetch Google OAuth token: {e}")
