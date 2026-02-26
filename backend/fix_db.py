@@ -5,7 +5,9 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from app.core.config import settings
 
 async def main():
-    engine = create_async_engine(settings.DATABASE_URL)
+    # Force the asyncpg driver into the URL string to bypass psycopg2 requirement
+    async_url = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+    engine = create_async_engine(async_url)
     async with engine.begin() as conn:
         try:
             await conn.execute(sa.text("ALTER TABLE user_settings ADD COLUMN last_inbox_sync_time TIMESTAMP WITH TIME ZONE;"))
