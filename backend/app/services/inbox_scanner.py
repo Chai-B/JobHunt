@@ -114,59 +114,84 @@ async def run_inbox_scanner_async(user_id: int):
                 extracted_company = None
                 
                 # Try simple domain extraction first
-                domain_match = re.search(r'@([\w-]+)\.', sender)
+                domain_match = re.search(r'@([\w.-]+)\.', sender)
+                
+                # ATS domains that hide the real company
+                ignore_domains = ["gmail", "yahoo", "hotmail", "outlook", "greenhouse", "lever", "workday", "ashbyhq", "myworkday", "linkedin", "bamboohr", "talent", "recruiting", "smartrecruiters", "icims", "jobvite"]
+                
                 if domain_match:
                     domain = domain_match.group(1).lower()
-                    # Filter junk/ATS domains
-                    ignore_domains = ["gmail", "yahoo", "hotmail", "outlook", "greenhouse", "lever", "workday", "ashbyhq", "myworkday", "linkedin", "bamboohr", "talent", "recruiting"]
                     if domain not in ignore_domains:
-                        extracted_company = domain
+                        extracted_company = domain.title()
                 
-                # If domain is ATS or generic, try looking at the Sender Name (e.g., "Stripe via Greenhouse" or "Recruiting | Meta")
+                # If domain is ATS or generic (like LinkedIn), try looking at the Sender Name or Subject
                 if not extracted_company:
-                    name_part = sender.split('<')[0].strip()
+                    name_part = sender.split('<')[0].strip().lower()
+                    subject_lower = email['subject'].lower()
+                    
+                    # 1. Check known companies first
                     for c_name in known_companies.keys():
-                        if c_name in name_part or c_name in email['subject'].lower():
-                            extracted_company = c_name
+                        if c_name in name_part or c_name in subject_lower:
+                            extracted_company = known_companies[c_name].company_name
                             break
-                
-                if not extracted_company:
+                    
+                    # 2. LinkedIn Easy Apply fallback: "Your application to [Company] was sent"
+                    if not extracted_company and "linkedin" in sender:
+                        match = re.search(r'application to (.+?) was sent|viewed your application for (.+?)\b|application for (.+?) at (.+?)\b', subject_lower)
+                        if match:
+                            extracted_company = next((m for m in match.groups() if m), "Unknown").strip().title()
+
+                if not extracted_company or extracted_company.lower() in ("unknown", "linkedin", "greenhouse"):
                     continue # Cannot bind this email to any tracked jobs
                 
-                # Bind to application
-                target_app = known_companies.get(extracted_company)
+                # Bind to application or CREATE ONE
+                target_app = known_companies.get(extracted_company.lower())
+                
                 if not target_app:
                     # Fuzzy match just in case
-                    target_app = next((a for c, a in known_companies.items() if c in extracted_company or extracted_company in c), None)
+                    target_app = next((a for c, a in known_companies.items() if c in extracted_company.lower() or extracted_company.lower() in c), None)
                 
-                if target_app:
-                    # Heuristic 2: Status Matching
-                    detected_status = None
-                    # We check in order of priority (Offer -> Rejected -> Interviewing -> Applied) to avoid false overlap 
-                    # e.g a rejection might say "thank you for applying" (applied), but "unfortunately" (rejected) overrides it.
-                    for s in ["offer", "rejected", "interviewing", "applied"]:
-                        if any(re.search(r'\b' + kw + r'\b', text_to_check) for kw in status_heuristics[s]):
-                            detected_status = s
-                            break
-                            
-                    if detected_status:
-                        logger.info(f"Match found for {extracted_company}. Status: {detected_status}")
-                        # Rank maps
-                        ranks = {"applied": 1, "interviewing": 2, "rejected": 3, "offer": 4}
-                        curr_rank = ranks.get(target_app.status, 0)
-                        new_rank = ranks.get(detected_status, 0)
+                # If STILL no match, auto-create the Application row so the user doesn't lose the data!
+                if not target_app:
+                    logger.info(f"Auto-creating missing application for: {extracted_company}")
+                    target_app = Application(
+                        user_id=user_id,
+                        company_name=extracted_company,
+                        application_type="Discovered (Email)",
+                        status="applied",
+                        notes=f"Auto-imported from Gmail on {datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
+                    )
+                    db.add(target_app)
+                    await db.flush() # get ID
+                    known_companies[extracted_company.lower()] = target_app
+
+                # Heuristic 2: Status Matching
+                detected_status = None
+                # Check in order of priority (Offer -> Rejected -> Interviewing -> Applied)
+                for s in ["offer", "rejected", "interviewing", "applied"]:
+                    # Removed word boundaries \b to allow sub-string matches like "offered" or "scheduling"
+                    if any(kw in text_to_check for kw in status_heuristics[s]):
+                        detected_status = s
+                        break
                         
-                        if new_rank > curr_rank or detected_status == "rejected":
-                            target_app.status = detected_status
-                        
-                        # Generate Timeline Note
-                        existing_notes = target_app.notes or ""
-                        sender_clean = sender.split('<')[0].strip()
-                        if str(email['id']) not in existing_notes:
-                            timeline_node = f"\n[{email['date'][:16]}] {sender_clean}: {email['subject']}  -> (Status: {detected_status.upper()}) [ID: {email['id']}]"
-                            target_app.notes = existing_notes + timeline_node
-                            db.add(target_app)
-                            matched_count += 1
+                if detected_status:
+                    logger.info(f"Match found for {extracted_company}. Status: {detected_status}")
+                    # Rank maps
+                    ranks = {"applied": 1, "interviewing": 2, "rejected": 3, "offer": 4}
+                    curr_rank = ranks.get(target_app.status, 0)
+                    new_rank = ranks.get(detected_status, 0)
+                    
+                    if new_rank > curr_rank or detected_status == "rejected":
+                        target_app.status = detected_status
+                    
+                    # Generate Timeline Node
+                    existing_notes = target_app.notes or ""
+                    sender_clean = sender.split('<')[0].strip()
+                    if str(email['id']) not in existing_notes:
+                        timeline_node = f"\n[{email['date'][:16]}] {sender_clean}: {email['subject']}  -> (Status: {detected_status.upper()}) [ID: {email['id']}]"
+                        target_app.notes = existing_notes + timeline_node
+                        db.add(target_app)
+                        matched_count += 1
             
             from sqlalchemy.sql import func
             user_settings.last_inbox_sync_time = func.now()
