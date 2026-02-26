@@ -161,7 +161,7 @@ export default function ResumesPage() {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
-                    <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
+                    <h1 className="text-3xl font-medium tracking-tight text-foreground flex items-center gap-3">
                         <FileText className="h-6 w-6" />
                         Resumes
                     </h1>
@@ -196,7 +196,7 @@ export default function ResumesPage() {
 
             <Card className="bg-card border-border shadow-sm">
                 <CardHeader className="border-b border-border pb-5">
-                    <CardTitle className="text-foreground text-lg font-semibold">Saved Resumes</CardTitle>
+                    <CardTitle className="text-foreground text-lg font-medium">Saved Resumes</CardTitle>
                     <CardDescription className="text-muted-foreground">Your uploaded resumes, parsed and ready for job matching.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -210,7 +210,7 @@ export default function ResumesPage() {
                             <div className="h-16 w-16 bg-secondary/50 rounded-full flex items-center justify-center mb-4 border border-border">
                                 <FileText className="w-6 h-6 text-muted-foreground" />
                             </div>
-                            <p className="text-foreground font-semibold text-lg mb-1">No Resumes Found</p>
+                            <p className="text-foreground font-medium text-lg mb-1">No Resumes Found</p>
                             <p className="text-sm max-w-sm">Upload a PDF or DOCX resume to get started.</p>
                         </div>
                     ) : (
@@ -282,7 +282,7 @@ export default function ResumesPage() {
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogContent className="sm:max-w-[800px] h-[85vh] flex flex-col bg-card border-border text-foreground shadow-lg rounded-xl">
                     <DialogHeader>
-                        <DialogTitle className="text-xl font-semibold flex items-center gap-2">
+                        <DialogTitle className="text-xl font-medium flex items-center gap-2">
                             <Edit2 className="w-4 h-4" /> Edit Resume Details
                         </DialogTitle>
                         <DialogDescription className="text-muted-foreground text-sm">

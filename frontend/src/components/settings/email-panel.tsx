@@ -32,7 +32,7 @@ export function EmailPanel({ formData, handleChange, setFormData, handleGmailCon
             {/* Primary Integration: Gmail & Automation */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-10 p-8 bg-card border border-border shadow-sm rounded-xl relative overflow-hidden group">
                 <div className="col-span-1 lg:col-span-1 lg:border-r border-border pr-6 relative z-10 flex flex-col gap-2">
-                    <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <h3 className="text-lg font-medium text-foreground flex items-center gap-2">
                         <Sparkles className="w-4 h-4 text-primary" /> Connectivity
                     </h3>
                     <p className="text-xs text-muted-foreground leading-relaxed">Gmail OAuth and pipeline automation.</p>
@@ -47,7 +47,7 @@ export function EmailPanel({ formData, handleChange, setFormData, handleGmailCon
                             {formData.gmail_connected ? (
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                        <button type="button" className="w-full flex items-center justify-center gap-2 h-11 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 text-sm font-semibold transition-all cursor-pointer shadow-sm group/btn">
+                                        <button type="button" className="w-full flex items-center justify-center gap-2 h-11 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 text-sm font-medium transition-all cursor-pointer shadow-sm group/btn">
                                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
                                             <span className="group-hover/btn:hidden">Gmail Connected</span>
                                             <span className="hidden group-hover/btn:inline">Reconnect Gmail</span>
@@ -69,7 +69,7 @@ export function EmailPanel({ formData, handleChange, setFormData, handleGmailCon
                                     </AlertDialogContent>
                                 </AlertDialog>
                             ) : (
-                                <button type="button" onClick={handleGmailConnect} className="bg-foreground text-background focus-visible:ring-ring hover:opacity-90 h-11 px-4 py-2 w-full rounded-md shadow-md transition-all text-sm font-bold flex items-center justify-center gap-2">
+                                <button type="button" onClick={handleGmailConnect} className="bg-foreground text-background focus-visible:ring-ring hover:opacity-90 h-11 px-4 py-2 w-full rounded-md shadow-md transition-all text-sm font-medium flex items-center justify-center gap-2">
                                     <Mail className="w-4 h-4" /> Connect to Gmail
                                 </button>
                             )}
@@ -114,7 +114,7 @@ export function EmailPanel({ formData, handleChange, setFormData, handleGmailCon
             {/* Legacy SMTP Fallback */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-10 p-8 bg-card/40 border border-border shadow-sm rounded-xl relative overflow-hidden group">
                 <div className="col-span-1 lg:col-span-1 lg:border-r border-border pr-6 relative z-10 flex flex-col gap-2">
-                    <h3 className="text-lg font-semibold text-foreground flex items-center gap-2"><Network className="w-4 h-4 text-muted-foreground" /> Protocols</h3>
+                    <h3 className="text-lg font-medium text-foreground flex items-center gap-2"><Network className="w-4 h-4 text-muted-foreground" /> Protocols</h3>
                     <p className="text-xs text-muted-foreground leading-relaxed">Legacy SMTP fallback services.</p>
                 </div>
                 <div className="col-span-1 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">

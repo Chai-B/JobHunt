@@ -134,7 +134,7 @@ export default function JobsPage() {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
+                    <h1 className="text-3xl font-medium tracking-tight text-foreground flex items-center gap-3">
                         <Briefcase className="h-6 w-6" />
                         Jobs
                     </h1>
@@ -150,7 +150,7 @@ export default function JobsPage() {
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[500px] bg-card border-border text-foreground shadow-lg rounded-xl">
                         <DialogHeader>
-                            <DialogTitle className="text-xl font-semibold">Add New Job</DialogTitle>
+                            <DialogTitle className="text-xl font-medium">Add New Job</DialogTitle>
                         </DialogHeader>
                         <form onSubmit={handleManualIngest} className="grid gap-5 py-6">
                             <div className="grid gap-2">
@@ -231,7 +231,7 @@ export default function JobsPage() {
                     <div className="h-16 w-16 bg-secondary rounded-full flex items-center justify-center mb-4 border border-border">
                         <Briefcase className="w-6 h-6 text-muted-foreground" />
                     </div>
-                    <h3 className="text-xl font-semibold text-foreground mb-2">No jobs found</h3>
+                    <h3 className="text-xl font-medium text-foreground mb-2">No jobs found</h3>
                     <p className="text-sm max-w-sm text-center">Add a job manually or run the scraper to populate the global database.</p>
                 </div>
             ) : (
@@ -247,7 +247,7 @@ export default function JobsPage() {
                                     {/* Header */}
                                     <div className="flex items-start justify-between gap-3 mb-3">
                                         <div className="flex-1 min-w-0">
-                                            <h3 className="text-base font-semibold text-foreground leading-tight line-clamp-2 group-hover:text-foreground/90 transition-colors">
+                                            <h3 className="text-base font-medium text-foreground leading-tight line-clamp-2 group-hover:text-foreground/90 transition-colors">
                                                 {job.title}
                                             </h3>
                                         </div>
@@ -333,7 +333,7 @@ export default function JobsPage() {
             <Dialog open={!!selectedJob} onOpenChange={(open) => !open && setSelectedJob(null)}>
                 <DialogContent className="sm:max-w-[650px] max-h-[85vh] bg-card border-border text-foreground shadow-lg rounded-xl overflow-hidden flex flex-col">
                     <DialogHeader className="shrink-0">
-                        <DialogTitle className="text-xl font-semibold leading-tight pr-8">
+                        <DialogTitle className="text-xl font-medium leading-tight pr-8">
                             {selectedJob?.title}
                         </DialogTitle>
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-2">

@@ -19,7 +19,7 @@ export function ScraperPanel({ formData, handleChange }: { formData: any, handle
     return (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 p-8 bg-card border border-border shadow-sm rounded-xl relative overflow-hidden group">
             <div className="col-span-1 lg:col-span-1 lg:border-r border-border pr-6 relative z-10">
-                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2"><Globe className="w-4 h-4" /> Scraper Config</h3>
+                <h3 className="text-lg font-medium text-foreground flex items-center gap-2"><Globe className="w-4 h-4" /> Scraper Config</h3>
                 <p className="text-xs text-muted-foreground mt-2 leading-relaxed">Configure which sites to scrape automatically and how often.</p>
             </div>
             <div className="col-span-3 grid gap-6 relative z-10">

@@ -79,8 +79,6 @@ export default function TemplatesPage() {
     const [name, setName] = useState("");
     const [subject, setSubject] = useState("");
     const [bodyText, setBodyText] = useState("");
-    const [customTags, setCustomTags] = useState<string[]>([]);
-    const [newTagInput, setNewTagInput] = useState("");
 
     const bodyRef = useRef<HTMLTextAreaElement>(null);
     const subjectRef = useRef<HTMLInputElement>(null);
@@ -137,23 +135,6 @@ export default function TemplatesPage() {
         }
     };
 
-    const addCustomTag = () => {
-        const cleaned = newTagInput.trim().replace(/[^a-zA-Z0-9_]/g, "_").toLowerCase();
-        if (!cleaned) return;
-        const tagStr = `{{${cleaned}}}`;
-        if (customTags.includes(tagStr) || DEFAULT_TAGS.some(t => t.tag === tagStr)) {
-            toast.error("Tag already exists.");
-            return;
-        }
-        setCustomTags([...customTags, tagStr]);
-        setNewTagInput("");
-        toast.success(`Custom tag ${tagStr} added.`);
-    };
-
-    const removeCustomTag = (tag: string) => {
-        setCustomTags(customTags.filter(t => t !== tag));
-    };
-
     const handleOpenCreate = () => {
         setSelectedTemplateId(null);
         setName("");
@@ -193,7 +174,7 @@ export default function TemplatesPage() {
             }
             toast.success(selectedTemplateId ? "Template updated successfully." : "Template created successfully.");
             setIsOpen(false);
-            setName(""); setSubject(""); setBodyText(""); setCustomTags([]);
+            setName(""); setSubject(""); setBodyText("");
             setSelectedTemplateId(null);
             fetchTemplates();
         } catch (err: any) {
@@ -201,7 +182,7 @@ export default function TemplatesPage() {
         }
     };
 
-    const allTags = [...DEFAULT_TAGS.map(t => t.tag), ...customTags];
+    const allTags = [...DEFAULT_TAGS.map(t => t.tag)];
 
     const generateWithAI = async () => {
         setGenerating(true);
@@ -240,7 +221,7 @@ export default function TemplatesPage() {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
+                    <h1 className="text-3xl font-medium tracking-tight text-foreground flex items-center gap-3">
                         <LayoutTemplate className="h-6 w-6" />
                         Templates
                     </h1>
@@ -256,7 +237,7 @@ export default function TemplatesPage() {
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[900px] bg-card border-border text-foreground shadow-2xl rounded-xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
-                            <DialogTitle className="text-xl font-semibold flex items-center gap-2">
+                            <DialogTitle className="text-xl font-medium flex items-center gap-2">
                                 <Mail className="h-5 w-5" />
                                 {selectedTemplateId ? "Edit Template" : "New Template"}
                             </DialogTitle>
@@ -267,7 +248,7 @@ export default function TemplatesPage() {
                             <div className="md:col-span-5 space-y-5">
                                 {/* AI Generation Section */}
                                 <div className="bg-card border border-border p-5 rounded-xl shadow-sm space-y-5">
-                                    <div className="flex items-center gap-2 text-[11px] font-semibold text-foreground uppercase tracking-wider">
+                                    <div className="flex items-center gap-2 text-[11px] font-medium text-foreground uppercase tracking-wider">
                                         <div className="w-5 h-5 flex items-center justify-center rounded bg-primary/10 text-primary">
                                             <Bot className="w-3.5 h-3.5" />
                                         </div>
@@ -322,7 +303,7 @@ export default function TemplatesPage() {
                                                 </SelectContent>
                                             </Select>
                                         </div>
-                                        <Button type="button" onClick={generateWithAI} disabled={generating} className="h-10 w-full text-xs font-semibold gap-2 bg-foreground text-background hover:bg-foreground/90 shadow-sm transition-all rounded-lg mt-2">
+                                        <Button type="button" onClick={generateWithAI} disabled={generating} className="h-10 w-full text-xs font-medium gap-2 bg-foreground text-background hover:bg-foreground/90 shadow-sm transition-all rounded-lg mt-2">
                                             <Bot className={`w-3.5 h-3.5 ${generating ? 'animate-bounce' : ''}`} />
                                             {generating ? "Drafting..." : "Generate Draft"}
                                         </Button>
@@ -331,9 +312,9 @@ export default function TemplatesPage() {
 
                                 {/* Available Tags */}
                                 <div className="bg-card border border-border p-4 rounded-xl shadow-sm space-y-4">
-                                    <div className="flex items-center gap-2 text-[11px] font-semibold text-foreground uppercase tracking-wider">
-                                        <div className="w-5 h-5 flex items-center justify-center rounded bg-blue-500/20 text-blue-500">
-                                            <Tag className="w-3.5 h-3.5" />
+                                    <div className="flex items-center gap-2 text-[11px] font-medium text-foreground uppercase tracking-wider">
+                                        <div className="w-5 h-5 flex items-center justify-center rounded bg-primary/10 text-primary">
+                                            <LayoutTemplate className="w-3.5 h-3.5" />
                                         </div>
                                         Dynamic Variables
                                     </div>
@@ -353,49 +334,18 @@ export default function TemplatesPage() {
                                             </button>
                                         ))}
                                     </div>
-
-                                    {/* Custom Tags */}
-                                    {customTags.length > 0 && (
-                                        <div className="pt-3 border-t border-border">
-                                            <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                                                Custom Variables
-                                            </div>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {customTags.map((tag) => (
-                                                    <span key={tag} className="text-foreground bg-secondary/80 px-2 py-1 rounded-md border border-border text-[10px] font-mono flex items-center gap-1.5 group">
-                                                        <button type="button" onClick={() => insertTag(tag, "body")} className="hover:text-primary transition-colors">{tag}</button>
-                                                        <button type="button" onClick={() => removeCustomTag(tag)} className="text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive transition-all"><X className="w-3 h-3" /></button>
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Add Custom Tag */}
-                                    <div className="flex items-center gap-2 pt-3 border-t border-border mt-2">
-                                        <Input
-                                            value={newTagInput}
-                                            onChange={(e) => setNewTagInput(e.target.value)}
-                                            placeholder="custom_tag_name"
-                                            className="bg-background border-border text-foreground h-8 text-xs font-mono flex-1 rounded-md"
-                                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomTag(); } }}
-                                        />
-                                        <Button type="button" size="sm" variant="outline" onClick={addCustomTag} className="h-8 text-xs border-border text-foreground hover:bg-secondary rounded-md shadow-sm">
-                                            <Plus className="w-3 h-3" />
-                                        </Button>
-                                    </div>
                                 </div>
                             </div>
 
                             {/* Right Column: Editor */}
                             <div className="md:col-span-7 flex flex-col gap-4">
                                 <div className="grid gap-1.5">
-                                    <Label htmlFor="name" className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider pl-1">Template Name</Label>
+                                    <Label htmlFor="name" className="text-muted-foreground text-[10px] font-medium uppercase tracking-wider pl-1">Template Name</Label>
                                     <Input id="name" placeholder="e.g. Standard Cold Intro" required value={name} onChange={(e) => setName(e.target.value)} className="bg-background border-border focus-visible:ring-ring text-foreground h-10 rounded-lg shadow-sm font-medium" />
                                 </div>
                                 <div className="grid gap-1.5">
                                     <div className="flex justify-between items-center pl-1 r-1">
-                                        <Label htmlFor="subject" className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">Email Subject</Label>
+                                        <Label htmlFor="subject" className="text-muted-foreground text-[10px] font-medium uppercase tracking-wider">Email Subject</Label>
                                         <div className="flex gap-1.5">
                                             {["{{job_title}}", "{{company}}"].map(tag => (
                                                 <button key={tag} type="button" onClick={() => insertTag(tag, "subject")} className="text-[9px] text-muted-foreground hover:text-foreground hover:bg-secondary font-mono border border-border bg-card rounded px-1.5 py-0.5 transition-colors shadow-sm">{tag}</button>
@@ -405,7 +355,7 @@ export default function TemplatesPage() {
                                     <Input ref={subjectRef} id="subject" placeholder="Application for {{job_title}} at {{company}}" required value={subject} onChange={(e) => setSubject(e.target.value)} className="bg-background border-border focus-visible:ring-ring text-foreground h-10 rounded-lg shadow-sm font-mono text-sm" />
                                 </div>
                                 <div className="grid gap-1.5 flex-1 flex flex-col min-h-[300px]">
-                                    <Label htmlFor="body" className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider pl-1">Email Body</Label>
+                                    <Label htmlFor="body" className="text-muted-foreground text-[10px] font-medium uppercase tracking-wider pl-1">Email Body</Label>
                                     <Textarea
                                         ref={bodyRef}
                                         id="body"
@@ -416,7 +366,7 @@ export default function TemplatesPage() {
                                         onChange={(e) => setBodyText(e.target.value)}
                                     />
                                 </div>
-                                <Button type="submit" className="w-full bg-primary text-primary-foreground hover:opacity-90 font-bold h-11 text-sm rounded-lg shadow-md mt-2">
+                                <Button type="submit" className="w-full bg-primary text-primary-foreground hover:opacity-90 font-medium h-11 text-sm rounded-lg shadow-md mt-2">
                                     {selectedTemplateId ? "Save Changes" : "Create Template"}
                                 </Button>
                             </div>
@@ -427,7 +377,7 @@ export default function TemplatesPage() {
 
             <Card className="bg-card border-border shadow-sm">
                 <CardHeader className="border-b border-border pb-5">
-                    <CardTitle className="text-foreground text-lg font-semibold">Saved Templates</CardTitle>
+                    <CardTitle className="text-foreground text-lg font-medium">Saved Templates</CardTitle>
                     <CardDescription className="text-muted-foreground">Your templates ready for outreach. Click a tag in the editor to autofill.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -436,7 +386,7 @@ export default function TemplatesPage() {
                             <Table>
                                 <TableHeader className="bg-secondary/30">
                                     <TableRow className="border-border hover:bg-transparent">
-                                        <TableHead className="w-12 text-center text-[10px] uppercase font-bold text-muted-foreground/40">#</TableHead>
+                                        <TableHead className="w-12 text-center text-[10px] uppercase font-medium text-muted-foreground/40">#</TableHead>
                                         <TableHead className="text-muted-foreground font-medium">Name</TableHead>
                                         <TableHead className="text-muted-foreground font-medium">Subject</TableHead>
                                         <TableHead className="text-muted-foreground font-medium">Variables Used</TableHead>
@@ -461,7 +411,7 @@ export default function TemplatesPage() {
                             <div className="h-16 w-16 bg-secondary/50 rounded-full flex items-center justify-center mb-4 border border-border">
                                 <LayoutTemplate className="w-6 h-6 text-muted-foreground" />
                             </div>
-                            <p className="text-foreground font-semibold text-lg mb-1">No Templates Found</p>
+                            <p className="text-foreground font-medium text-lg mb-1">No Templates Found</p>
                             <p className="text-sm max-w-sm">Create a template to enable personalized automated outreach.</p>
                         </div>
                     ) : (
@@ -469,7 +419,7 @@ export default function TemplatesPage() {
                             <Table>
                                 <TableHeader className="bg-secondary/30">
                                     <TableRow className="border-border hover:bg-transparent">
-                                        <TableHead className="w-12 text-center text-[10px] uppercase font-bold text-muted-foreground/40">#</TableHead>
+                                        <TableHead className="w-12 text-center text-[10px] uppercase font-medium text-muted-foreground/40">#</TableHead>
                                         <TableHead className="text-muted-foreground font-medium">Name</TableHead>
                                         <TableHead className="text-muted-foreground font-medium">Subject</TableHead>
                                         <TableHead className="text-muted-foreground font-medium">Variables Used</TableHead>

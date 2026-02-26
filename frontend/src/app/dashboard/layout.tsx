@@ -138,7 +138,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <div className="h-8 w-8 rounded-md bg-secondary flex items-center justify-center border border-border">
                             <Briefcase className="h-4 w-4 text-foreground" />
                         </div>
-                        <h1 className="text-xl font-semibold tracking-tight text-foreground">JobHunt</h1>
+                        <h1 className="text-xl font-medium tracking-tight text-foreground">JobHunt</h1>
                     </div>
                     <nav className="space-y-1">
                         {navigation.map((item) => {

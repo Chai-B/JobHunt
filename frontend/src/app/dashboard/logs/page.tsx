@@ -106,7 +106,7 @@ export default function LogsPage() {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
+                    <h1 className="text-3xl font-medium tracking-tight text-foreground flex items-center gap-3">
                         <Activity className="h-6 w-6" />
                         System Logs
                         <Badge variant="outline" className={`transition-opacity duration-300 border-blue-500/50 text-blue-500 bg-blue-500/10 animate-pulse ml-2 ${runningCount > 0 ? 'opacity-100' : 'opacity-0 select-none'}`}>

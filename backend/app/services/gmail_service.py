@@ -17,7 +17,7 @@ class GmailService:
         )
         self.service = build('gmail', 'v1', credentials=self.creds)
 
-    def send_email(self, to: str, subject: str, body: str, attachment_path: str = None) -> str:
+    def send_email(self, to: str, subject: str, body: str, attachment_data: bytes = None, attachment_filename: str = None) -> str:
         """Send an email via the user's connected Gmail account, optionally with an attachment."""
         try:
             from email.mime.multipart import MIMEMultipart
@@ -31,13 +31,12 @@ class GmailService:
             message['Subject'] = subject
             message.attach(MIMEText(body, 'plain'))
             
-            if attachment_path and os.path.exists(attachment_path):
-                with open(attachment_path, "rb") as attachment:
-                    part = MIMEBase("application", "octet-stream")
-                    part.set_payload(attachment.read())
+            if attachment_data and attachment_filename:
+                part = MIMEBase("application", "octet-stream")
+                part.set_payload(attachment_data)
                 
                 encoders.encode_base64(part)
-                filename = os.path.basename(attachment_path)
+                filename = attachment_filename
                 # Strip internal IDs for the recipient if we appended them to the filename
                 if "_" in filename:
                     filename = filename.split("_", 1)[1]

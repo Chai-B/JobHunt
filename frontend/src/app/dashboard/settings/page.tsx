@@ -149,7 +149,7 @@ export default function SettingsPage() {
     return (
         <div className="max-w-5xl space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 relative pb-20">
             <div>
-                <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
+                <h1 className="text-3xl font-medium tracking-tight text-foreground flex items-center gap-3">
                     <Settings className="w-7 h-7" />
                     Settings
                 </h1>
@@ -170,7 +170,7 @@ export default function SettingsPage() {
                             <Info className="w-5 h-5 text-foreground" />
                         </div>
                         <div>
-                            <p className="font-semibold text-foreground">Secure Vault Integration</p>
+                            <p className="font-medium text-foreground">Secure Vault Integration</p>
                             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                                 API keys and credentials are encrypted at rest and never leave your environment. They are used exclusively for server-side processing and are never exposed to the client or third parties.
                             </p>
@@ -184,7 +184,7 @@ export default function SettingsPage() {
                     <DatabasePanel formData={formData} handleChange={handleChange} />
 
                     <div className="flex justify-end pt-6">
-                        <Button type="submit" disabled={saving} className="h-12 px-10 bg-foreground hover:opacity-90 text-background font-semibold transition-all rounded-lg shadow-lg">
+                        <Button type="submit" disabled={saving} className="h-12 px-10 bg-foreground hover:opacity-90 text-background font-medium transition-all rounded-lg shadow-lg">
                             {saving ? "Saving Changes..." : "Save Settings"}
                         </Button>
                     </div>

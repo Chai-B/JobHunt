@@ -28,7 +28,6 @@ async def upload_resume(
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=400, detail=f"Unsupported file extension: {ext}")
         
-    import os
     
     file_bytes = await file.read()
     
@@ -38,18 +37,12 @@ async def upload_resume(
         filename=file.filename,
         format=ext,
         label=label,
-        status="pending"
+        status="pending",
+        file_data=file_bytes
     )
     db.add(new_resume)
     await db.commit()
     await db.refresh(new_resume)
-    
-    # Save the physical file so it can be attached to cold emails later
-    upload_dir = "app/uploads/resumes"
-    os.makedirs(upload_dir, exist_ok=True)
-    file_path = os.path.join(upload_dir, f"{new_resume.id}_{file.filename}")
-    with open(file_path, "wb") as f:
-        f.write(file_bytes)
     
     # Run directly in the current event loop (non-blocking)
     task = asyncio.create_task(

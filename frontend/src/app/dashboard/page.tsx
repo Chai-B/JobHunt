@@ -105,7 +105,7 @@ export default function DashboardOverview() {
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div>
-                <h1 className="text-3xl font-semibold tracking-tight text-foreground mb-2 text-zinc-100">Command Center</h1>
+                <h1 className="text-3xl font-medium tracking-tight text-foreground mb-2 text-zinc-100">Command Center</h1>
                 <p className="text-muted-foreground text-sm">Real-time telemetry of your job application pipeline.</p>
             </div>
 
@@ -118,7 +118,7 @@ export default function DashboardOverview() {
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-semibold text-foreground">{metrics.total_applications}</div>
+                        <div className="text-3xl font-medium text-foreground">{metrics.total_applications}</div>
                         <p className="text-xs text-muted-foreground mt-1">Active Pipeline Volume</p>
                     </CardContent>
                 </Card>
@@ -131,7 +131,7 @@ export default function DashboardOverview() {
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-semibold text-foreground">{metrics.global_knowledge.jobs}</div>
+                        <div className="text-3xl font-medium text-foreground">{metrics.global_knowledge.jobs}</div>
                         <p className="text-xs text-muted-foreground mt-1">Across interconnected pool</p>
                     </CardContent>
                 </Card>
@@ -144,7 +144,7 @@ export default function DashboardOverview() {
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-semibold text-foreground">{metrics.global_knowledge.contacts}</div>
+                        <div className="text-3xl font-medium text-foreground">{metrics.global_knowledge.contacts}</div>
                         <p className="text-xs text-muted-foreground mt-1">High-value targets scraped</p>
                     </CardContent>
                 </Card>
@@ -157,7 +157,7 @@ export default function DashboardOverview() {
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-semibold text-foreground">+{metrics.recent_apps_7d}</div>
+                        <div className="text-3xl font-medium text-foreground">+{metrics.recent_apps_7d}</div>
                         <p className="text-xs text-muted-foreground mt-1">Applications this week</p>
                     </CardContent>
                 </Card>
@@ -166,7 +166,7 @@ export default function DashboardOverview() {
             <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-7">
                 <Card className="col-span-4 bg-card border-border shadow-sm">
                     <CardHeader>
-                        <CardTitle className="text-foreground font-semibold tracking-wide flex items-center gap-2">Funnel Velocity</CardTitle>
+                        <CardTitle className="text-foreground font-medium tracking-wide flex items-center gap-2">Funnel Velocity</CardTitle>
                         <CardDescription className="text-muted-foreground">Volumetric tracking of your applications moving through the pipeline.</CardDescription>
                     </CardHeader>
                     <CardContent className="h-[320px] mt-4">
@@ -202,7 +202,7 @@ export default function DashboardOverview() {
 
                 <Card className="col-span-3 bg-card border-border shadow-sm">
                     <CardHeader>
-                        <CardTitle className="text-foreground font-semibold flex items-center gap-2">
+                        <CardTitle className="text-foreground font-medium flex items-center gap-2">
                             <Cpu className="h-5 w-5 text-foreground" />
                             Activity Logs
                         </CardTitle>

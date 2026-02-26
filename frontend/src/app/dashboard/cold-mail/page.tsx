@@ -47,7 +47,7 @@ const ContactRow = React.memo(({ c, idx, isSelected, onToggle, onSend, sendingId
             <TableCell className="py-5">
                 <div className="flex flex-col gap-1.5">
                     <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-foreground/90">{c.company}</span>
+                        <span className="text-xs font-medium text-foreground/90">{c.company}</span>
                         <CheckCircle2 className="w-3 h-3 text-emerald-500/30" />
                     </div>
                     <Badge variant="outline" className="w-fit text-[10px] rounded-md px-1.5 py-0 border-border/30 bg-background/30 text-muted-foreground/80 font-normal">
@@ -59,7 +59,7 @@ const ContactRow = React.memo(({ c, idx, isSelected, onToggle, onSend, sendingId
                 <Button
                     size="sm"
                     variant="outline"
-                    className="text-foreground border-border/50 hover:bg-primary hover:text-primary-foreground text-[11px] font-bold rounded-xl h-9 px-4 gap-2 transition-all hover:scale-105"
+                    className="text-foreground border-border/50 hover:bg-primary hover:text-primary-foreground text-[11px] font-medium rounded-xl h-9 px-4 gap-2 transition-all hover:scale-105"
                     onClick={() => onSend(c.id)}
                     disabled={sendingId === c.id || !selectedTemplate || !selectedResume}
                 >
@@ -110,7 +110,7 @@ export default function ColdMailPage() {
             }
             if (templatesRes.ok) {
                 const data = await templatesRes.json();
-                setTemplates(Array.isArray(data) ? data : []);
+                setTemplates(Array.isArray(data.items) ? data.items : (Array.isArray(data) ? data : []));
             }
             if (resumesRes.ok) {
                 const data = await resumesRes.json();
@@ -222,13 +222,13 @@ export default function ColdMailPage() {
         setSelectedContactIds(new Set()); // Clear selection after batch
     };
 
-    const labelClass = "text-[11px] uppercase tracking-[0.2em] text-muted-foreground/60 font-bold mb-2 flex items-center";
+    const labelClass = "text-[11px] uppercase tracking-[0.2em] text-muted-foreground/60 font-medium mb-2 flex items-center";
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-1000 relative pb-24">
             <div className="flex justify-between items-end">
                 <div>
-                    <h1 className="text-4xl font-bold tracking-tight text-foreground flex items-center gap-3 font-sans">
+                    <h1 className="text-4xl font-medium tracking-tight text-foreground flex items-center gap-3 font-sans">
                         <Mail className="h-8 w-8 text-primary" />
                         Cold Mail
                     </h1>
@@ -243,7 +243,7 @@ export default function ColdMailPage() {
                 {/* Configuration Panel */}
                 <Card className="lg:col-span-4 bg-card/60 backdrop-blur-xl border-border/50 shadow-2xl rounded-2xl overflow-hidden self-start sticky top-24">
                     <CardHeader className="border-b border-border/50 pb-6 bg-secondary/10">
-                        <CardTitle className="text-lg font-bold">Campaign Presets</CardTitle>
+                        <CardTitle className="text-lg font-medium">Campaign Presets</CardTitle>
                         <CardDescription className="text-xs">Define the assets for this outbound wave.</CardDescription>
                     </CardHeader>
                     <CardContent className="pt-8 space-y-8">
@@ -282,7 +282,7 @@ export default function ColdMailPage() {
 
                         <div className="pt-4">
                             <div className="p-4 bg-primary/5 border border-primary/10 rounded-xl space-y-3">
-                                <div className="flex items-center justify-between text-[11px] font-bold uppercase text-primary/70">
+                                <div className="flex items-center justify-between text-[11px] font-medium uppercase text-primary/70">
                                     <span>Batch Ready</span>
                                     <span>{selectedContactIds.size} Leads</span>
                                 </div>
@@ -302,7 +302,7 @@ export default function ColdMailPage() {
                 <Card className="lg:col-span-8 bg-card/60 backdrop-blur-xl border-border/50 shadow-2xl rounded-2xl overflow-hidden">
                     <CardHeader className="border-b border-border/50 pb-6 bg-secondary/10">
                         <div className="flex justify-between items-center">
-                            <CardTitle className="text-lg font-bold flex items-center gap-3">
+                            <CardTitle className="text-lg font-medium flex items-center gap-3">
                                 <Users className="w-5 h-5 text-primary/70" />
                                 Lead Collection
                             </CardTitle>
@@ -353,7 +353,7 @@ export default function ColdMailPage() {
                                 <div className="h-20 w-20 bg-secondary/50 rounded-3xl flex items-center justify-center mb-6 border border-border/50 shadow-inner">
                                     <MousePointer2 className="w-8 h-8 text-muted-foreground/30" />
                                 </div>
-                                <h3 className="text-xl font-bold text-foreground mb-3 font-sans">No Leads Identified</h3>
+                                <h3 className="text-xl font-medium text-foreground mb-3 font-sans">No Leads Identified</h3>
                                 <p className="text-sm text-balance max-w-sm opacity-60 leading-relaxed">
                                     Use the Universal Extractor to bridge external lists into your outbound pipeline.
                                 </p>
@@ -363,7 +363,7 @@ export default function ColdMailPage() {
                                 <Table>
                                     <TableHeader className="bg-secondary/20">
                                         <TableRow className="border-border/40 hover:bg-transparent">
-                                            <TableHead className="w-12 px-4 text-center text-[10px] font-bold text-muted-foreground/40">#</TableHead>
+                                            <TableHead className="w-12 px-4 text-center text-[10px] font-medium text-muted-foreground/40">#</TableHead>
                                             <TableHead className="w-16 px-6">
                                                 <Checkbox
                                                     checked={selectedContactIds.size === contacts.length && contacts.length > 0}
@@ -371,9 +371,9 @@ export default function ColdMailPage() {
                                                     className="rounded-md border-border/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                                                 />
                                             </TableHead>
-                                            <TableHead className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60 py-4">Identity & Reach</TableHead>
-                                            <TableHead className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60 py-4">Professional Context</TableHead>
-                                            <TableHead className="text-right text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60 py-4 pr-8">Precision Send</TableHead>
+                                            <TableHead className="text-[10px] uppercase font-medium tracking-widest text-muted-foreground/60 py-4">Identity & Reach</TableHead>
+                                            <TableHead className="text-[10px] uppercase font-medium tracking-widest text-muted-foreground/60 py-4">Professional Context</TableHead>
+                                            <TableHead className="text-right text-[10px] uppercase font-medium tracking-widest text-muted-foreground/60 py-4 pr-8">Precision Send</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -416,14 +416,14 @@ export default function ColdMailPage() {
                                 <Zap className="w-5 h-5 text-primary" />
                             </div>
                             <div className="flex flex-col">
-                                <span className="text-lg font-bold leading-none">{selectedContactIds.size} Target{selectedContactIds.size > 1 ? 's' : ''}</span>
-                                <span className="text-[10px] uppercase font-bold tracking-widest text-primary/70 mt-1">Batch Ready</span>
+                                <span className="text-lg font-medium leading-none">{selectedContactIds.size} Target{selectedContactIds.size > 1 ? 's' : ''}</span>
+                                <span className="text-[10px] uppercase font-medium tracking-widest text-primary/70 mt-1">Batch Ready</span>
                             </div>
                         </div>
                         <Button
                             onClick={sendBatchMails}
                             disabled={batchSending || !selectedTemplate || !selectedResume}
-                            className="bg-primary text-primary-foreground hover:opacity-90 rounded-xl px-8 py-6 h-auto font-bold text-base shadow-xl transition-all hover:scale-105 active:scale-95 gap-3"
+                            className="bg-primary text-primary-foreground hover:opacity-90 rounded-xl px-8 py-6 h-auto font-medium text-base shadow-xl transition-all hover:scale-105 active:scale-95 gap-3"
                         >
                             {batchSending ? <Activity className="w-5 h-5 animate-spin" /> : <Mail className="w-5 h-5" />}
                             {batchSending ? "Processing wave..." : "Dispatch Batch Wave"}

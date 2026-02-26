@@ -170,7 +170,7 @@ export default function ContactsPage() {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
+                    <h1 className="text-3xl font-medium tracking-tight text-foreground flex items-center gap-3">
                         <Users className="h-6 w-6" />
                         Contacts
                     </h1>
@@ -186,7 +186,7 @@ export default function ContactsPage() {
                     </Label>
 
                     <Button variant="outline" onClick={handleExport} className="gap-2">
-                        <Download className="w-4 h-4" /> Export
+                        <Download className="w-4 h-4" /> Export CSV
                     </Button>
 
                     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -225,7 +225,7 @@ export default function ContactsPage() {
 
             <Card className="bg-card border-border shadow-sm">
                 <CardHeader className="border-b border-border pb-5">
-                    <CardTitle className="text-lg font-semibold">Saved Contacts</CardTitle>
+                    <CardTitle className="text-lg font-medium">Saved Contacts</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                     {loading ? (
@@ -241,7 +241,7 @@ export default function ContactsPage() {
                             <Table>
                                 <TableHeader className="bg-secondary/30">
                                     <TableRow>
-                                        <TableHead className="w-12 text-center text-[10px] uppercase font-bold text-muted-foreground/40">#</TableHead>
+                                        <TableHead className="w-12 text-center text-[10px] uppercase font-medium text-muted-foreground/40">#</TableHead>
                                         <TableHead>Name</TableHead>
                                         <TableHead>Email</TableHead>
                                         <TableHead>Role</TableHead>

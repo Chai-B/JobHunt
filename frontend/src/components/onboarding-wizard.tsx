@@ -75,7 +75,7 @@ export function OnboardingWizard({ user, onComplete }: { user: any, onComplete: 
 
                 <div className="p-6">
                     <DialogHeader className="mb-6">
-                        <DialogTitle className="text-2xl font-semibold tracking-tight text-foreground flex items-center gap-3">
+                        <DialogTitle className="text-2xl font-medium tracking-tight text-foreground flex items-center gap-3">
                             {step === 1 && <><User className="w-6 h-6 text-foreground" /> Complete Profile</>}
                             {step === 2 && <><SettingsIcon className="w-6 h-6 text-foreground" /> Professional Links</>}
                             {step === 3 && <><Sparkles className="w-6 h-6 text-foreground" /> Welcome to JobHunt</>}
@@ -130,7 +130,7 @@ export function OnboardingWizard({ user, onComplete }: { user: any, onComplete: 
                             <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mb-4">
                                 <CheckCircle2 className="w-8 h-8 text-emerald-500" />
                             </div>
-                            <h3 className="text-xl font-bold mb-2">Profile Configured</h3>
+                            <h3 className="text-xl font-medium mb-2">Profile Configured</h3>
                             <p className="text-sm text-muted-foreground max-w-[280px]">
                                 Your dashboard is ready. You can always update these details later in Settings.
                             </p>
@@ -145,9 +145,9 @@ export function OnboardingWizard({ user, onComplete }: { user: any, onComplete: 
                         </div>
                         <div>
                             {step < 3 ? (
-                                <Button onClick={nextStep} className="bg-foreground text-background hover:opacity-90 font-semibold px-8">Continue</Button>
+                                <Button onClick={nextStep} className="bg-foreground text-background hover:opacity-90 font-medium px-8">Continue</Button>
                             ) : (
-                                <Button disabled={loading} onClick={handleComplete} className="bg-foreground text-background hover:opacity-90 font-semibold px-8 shadow-lg transition-all">
+                                <Button disabled={loading} onClick={handleComplete} className="bg-foreground text-background hover:opacity-90 font-medium px-8 shadow-lg transition-all">
                                     {loading ? "Initializing..." : "Proceed to Dashboard"}
                                 </Button>
                             )}

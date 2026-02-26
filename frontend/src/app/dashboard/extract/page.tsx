@@ -131,7 +131,7 @@ export default function ExtractorPage() {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 min-h-[80px]">
                 <div>
-                    <h1 className="text-4xl font-bold tracking-tight text-foreground flex items-center gap-3 font-sans">
+                    <h1 className="text-4xl font-medium tracking-tight text-foreground flex items-center gap-3 font-sans">
                         <Sparkles className="h-8 w-8 text-primary animate-pulse" />
                         Extractor
                     </h1>
@@ -164,7 +164,7 @@ export default function ExtractorPage() {
                 {/* Input Column */}
                 <Card className="lg:col-span-4 bg-card/50 backdrop-blur-xl border-border/50 shadow-2xl flex flex-col h-full rounded-2xl overflow-hidden group">
                     <CardHeader className="pb-3 border-b border-border/50 bg-secondary/20">
-                        <CardTitle className="text-xl font-semibold flex items-center gap-2">
+                        <CardTitle className="text-xl font-medium flex items-center gap-2">
                             Raw Input
                             <Badge variant="secondary" className="text-[10px] uppercase tracking-tighter">Draft</Badge>
                         </CardTitle>
@@ -183,7 +183,7 @@ export default function ExtractorPage() {
                             </div>
                         </div>
                         <Button
-                            className="w-full h-14 text-lg font-semibold gap-3 bg-foreground text-background hover:bg-foreground/90 rounded-xl shadow-xl transition-all hover:gap-5"
+                            className="w-full h-14 text-lg font-medium gap-3 bg-foreground text-background hover:bg-foreground/90 rounded-xl shadow-xl transition-all hover:gap-5"
                             disabled={!rawText.trim() || processing}
                             onClick={handleExtract}
                         >
@@ -216,7 +216,7 @@ export default function ExtractorPage() {
                                         <div className={`p-2 rounded-lg ${r.type === 'contact' ? 'bg-blue-500/10 text-blue-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
                                             {r.type === 'contact' ? <Users className="w-4 h-4" /> : <Briefcase className="w-4 h-4" />}
                                         </div>
-                                        <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">
+                                        <CardTitle className="text-sm font-medium uppercase tracking-widest text-muted-foreground/80">
                                             {r.type === 'contact' ? 'Contact Found' : 'Job Inferred'}
                                         </CardTitle>
                                     </div>
@@ -229,22 +229,22 @@ export default function ExtractorPage() {
                                 {r.type === 'contact' && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
                                         <div className="space-y-1">
-                                            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter block">Email Address</span>
+                                            <span className="text-[10px] uppercase font-medium text-muted-foreground tracking-tighter block">Email Address</span>
                                             <strong className="text-base text-blue-400 font-mono break-all">{r.data.email}</strong>
                                         </div>
                                         <div className="space-y-1">
-                                            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter block">Current Company</span>
+                                            <span className="text-[10px] uppercase font-medium text-muted-foreground tracking-tighter block">Current Company</span>
                                             <div className="flex items-center gap-2">
                                                 <strong className="text-base text-primary">{r.data.company}</strong>
                                                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500/50" />
                                             </div>
                                         </div>
                                         <div className="space-y-1">
-                                            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter block">Lead Name</span>
+                                            <span className="text-[10px] uppercase font-medium text-muted-foreground tracking-tighter block">Lead Name</span>
                                             <strong className="text-base text-foreground/90">{r.data.name || "—"}</strong>
                                         </div>
                                         <div className="space-y-1">
-                                            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter block">Professional Role</span>
+                                            <span className="text-[10px] uppercase font-medium text-muted-foreground tracking-tighter block">Professional Role</span>
                                             <Badge variant="secondary" className="mt-0.5 rounded-md px-2 py-0.5 text-[11px] font-medium border-border/50">
                                                 {r.data.role || "Not Identified"}
                                             </Badge>
@@ -254,11 +254,11 @@ export default function ExtractorPage() {
                                 {r.type === 'job' && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-1">
-                                            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter block">Role Title</span>
+                                            <span className="text-[10px] uppercase font-medium text-muted-foreground tracking-tighter block">Role Title</span>
                                             <strong className="text-base text-emerald-400">{r.data.title}</strong>
                                         </div>
                                         <div className="space-y-1">
-                                            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter block">Organisation</span>
+                                            <span className="text-[10px] uppercase font-medium text-muted-foreground tracking-tighter block">Organisation</span>
                                             <strong className="text-base text-foreground/90">{r.data.company}</strong>
                                         </div>
                                     </div>
@@ -276,7 +276,7 @@ export default function ExtractorPage() {
                                 <Button
                                     size="sm"
                                     onClick={() => handleSaveEntity(r, i)}
-                                    className="bg-foreground text-background rounded-lg px-5 font-semibold transition-all hover:px-7"
+                                    className="bg-foreground text-background rounded-lg px-5 font-medium transition-all hover:px-7"
                                 >
                                     <Save className="w-4 h-4 mr-2" />
                                     Confirm & Save

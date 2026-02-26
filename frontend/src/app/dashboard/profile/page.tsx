@@ -142,7 +142,7 @@ export default function ProfilePage() {
     return (
         <div className="max-w-5xl space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 relative pb-20">
             <div>
-                <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
+                <h1 className="text-3xl font-medium tracking-tight text-foreground flex items-center gap-3">
                     <User className="w-7 h-7" />
                     Profile
                 </h1>
@@ -159,7 +159,7 @@ export default function ProfilePage() {
                 {/* Personal Information Structure */}
                 <div className="p-8 bg-card border border-border shadow-sm rounded-xl relative overflow-hidden group">
                     <div className="relative z-10 mb-8 border-b border-border pb-5">
-                        <h3 className="text-xl font-semibold text-foreground flex items-center gap-2"><BriefcaseBusiness className="w-5 h-5" /> Personal Details</h3>
+                        <h3 className="text-xl font-medium text-foreground flex items-center gap-2"><BriefcaseBusiness className="w-5 h-5" /> Personal Details</h3>
                         <p className="text-xs text-muted-foreground mt-2">Essential information used for application fields.</p>
                     </div>
 
@@ -206,7 +206,7 @@ export default function ProfilePage() {
                 {/* Professional Links Structure */}
                 <div className="p-8 bg-card border border-border shadow-sm rounded-xl relative overflow-hidden group">
                     <div className="relative z-10 mb-8 border-b border-border pb-5">
-                        <h3 className="text-xl font-semibold text-foreground flex items-center gap-2"><LinkIcon className="w-5 h-5" /> Professional Links</h3>
+                        <h3 className="text-xl font-medium text-foreground flex items-center gap-2"><LinkIcon className="w-5 h-5" /> Professional Links</h3>
                         <p className="text-xs text-muted-foreground mt-2">Your online presence for applications.</p>
                     </div>
 

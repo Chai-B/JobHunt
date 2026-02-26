@@ -119,7 +119,7 @@ export default function ApplicationsPage() {
             case "processing": return <Badge variant="outline" className="border-foreground text-foreground animate-pulse">Processing...</Badge>;
             case "submitted": return <Badge variant="default" className="bg-foreground text-background">Applied</Badge>;
             case "error": return <Badge variant="destructive" className="bg-destructive text-destructive-foreground">Error</Badge>;
-            case "acknowledged": return <Badge variant="outline" className="border-border text-foreground font-semibold">Acknowledged</Badge>;
+            case "acknowledged": return <Badge variant="outline" className="border-border text-foreground font-medium">Acknowledged</Badge>;
             case "responded": return <Badge variant="default" className="bg-foreground text-background">Lead Captured</Badge>;
             case "closed": return <Badge variant="secondary" className="bg-secondary text-muted-foreground">Closed</Badge>;
             default: return <Badge variant="secondary" className="bg-secondary text-muted-foreground">{status}</Badge>;
@@ -133,7 +133,7 @@ export default function ApplicationsPage() {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
+                    <h1 className="text-3xl font-medium tracking-tight text-foreground flex items-center gap-3">
                         <Send className="h-6 w-6" />
                         Applications
                     </h1>
@@ -155,7 +155,7 @@ export default function ApplicationsPage() {
             {showConfig && (
                 <Card className="bg-card border-border shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
                     <CardHeader className="border-b border-border pb-5">
-                        <CardTitle className="text-foreground text-lg font-semibold">Auto-Apply Configuration</CardTitle>
+                        <CardTitle className="text-foreground text-lg font-medium">Auto-Apply Configuration</CardTitle>
                         <CardDescription className="text-muted-foreground">Configure how the AI handles applications on your behalf.</CardDescription>
                     </CardHeader>
                     <CardContent className="pt-6">
@@ -211,7 +211,7 @@ export default function ApplicationsPage() {
                         <div className="h-16 w-16 bg-secondary rounded-full flex items-center justify-center mb-4 border border-border">
                             <Briefcase className="w-6 h-6 text-muted-foreground" />
                         </div>
-                        <h3 className="text-xl font-semibold text-foreground mb-2">Pipeline Empty</h3>
+                        <h3 className="text-xl font-medium text-foreground mb-2">Pipeline Empty</h3>
                         <p className="text-sm text-muted-foreground text-center max-w-sm">Match a Job with a Resume in the Jobs page to start an application.</p>
                     </div>
                 ) : (
@@ -227,7 +227,7 @@ export default function ApplicationsPage() {
                                         </span>
                                     )}
                                 </div>
-                                <div className="text-xl font-semibold text-foreground mb-1">
+                                <div className="text-xl font-medium text-foreground mb-1">
                                     Job ID: {app.job_id}
                                 </div>
                                 <div className="text-sm text-muted-foreground">
@@ -235,13 +235,13 @@ export default function ApplicationsPage() {
                                 </div>
                                 {app.status === "submitted" && app.notes && (
                                     <div className="mt-4 p-4 bg-secondary/50 rounded-md border border-border text-foreground font-mono text-xs overflow-auto max-h-48 whitespace-pre-wrap">
-                                        <span className="text-foreground font-bold mb-2 block">{'// AUTO-APPLY COVER LETTER'}</span>
+                                        <span className="text-foreground font-medium mb-2 block">{'// AUTO-APPLY COVER LETTER'}</span>
                                         {app.notes}
                                     </div>
                                 )}
                                 {app.status === "error" && app.notes && (
                                     <div className="mt-4 p-4 bg-destructive/10 text-destructive text-xs rounded-md border border-destructive/20 font-mono flex flex-col gap-1">
-                                        <span className="font-bold">Execution Error:</span>
+                                        <span className="font-medium">Execution Error:</span>
                                         {app.notes}
                                     </div>
                                 )}

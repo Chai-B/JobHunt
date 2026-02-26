@@ -89,7 +89,7 @@ export default function LoginPage() {
           <div className="h-14 w-14 rounded-full bg-secondary flex items-center justify-center border border-border mb-6">
             <Briefcase className="h-6 w-6 text-foreground" />
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+          <h1 className="text-3xl font-medium tracking-tight text-foreground">
             {isRegistering ? "Create an account" : "JobHunt"}
           </h1>
           <p className="text-sm text-muted-foreground mt-2 max-w-xs mx-auto">
