@@ -3,7 +3,7 @@ from typing import Optional
 from datetime import datetime
 
 class ApplicationBase(BaseModel):
-    job_id: int
+    job_id: Optional[int] = None
     resume_id: Optional[int] = None
 
 class ApplicationCreate(ApplicationBase):

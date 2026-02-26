@@ -32,45 +32,52 @@ class InboxScanner:
         if not watermark:
             watermark = datetime.now(timezone.utc) - timedelta(days=180)
         
-        after_date = watermark.strftime("%Y/%m/%d")
+        # Look back 1 extra day to avoid missing emails due to sync timing or timezone offsets
+        after_date = (watermark - timedelta(days=1)).strftime("%Y/%m/%d")
         query = f"after:{after_date} (subject:interview OR subject:application OR subject:update OR subject:offer OR subject:status OR from:linkedin)"
         logger.info(f"Gmail Query: {query}")
+        
         results = self.service.users().messages().list(userId='me', q=query, maxResults=max_results).execute()
         messages = results.get('messages', [])
+        logger.info(f"Found {len(messages)} potential emails matching query criteria.")
         
         email_data = []
-        for msg in messages:
+        def get_body_recursive(p):
+            inner_body = ""
+            if p.get('mimeType') == 'text/plain' and 'data' in p.get('body', {}):
+                try:
+                    raw_data = base64.urlsafe_b64decode(p['body']['data'])
+                    inner_body += raw_data.decode('utf-8', errors='replace')
+                except Exception as e:
+                    logger.warning(f"Failed to decode part: {e}")
+            
+            if 'parts' in p:
+                for part in p['parts']:
+                    inner_body += get_body_recursive(part)
+            return inner_body
+
+        for i, msg in enumerate(messages):
             try:
+                logger.info(f"Processing email {i+1}/{len(messages)} [ID: {msg['id']}]")
                 msg_full = self.service.users().messages().get(userId='me', id=msg['id'], format='full').execute()
                 payload = msg_full.get('payload', {})
                 headers = payload.get('headers', [])
-                subject = next((h['value'] for h in headers if h['name'] == 'Subject'), "No Subject")
-                sender = next((h['value'] for h in headers if h['name'] == 'From'), "Unknown")
-                date = next((h['value'] for h in headers if h['name'] == 'Date'), "Unknown")
                 
-                body = ""
-                # recursive search for body
-                if 'parts' in payload:
-                    for part in payload['parts']:
-                        if part['mimeType'] == 'text/plain' and 'data' in part['body']:
-                            body += base64.urlsafe_b64decode(part['body']['data']).decode()
-                        elif 'parts' in part:
-                            # 1 layer deeper
-                            for subpart in part['parts']:
-                                if subpart['mimeType'] == 'text/plain' and 'data' in subpart['body']:
-                                    body += base64.urlsafe_b64decode(subpart['body']['data']).decode()
-                elif 'data' in payload.get('body', {}):
-                    body = base64.urlsafe_b64decode(payload['body']['data']).decode()
+                subject = next((h['value'] for h in headers if h['name'].lower() == 'subject'), "No Subject")
+                sender = next((h['value'] for h in headers if h['name'].lower() == 'from'), "Unknown")
+                date = next((h['value'] for h in headers if h['name'].lower() == 'date'), "Unknown")
+                
+                body = get_body_recursive(payload)
                     
                 email_data.append({
                     "id": msg['id'],
                     "subject": subject,
                     "sender": sender,
                     "date": date,
-                    "body": body[:2000] # limit context for LLM cost and speed
+                    "body": body[:5000] # Increased context slightly for better heuristics
                 })
             except Exception as e:
-                logger.error(f"Error fetching email {msg['id']}: {e}")
+                logger.error(f"Error fetching detail for email {msg['id']}: {e}")
                 
         return email_data
 
@@ -219,7 +226,7 @@ async def run_inbox_scanner_async(user_id: int):
             user_settings.last_inbox_sync_time = func.now()
             db.add(user_settings)
             
-            log_start.status = "completed"
+            log_start.status = "success"
             log_start.message = f"Heuristic Inbox Sync completed. Integrated {matched_count} new updates."
             db.add(log_start)
             
