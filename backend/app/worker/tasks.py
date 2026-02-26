@@ -16,11 +16,11 @@ from app.db.models.application import Application
 from app.db.models.email_template import EmailTemplate
 from app.db.models.action_log import ActionLog
 from app.services.resume_parser import parse_and_embed_resume
-from app.core.config import settings as app_settings
 import requests
 from bs4 import BeautifulSoup
-import google.generativeai as genai
 from app.services.llm import call_llm
+from app.services.inbox_scanner import run_inbox_scanner_async
+from app.core.config import settings as app_settings
 import json
 import smtplib
 from email.mime.text import MIMEText
@@ -565,7 +565,8 @@ async def run_auto_apply_async(user_id: int, app_id: int):
             stmt = select(JobPosting).where(JobPosting.id == app_record.job_id)
             job = (await db.execute(stmt)).scalars().first()
 
-            # Setup Gemini
+            # Setup Gemini (Localized load to prevent global module crash)
+            import google.generativeai as genai
             api_key = settings.gemini_api_keys.split(",")[0].strip()
             genai.configure(api_key=api_key)
             model_name = settings.preferred_model or "gemini-2.0-flash"
