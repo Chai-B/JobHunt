@@ -52,7 +52,7 @@ def _extract_json_content(text: str) -> str:
         
     return text
 
-async def call_llm(prompt: str, settings: UserSetting, is_json: bool = False, system_prompt: str = None) -> str:
+async def call_llm(prompt: str, settings: UserSetting, is_json: bool = False, system_prompt: str = None, temperature: float = 0.0) -> str:
     """
     Unified LLM caller that routes to Gemini or OpenAI-compatible (OpenRouter/Groq/etc)
     based on user settings.
@@ -75,7 +75,10 @@ async def call_llm(prompt: str, settings: UserSetting, is_json: bool = False, sy
             if system_prompt:
                 full_prompt = f"{system_prompt}\n\n{prompt}"
                 
-            response = model.generate_content(full_prompt)
+            generation_config = genai.types.GenerationConfig(
+                temperature=temperature
+            )
+            response = model.generate_content(full_prompt, generation_config=generation_config)
             raw = response.text.strip()
             
             if is_json:
@@ -103,12 +106,15 @@ async def call_llm(prompt: str, settings: UserSetting, is_json: bool = False, sy
             # For max compatibility with OpenRouter/etc, we just instruct it in the prompt instead
             # to avoid unsupported schema errors on random models.
             if is_json and "json" not in prompt.lower():
-                messages[0]["content"] += "\nReturn ONLY valid JSON."
+                if messages and messages[0]["role"] == "system":
+                    messages[0]["content"] += "\nReturn ONLY valid JSON."
+                else:
+                    messages[0]["content"] += "\nReturn ONLY valid JSON."
                 
             response = await client.chat.completions.create(
                 model=model_name,
                 messages=messages,
-                temperature=0.7,
+                temperature=temperature,
             )
             
             raw = response.choices[0].message.content.strip()

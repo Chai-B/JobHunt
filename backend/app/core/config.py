@@ -42,6 +42,18 @@ class Settings(BaseSettings):
     # Clerk (headless sync)
     CLERK_SECRET_KEY: str = ""
     
+    # Paths
+    @property
+    def BASE_DIR(self):
+        from pathlib import Path
+        return Path(__file__).resolve().parent.parent.parent
+
+    @property
+    def UPLOAD_DIR(self):
+        path = self.BASE_DIR / "app" / "uploads" / "resumes"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
     # Google OAuth
     GOOGLE_CLIENT_ID: str | None = None
     GOOGLE_CLIENT_SECRET: str | None = None

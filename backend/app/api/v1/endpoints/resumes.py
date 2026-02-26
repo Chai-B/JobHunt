@@ -16,7 +16,8 @@ from app.services.task_registry import register_task, cancel_user_tasks
 
 router = APIRouter()
 
-UPLOAD_DIR = Path("app/uploads/resumes")
+# Standardize directories from central config
+UPLOAD_DIR = settings.UPLOAD_DIR
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {"pdf", "docx", "doc", "txt", "md"}

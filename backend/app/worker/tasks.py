@@ -691,11 +691,19 @@ async def run_cold_mail_async(user_id: int, contact_id: int, template_id: int, r
             resume_data = resume.parsed_json or {}
             
             # Build tag replacement map
+            exp_years = resume_data.get("experience_years") or getattr(user, 'experience_years', "") or ""
+            # Robust cleanup: If it contains parentheses or verbose estimation text, attempt to strip it
+            if "(" in str(exp_years):
+                import re
+                match = re.search(r'(\d+)', str(exp_years))
+                if match:
+                    exp_years = match.group(1)
+
             tag_map = {
                 "{{contact_name}}": contact.name or "",
                 "{{job_title}}": contact.role or "",
                 "{{company}}": contact.company or "",
-                "{{experience_years}}": resume_data.get("experience_years") or getattr(user, 'experience_years', "") or "",
+                "{{experience_years}}": exp_years,
                 "{{skills}}": resume_data.get("skills") or getattr(user, 'skills', "") or "",
                 "{{education}}": resume_data.get("education") or "",
                 "{{recent_role}}": resume_data.get("recent_role") or "",
@@ -750,7 +758,8 @@ Return STRICTLY valid JSON ONLY:
                 try:
                     from app.services.llm import call_llm
                     import json
-                    cleaned_str = await call_llm(fallback_prompt, settings, is_json=True)
+                    # Force temperature=0 for deterministic proofreading
+                    cleaned_str = await call_llm(fallback_prompt, settings, is_json=True, temperature=0.0)
                     cleaned_data = json.loads(cleaned_str, strict=False)
                     subject = cleaned_data.get("subject", subject)
                     body = cleaned_data.get("body_text", body)
@@ -762,8 +771,8 @@ Return STRICTLY valid JSON ONLY:
                 subject = subject.replace(tag, str(value) if value else "")
                 body = body.replace(tag, str(value) if value else "")
 
-            # Resolve Disk-based Resume Attachment
-            UPLOAD_DIR = Path("app/uploads/resumes")
+            # Resolve Disk-based Resume Attachment using absolute path from settings
+            UPLOAD_DIR = settings.UPLOAD_DIR
             file_path = UPLOAD_DIR / f"{resume.id}_{resume.filename}"
             has_attachment = file_path.exists()
             logger.info(f"Checking for resume at {file_path}. Exists: {has_attachment}")
