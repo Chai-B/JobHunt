@@ -228,150 +228,172 @@ export default function TemplatesPage() {
                             Create Template
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[650px] bg-card border-border text-foreground shadow-lg rounded-xl max-h-[90vh] overflow-y-auto">
+                    <DialogContent className="sm:max-w-[900px] bg-card border-border text-foreground shadow-2xl rounded-xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                             <DialogTitle className="text-xl font-semibold flex items-center gap-2">
                                 <Mail className="h-5 w-5" />
                                 {selectedTemplateId ? "Edit Template" : "New Template"}
                             </DialogTitle>
                         </DialogHeader>
-                        <form onSubmit={handleCreate} className="grid gap-5 py-4">
-                            {/* AI Generation Section */}
-                            <div className="bg-secondary/30 border border-border p-4 rounded-md space-y-3">
-                                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                    <Sparkles className="w-3.5 h-3.5" /> Generate with AI
+                        <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-12 gap-6 py-4">
+
+                            {/* Left Column: AI & Tags */}
+                            <div className="md:col-span-5 space-y-5">
+                                {/* AI Generation Section */}
+                                <div className="bg-secondary/30 border border-border p-4 rounded-xl shadow-sm space-y-4">
+                                    <div className="flex items-center gap-2 text-[11px] font-semibold text-foreground uppercase tracking-wider">
+                                        <div className="w-5 h-5 flex items-center justify-center rounded bg-primary/20 text-primary">
+                                            <Sparkles className="w-3.5 h-3.5" />
+                                        </div>
+                                        Generate with AI
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-3">
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <Select value={aiPurpose} onValueChange={setAiPurpose}>
+                                                <SelectTrigger className="bg-background border-border text-foreground text-xs h-9">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent className="bg-card border-border text-foreground">
+                                                    <SelectItem value="cold_outreach">Cold Outreach</SelectItem>
+                                                    <SelectItem value="job_application">Job Application</SelectItem>
+                                                    <SelectItem value="follow_up">Follow-Up</SelectItem>
+                                                    <SelectItem value="networking">Networking</SelectItem>
+                                                    <SelectItem value="referral_request">Referral Request</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <Select value={aiTone} onValueChange={setAiTone}>
+                                                <SelectTrigger className="bg-background border-border text-foreground text-xs h-9">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent className="bg-card border-border text-foreground">
+                                                    <SelectItem value="professional">Professional</SelectItem>
+                                                    <SelectItem value="casual">Casual</SelectItem>
+                                                    <SelectItem value="enthusiastic">Enthusiastic</SelectItem>
+                                                    <SelectItem value="concise">Concise & Direct</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <Select value={aiLength} onValueChange={setAiLength}>
+                                                <SelectTrigger className="bg-background border-border text-foreground text-xs h-9">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent className="bg-card border-border text-foreground">
+                                                    <SelectItem value="short">Short</SelectItem>
+                                                    <SelectItem value="medium">Medium</SelectItem>
+                                                    <SelectItem value="long">Long</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <Select value={aiFocus} onValueChange={setAiFocus}>
+                                                <SelectTrigger className="bg-background border-border text-foreground text-xs h-9">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent className="bg-card border-border text-foreground">
+                                                    <SelectItem value="achievements">Achievements</SelectItem>
+                                                    <SelectItem value="skills">Skills</SelectItem>
+                                                    <SelectItem value="culture">Culture Fit</SelectItem>
+                                                    <SelectItem value="projects">Projects</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <Button type="button" onClick={generateWithAI} disabled={generating} className="h-9 w-full text-xs font-semibold gap-1.5 bg-foreground text-background hover:bg-foreground/90 shadow-sm transition-all rounded-md mt-1">
+                                            <Sparkles className={`w-3.5 h-3.5 ${generating ? 'animate-spin' : ''}`} />
+                                            {generating ? "Crafting Message..." : "Generate Magic Template"}
+                                        </Button>
+                                    </div>
                                 </div>
-                                <div className="flex flex-col sm:flex-row gap-3">
-                                    <Select value={aiPurpose} onValueChange={setAiPurpose}>
-                                        <SelectTrigger className="bg-background border-border text-foreground text-xs h-9 flex-1">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-card border-border text-foreground">
-                                            <SelectItem value="cold_outreach">Cold Outreach</SelectItem>
-                                            <SelectItem value="job_application">Job Application</SelectItem>
-                                            <SelectItem value="follow_up">Follow-Up</SelectItem>
-                                            <SelectItem value="networking">Networking</SelectItem>
-                                            <SelectItem value="referral_request">Referral Request</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <Select value={aiTone} onValueChange={setAiTone}>
-                                        <SelectTrigger className="bg-background border-border text-foreground text-xs h-9 flex-1">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-card border-border text-foreground">
-                                            <SelectItem value="professional">Professional</SelectItem>
-                                            <SelectItem value="casual">Casual</SelectItem>
-                                            <SelectItem value="enthusiastic">Enthusiastic</SelectItem>
-                                            <SelectItem value="concise">Concise & Direct</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <Select value={aiLength} onValueChange={setAiLength}>
-                                        <SelectTrigger className="bg-background border-border text-foreground text-xs h-9 flex-1">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-card border-border text-foreground">
-                                            <SelectItem value="short">Short (3-4 sentences)</SelectItem>
-                                            <SelectItem value="medium">Medium (2-3 paragraphs)</SelectItem>
-                                            <SelectItem value="long">Long (Detailed)</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <Select value={aiFocus} onValueChange={setAiFocus}>
-                                        <SelectTrigger className="bg-background border-border text-foreground text-xs h-9 flex-1">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-card border-border text-foreground">
-                                            <SelectItem value="achievements">Focus: Achievements</SelectItem>
-                                            <SelectItem value="skills">Focus: Soft/Hard Skills</SelectItem>
-                                            <SelectItem value="culture">Focus: Culture Fit</SelectItem>
-                                            <SelectItem value="projects">Focus: Projects</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <Button type="button" variant="outline" onClick={generateWithAI} disabled={generating} className="h-9 w-full sm:w-auto text-xs gap-1.5 border-border text-foreground hover:bg-secondary whitespace-nowrap">
-                                        <Sparkles className={`w-3.5 h-3.5 ${generating ? 'animate-spin' : ''}`} />
-                                        {generating ? "Generating..." : "Generate"}
-                                    </Button>
+
+                                {/* Available Tags */}
+                                <div className="bg-card border border-border p-4 rounded-xl shadow-sm space-y-4">
+                                    <div className="flex items-center gap-2 text-[11px] font-semibold text-foreground uppercase tracking-wider">
+                                        <div className="w-5 h-5 flex items-center justify-center rounded bg-blue-500/20 text-blue-500">
+                                            <Tag className="w-3.5 h-3.5" />
+                                        </div>
+                                        Dynamic Variables
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground leading-relaxed -mt-1">
+                                        Click a variable to insert it at your cursor position in the template editor.
+                                    </p>
+                                    <div className="flex flex-wrap gap-1.5 max-h-[200px] overflow-y-auto pr-1 pb-1 custom-scrollbar">
+                                        {DEFAULT_TAGS.map((t) => (
+                                            <button
+                                                key={t.tag}
+                                                type="button"
+                                                onClick={() => insertTag(t.tag, "body")}
+                                                className="text-foreground bg-secondary/80 hover:bg-muted px-2 py-1 rounded-md border border-border text-[10px] font-mono transition-colors cursor-pointer"
+                                                title={t.desc}
+                                            >
+                                                {t.tag}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* Custom Tags */}
+                                    {customTags.length > 0 && (
+                                        <div className="pt-3 border-t border-border">
+                                            <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                                                Custom Variables
+                                            </div>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {customTags.map((tag) => (
+                                                    <span key={tag} className="text-foreground bg-secondary/80 px-2 py-1 rounded-md border border-border text-[10px] font-mono flex items-center gap-1.5 group">
+                                                        <button type="button" onClick={() => insertTag(tag, "body")} className="hover:text-primary transition-colors">{tag}</button>
+                                                        <button type="button" onClick={() => removeCustomTag(tag)} className="text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive transition-all"><X className="w-3 h-3" /></button>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Add Custom Tag */}
+                                    <div className="flex items-center gap-2 pt-3 border-t border-border mt-2">
+                                        <Input
+                                            value={newTagInput}
+                                            onChange={(e) => setNewTagInput(e.target.value)}
+                                            placeholder="custom_tag_name"
+                                            className="bg-background border-border text-foreground h-8 text-xs font-mono flex-1 rounded-md"
+                                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomTag(); } }}
+                                        />
+                                        <Button type="button" size="sm" variant="outline" onClick={addCustomTag} className="h-8 text-xs border-border text-foreground hover:bg-secondary rounded-md shadow-sm">
+                                            <Plus className="w-3 h-3" />
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Available Tags */}
-                            <div className="bg-secondary/50 border border-border text-foreground p-4 rounded-md shadow-sm space-y-3">
-                                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                    <Tag className="w-3.5 h-3.5" /> Default Variables
+                            {/* Right Column: Editor */}
+                            <div className="md:col-span-7 flex flex-col gap-4">
+                                <div className="grid gap-1.5">
+                                    <Label htmlFor="name" className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider pl-1">Template Name</Label>
+                                    <Input id="name" placeholder="e.g. Standard Cold Intro" required value={name} onChange={(e) => setName(e.target.value)} className="bg-background border-border focus-visible:ring-ring text-foreground h-10 rounded-lg shadow-sm font-medium" />
                                 </div>
-                                <div className="flex flex-wrap gap-2">
-                                    {DEFAULT_TAGS.map((t) => (
-                                        <button
-                                            key={t.tag}
-                                            type="button"
-                                            onClick={() => insertTag(t.tag, "body")}
-                                            className="text-foreground bg-secondary hover:bg-secondary/80 px-2.5 py-1 rounded border border-border text-xs font-mono transition-colors cursor-pointer group relative"
-                                            title={t.desc}
-                                        >
-                                            {t.tag}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                {/* Custom Tags */}
-                                {customTags.length > 0 && (
-                                    <div className="pt-2 border-t border-border">
-                                        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                                            Custom Variables
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            {customTags.map((tag) => (
-                                                <span key={tag} className="text-foreground bg-secondary px-2.5 py-1 rounded border border-border text-xs font-mono flex items-center gap-1.5">
-                                                    <button type="button" onClick={() => insertTag(tag, "body")} className="hover:text-foreground transition-colors">{tag}</button>
-                                                    <button type="button" onClick={() => removeCustomTag(tag)} className="text-muted-foreground hover:text-destructive transition-colors"><X className="w-3 h-3" /></button>
-                                                </span>
+                                <div className="grid gap-1.5">
+                                    <div className="flex justify-between items-center pl-1 r-1">
+                                        <Label htmlFor="subject" className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">Email Subject</Label>
+                                        <div className="flex gap-1.5">
+                                            {["{{job_title}}", "{{company}}"].map(tag => (
+                                                <button key={tag} type="button" onClick={() => insertTag(tag, "subject")} className="text-[9px] text-muted-foreground hover:text-foreground hover:bg-secondary font-mono border border-border bg-card rounded px-1.5 py-0.5 transition-colors shadow-sm">{tag}</button>
                                             ))}
                                         </div>
                                     </div>
-                                )}
-
-                                {/* Add Custom Tag */}
-                                <div className="flex items-center gap-2 pt-2 border-t border-border">
-                                    <Input
-                                        value={newTagInput}
-                                        onChange={(e) => setNewTagInput(e.target.value)}
-                                        placeholder="my_custom_variable"
-                                        className="bg-background border-border text-foreground h-8 text-xs font-mono flex-1"
-                                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomTag(); } }}
+                                    <Input ref={subjectRef} id="subject" placeholder="Application for {{job_title}} at {{company}}" required value={subject} onChange={(e) => setSubject(e.target.value)} className="bg-background border-border focus-visible:ring-ring text-foreground h-10 rounded-lg shadow-sm font-mono text-sm" />
+                                </div>
+                                <div className="grid gap-1.5 flex-1 flex flex-col min-h-[300px]">
+                                    <Label htmlFor="body" className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider pl-1">Email Body</Label>
+                                    <Textarea
+                                        ref={bodyRef}
+                                        id="body"
+                                        className="flex-1 font-mono text-sm leading-relaxed resize-none p-5 bg-background border-border focus-visible:ring-ring text-foreground rounded-xl transition-colors shadow-inner"
+                                        placeholder={"Hi {{contact_name}},\n\nI'm {{user_name}}, and I'm reaching out about the {{job_title}} role at {{company}}.\n\nI bring {{experience_years}} of experience and expertise in {{skills}}.\n\nLet's connect:\n{{linkedin}} | {{github}} | {{portfolio}}\n\nBest,\n{{user_name}}\n{{user_email}} | {{user_phone}}"}
+                                        required
+                                        value={bodyText}
+                                        onChange={(e) => setBodyText(e.target.value)}
                                     />
-                                    <Button type="button" size="sm" variant="outline" onClick={addCustomTag} className="h-8 text-xs border-border text-foreground hover:bg-secondary">
-                                        <Plus className="w-3 h-3 mr-1" /> Add Tag
-                                    </Button>
                                 </div>
+                                <Button type="submit" className="w-full bg-primary text-primary-foreground hover:opacity-90 font-bold h-11 text-sm rounded-lg shadow-md mt-2">
+                                    {selectedTemplateId ? "Save Changes" : "Create Template"}
+                                </Button>
                             </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="name" className="text-muted-foreground text-xs uppercase tracking-wider">Template Name</Label>
-                                <Input id="name" placeholder="e.g. Standard Cold Intro" required value={name} onChange={(e) => setName(e.target.value)} className="bg-background border-border focus-visible:ring-ring text-foreground" />
-                            </div>
-                            <div className="grid gap-2">
-                                <div className="flex justify-between items-center">
-                                    <Label htmlFor="subject" className="text-muted-foreground text-xs uppercase tracking-wider">Email Subject</Label>
-                                    <div className="flex gap-1">
-                                        {["{{job_title}}", "{{company}}"].map(tag => (
-                                            <button key={tag} type="button" onClick={() => insertTag(tag, "subject")} className="text-[10px] text-muted-foreground hover:text-foreground font-mono border border-border rounded px-1.5 py-0.5 transition-colors">{tag}</button>
-                                        ))}
-                                    </div>
-                                </div>
-                                <Input ref={subjectRef} id="subject" placeholder="Application for {{job_title}} at {{company}}" required value={subject} onChange={(e) => setSubject(e.target.value)} className="bg-background border-border focus-visible:ring-ring text-foreground" />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="body" className="text-muted-foreground text-xs uppercase tracking-wider">Email Body</Label>
-                                <Textarea
-                                    ref={bodyRef}
-                                    id="body"
-                                    className="min-h-[220px] font-mono text-xs leading-relaxed resize-none p-4 bg-background border-border focus-visible:ring-ring text-foreground rounded-md transition-colors"
-                                    placeholder={"Hi {{contact_name}},\n\nI'm {{user_name}}, and I'm reaching out about the {{job_title}} role at {{company}}.\n\nI bring {{experience_years}} of experience and expertise in {{skills}}.\n\nLet's connect:\n{{linkedin}} | {{github}} | {{portfolio}}\n\nBest,\n{{user_name}}\n{{user_email}} | {{user_phone}}"}
-                                    required
-                                    value={bodyText}
-                                    onChange={(e) => setBodyText(e.target.value)}
-                                />
-                            </div>
-                            <Button type="submit" className="w-full bg-foreground text-background hover:opacity-90 font-medium mt-2">Save Template</Button>
                         </form>
                     </DialogContent>
                 </Dialog>

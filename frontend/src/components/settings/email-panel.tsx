@@ -1,7 +1,18 @@
 "use client";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Network, Info, Mail, Sparkles } from "lucide-react";
+import { Network, Info, Mail, Sparkles, RefreshCw } from "lucide-react";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const Tip = ({ text }: { text: string }) => (
     <span className="relative inline-flex items-center ml-1.5 cursor-help group/tip">
@@ -34,10 +45,29 @@ export function EmailPanel({ formData, handleChange, setFormData, handleGmailCon
                             <Label className={labelClass}>Connect Gmail Account</Label>
                             <p className="text-xs text-muted-foreground">Authorize JobHunt to send cold mail directly via your Gmail.</p>
                             {formData.gmail_connected ? (
-                                <div className="w-full flex items-center justify-center gap-2 h-11 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-sm font-medium">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                                    Gmail Connected
-                                </div>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <button type="button" className="w-full flex items-center justify-center gap-2 h-11 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 text-sm font-medium transition-colors cursor-pointer">
+                                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                            Gmail Connected
+                                        </button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent className="bg-card border-border text-foreground">
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Re-authenticate Gmail?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                You are already connected to Gmail. Do you want to re-authenticate or connect a different account?
+                                                This will redirect you to Google to select an account.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel className="bg-transparent border-border text-foreground hover:bg-secondary">Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleGmailConnect} className="bg-foreground hover:opacity-90 text-background">
+                                                Re-authenticate
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                             ) : (
                                 <button type="button" onClick={handleGmailConnect} className="bg-background border-border focus-visible:ring-ring text-foreground hover:bg-muted h-11 px-4 py-2 w-full rounded-md shadow-sm transition-colors border text-sm font-medium">
                                     Connect Gmail API

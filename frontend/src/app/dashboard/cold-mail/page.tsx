@@ -326,7 +326,7 @@ export default function ColdMailPage() {
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
-                                                        className="text-foreground border-border/50 hover:bg-primary hover:text-primary-foreground text-[11px] font-bold rounded-xl h-9 px-4 gap-2 transition-all opacity-0 group-hover:opacity-100 hover:scale-105"
+                                                        className="text-foreground border-border/50 hover:bg-primary hover:text-primary-foreground text-[11px] font-bold rounded-xl h-9 px-4 gap-2 transition-all hover:scale-105"
                                                         onClick={() => sendColdMail(c.id)}
                                                         disabled={sendingId === c.id || !selectedTemplate || !selectedResume}
                                                     >

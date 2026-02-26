@@ -110,22 +110,27 @@ async def generate_ai_template(
     if req.target_company:
         target_info += f"Target Company: {req.target_company}\n"
     
-    prompt = f"""You are an elite executive communications expert drafting a highly effective {req.purpose.replace('_', ' ')} email template.
-    
+    prompt = f"""You are an elite, world-class executive communication strategist and top-tier technical recruiter copywriter.
+    Your goal is to write a highly persuasive, psychological, and high-converting {req.purpose.replace('_', ' ')} email.
+
     PARAMETERS:
-    - Tone: {req.tone}
-    - Length: {req.length} (short: 3-4 sentences max, medium: 2-3 short paragraphs, long: detailed and comprehensive)
-    - Primary Focus: {req.focus} (Make sure the template naturally emphasizes this aspect)
+    - Tone constraint: {req.tone}
+    - Length Configuration: Produce text that is explicitly {req.length} (short: 3-4 sentences max, medium: 2-3 short paragraphs, long: detailed and comprehensive).
+    - Primary Focus: Emphasize {req.focus} intensely.
     {target_info}
     
-    AVAILABLE VARIABLES (Use exactly as written, including brackets):
-    {{{{contact_name}}}}, {{{{user_name}}}}, {{{{company}}}}, {{{{job_title}}}}, {{{{skills}}}}, {{{{experience_years}}}}, {{{{education}}}}, {{{{recent_role}}}}, {{{{top_projects}}}}, {{{{certifications}}}}, {{{{linkedin}}}}, {{{{github}}}}, {{{{portfolio}}}}
-    
-    CRITICAL INSTRUCTIONS:
-    1. Do NOT sound like a robot or a generic template. The email must flow naturally, as if written uniquely by a human.
-    2. Integrate the variables seamlessly. For example, instead of writing "My top projects include {{{{top_projects}}}}.", write "In my recent work, I spearheaded {{{{top_projects}}}}."
-    3. Not all variables must be used; use only those that fit the requested style and focus perfectly.
-    4. Provide a compelling Subject Line containing 1 or 2 relevant variables (e.g. `{{{{job_title}}}}` or `{{{{company}}}}`).
+    CRITICAL INSTRUCTION - VARIABLE INJECTION:
+    You MUST aggressively and naturally weave the following exact literal variables into the text. Do NOT replace them. Ensure grammar remains flawless even if a variable evaluates to empty later. Do NOT make up new [brackets].
+    {{{{user_name}}}}, {{{{user_email}}}}, {{{{user_phone}}}}, {{{{linkedin}}}}, {{{{github}}}}, {{{{portfolio}}}}
+    {{{{job_title}}}}, {{{{company}}}}, {{{{contact_name}}}}
+    {{{{skills}}}}, {{{{experience_years}}}}, {{{{education}}}}, {{{{recent_role}}}}, {{{{top_projects}}}}, {{{{certifications}}}}
+
+    WRITING RULES:
+    1. No corporate fluff or generic buzzwords. Be incredibly specific, punchy, and memorable.
+    2. The Subject Line MUST have an open-rate-optimized structure (e.g., provoke curiosity or establish immediate extreme relevance). Use variables like {{{{job_title}}}} or {{{{company}}}} in the subject.
+    3. The Body MUST follow a hook -> value proposition -> concise evidence -> low-friction call-to-action structure.
+    4. Seamlessly incorporate {{{{experience_years}}}} of experience, current/past role as {{{{recent_role}}}}, and top projects: {{{{top_projects}}}} into the prose.
+    5. Do NOT include placeholders like [Your Name] or [Date]. ONLY use the exact {{{{variable}}}} formatted tags provided.
     
     Return STRICTLY valid JSON ONLY:
     {{

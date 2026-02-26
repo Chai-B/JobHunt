@@ -17,6 +17,9 @@ class UserSettingBase(BaseModel):
     target_locations: Optional[str] = "Remote, USA"
     daily_apply_limit: Optional[int] = 10
     scrape_frequency_hours: Optional[int] = 24
+    use_gmail_for_send: Optional[bool] = False
+    cold_mail_automation_enabled: Optional[bool] = False
+    auto_apply_enabled: Optional[bool] = False
     # Intentionally excluding smtp_password from the Base to avoid accidental exposure
 
 class UserSettingCreate(UserSettingBase):

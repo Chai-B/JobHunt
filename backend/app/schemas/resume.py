@@ -13,6 +13,7 @@ class ResumeCreate(ResumeBase):
 class ResumeUpdate(BaseModel):
     label: Optional[str] = None
     raw_text: Optional[str] = None
+    parsed_json: Optional[dict] = None
 
 class ResumeRead(ResumeBase):
     id: int

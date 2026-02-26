@@ -20,6 +20,8 @@ export default function ResumesPage() {
     const [selectedResume, setSelectedResume] = useState<any>(null);
     const [editRawText, setEditRawText] = useState("");
     const [editLabel, setEditLabel] = useState("");
+    const [editParsedJson, setEditParsedJson] = useState("");
+    const [jsonError, setJsonError] = useState("");
     const [saving, setSaving] = useState(false);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [deleting, setDeleting] = useState<number | null>(null);
@@ -76,11 +78,22 @@ export default function ResumesPage() {
     const handleSaveResume = async () => {
         if (!selectedResume) return;
         setSaving(true);
+        let parsedJsonObj: Record<string, any> | null = null;
+        if (editParsedJson) {
+            try {
+                parsedJsonObj = JSON.parse(editParsedJson);
+            } catch (e) {
+                toast.error("Invalid JSON format in tags editor.");
+                setSaving(false);
+                return;
+            }
+        }
         try {
             const token = localStorage.getItem("token");
             const payload = {
                 raw_text: editRawText,
-                label: editLabel
+                label: editLabel,
+                parsed_json: parsedJsonObj
             };
             const res = await fetch(`${API_BASE_URL}/api/v1/resumes/${selectedResume.id}`, {
                 method: "PUT",
@@ -237,6 +250,8 @@ export default function ResumesPage() {
                                                         setSelectedResume(r);
                                                         setEditRawText(r.raw_text || "");
                                                         setEditLabel(r.label || "");
+                                                        setEditParsedJson(r.parsed_json ? JSON.stringify(r.parsed_json, null, 2) : "{}");
+                                                        setJsonError("");
                                                         setDialogOpen(true);
                                                     }}>
                                                         <Edit2 className="w-3.5 h-3.5 mr-2" />
@@ -275,7 +290,7 @@ export default function ResumesPage() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="flex flex-col gap-5 py-4 flex-1 overflow-hidden">
-                        <div className="grid grid-cols-4 items-center gap-4">
+                        <div className="grid grid-cols-4 items-center gap-4 px-2">
                             <label className="text-right text-xs uppercase tracking-wider text-muted-foreground font-medium">Resume Label</label>
                             <input
                                 className="col-span-3 flex h-11 w-full rounded-md border border-border bg-background px-4 py-2 text-sm text-foreground shadow-sm focus-visible:outline-none focus:border-ring focus:ring-1 focus:ring-ring"
@@ -283,14 +298,37 @@ export default function ResumesPage() {
                                 onChange={(e) => setEditLabel(e.target.value)}
                             />
                         </div>
-                        <div className="flex flex-col gap-2 flex-1 min-h-0">
-                            <label className="text-xs uppercase tracking-wider text-muted-foreground font-medium shrink-0">Parsed Resume Text</label>
-                            <Textarea
-                                className="flex-1 font-mono text-xs resize-y p-4 bg-background border-border focus-visible:ring-ring text-foreground rounded-md leading-relaxed shadow-sm transition-colors overflow-y-auto min-h-[300px]"
-                                placeholder="Text extraction pending..."
-                                value={editRawText}
-                                onChange={(e) => setEditRawText(e.target.value)}
-                            />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 min-h-0 px-2">
+                            <div className="flex flex-col gap-2 flex-1 min-h-0">
+                                <label className="text-xs uppercase tracking-wider text-muted-foreground font-medium shrink-0">Raw Text Buffer</label>
+                                <Textarea
+                                    className="flex-1 font-mono text-xs resize-none p-4 bg-background border-border focus-visible:ring-ring text-foreground rounded-md leading-relaxed shadow-sm transition-colors overflow-y-auto"
+                                    placeholder="Text extraction pending..."
+                                    value={editRawText}
+                                    onChange={(e) => setEditRawText(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex flex-col gap-2 flex-1 min-h-0">
+                                <label className="text-xs uppercase tracking-wider text-muted-foreground font-medium shrink-0 flex justify-between">
+                                    <span>Extracted AI Tags (JSON)</span>
+                                    {jsonError && <span className="text-destructive text-[10px] normal-case tracking-normal">{jsonError}</span>}
+                                </label>
+                                <Textarea
+                                    className={`flex-1 font-mono text-xs resize-none p-4 bg-secondary/20 border-border focus-visible:ring-ring ${jsonError ? 'border-destructive/50 ring-destructive/20 text-destructive' : 'text-foreground'} rounded-md leading-relaxed shadow-sm transition-colors overflow-y-auto`}
+                                    placeholder="{}"
+                                    value={editParsedJson}
+                                    onChange={(e) => {
+                                        setEditParsedJson(e.target.value);
+                                        try {
+                                            JSON.parse(e.target.value);
+                                            setJsonError("");
+                                        } catch (err) {
+                                            setJsonError("Invalid JSON");
+                                        }
+                                    }}
+                                />
+                                <p className="text-[10px] text-muted-foreground/60 leading-tight">These values replace {'`{{ tags }}`'} in templates. Modify them if the AI extractor made a mistake.</p>
+                            </div>
                         </div>
                     </div>
                     <DialogFooter className="gap-3">
