@@ -31,5 +31,6 @@ class UserSettingUpdate(UserSettingBase):
 class UserSettingRead(UserSettingBase):
     id: int
     user_id: int
+    gmail_access_token: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)

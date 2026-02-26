@@ -17,13 +17,35 @@ class GmailService:
         )
         self.service = build('gmail', 'v1', credentials=self.creds)
 
-    def send_email(self, to: str, subject: str, body: str) -> str:
-        """Send an email via the user's connected Gmail account."""
+    def send_email(self, to: str, subject: str, body: str, attachment_path: str = None) -> str:
+        """Send an email via the user's connected Gmail account, optionally with an attachment."""
         try:
-            message = EmailMessage()
-            message.set_content(body)
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.text import MIMEText
+            from email.mime.base import MIMEBase
+            from email import encoders
+            import os
+            
+            message = MIMEMultipart()
             message['To'] = to
             message['Subject'] = subject
+            message.attach(MIMEText(body, 'plain'))
+            
+            if attachment_path and os.path.exists(attachment_path):
+                with open(attachment_path, "rb") as attachment:
+                    part = MIMEBase("application", "octet-stream")
+                    part.set_payload(attachment.read())
+                
+                encoders.encode_base64(part)
+                filename = os.path.basename(attachment_path)
+                # Strip internal IDs for the recipient if we appended them to the filename
+                if "_" in filename:
+                    filename = filename.split("_", 1)[1]
+                part.add_header(
+                    "Content-Disposition",
+                    f"attachment; filename= {filename}",
+                )
+                message.attach(part)
             
             # The API expects urlsafe base64 encoding without padding
             encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()

@@ -745,18 +745,32 @@ Return STRICTLY valid JSON ONLY:
                 subject = subject.replace(tag, str(value) if value else "")
                 body = body.replace(tag, str(value) if value else "")
 
+            # Resolve Physical Resume Attachment
+            import os
+            attachment_path = f"app/uploads/resumes/{resume.id}_{resume.filename}"
+            has_attachment = os.path.exists(attachment_path)
+
             msg = MIMEMultipart()
             msg['From'] = settings.smtp_username or "user@example.com"
             msg['To'] = contact.email
             msg['Subject'] = subject
             msg.attach(MIMEText(body, 'plain'))
             
+            if has_attachment:
+                with open(attachment_path, "rb") as attachment_file:
+                    part = MIMEBase("application", "octet-stream")
+                    part.set_payload(attachment_file.read())
+                encoders.encode_base64(part)
+                clean_filename = resume.filename
+                part.add_header("Content-Disposition", f"attachment; filename={clean_filename}")
+                msg.attach(part)
+            
             port = settings.smtp_port or 587
             try:
                 if getattr(settings, 'use_gmail_for_send', False) and getattr(settings, 'gmail_access_token', None) and getattr(settings, 'gmail_refresh_token', None):
                     from app.services.gmail_service import GmailService
                     gmail_service = GmailService(settings.gmail_access_token, settings.gmail_refresh_token)
-                    gmail_service.send_email(contact.email, subject, body)
+                    gmail_service.send_email(contact.email, subject, body, attachment_path if has_attachment else None)
                     success_msg = f"Successfully sent cold mail to {contact.email} via Gmail"
                 else:
                     server = smtplib.SMTP(settings.smtp_server, port)

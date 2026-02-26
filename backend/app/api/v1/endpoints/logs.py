@@ -38,8 +38,10 @@ async def get_logs(
     result = await db.execute(query)
     logs = result.scalars().all()
     
-    # Convert to dict for response
-    return {"items": logs, "total": total}
+    # Convert to dict for response using Pydantic Validation
+    serialized_logs = [ActionLogResponse.model_validate(log).model_dump() for log in logs]
+    
+    return {"items": serialized_logs, "total": total}
 
 @router.post("/stop-all", status_code=200)
 async def stop_all_tasks(
