@@ -117,6 +117,35 @@ async def delete_contact(
     await db.commit()
     return {"status": "success"}
 
+from pydantic import BaseModel
+class BulkDeleteRequest(BaseModel):
+    contact_ids: List[int]
+
+@router.post("/bulk-delete")
+async def bulk_delete_contacts(
+    *,
+    db: AsyncSession = Depends(deps.get_personal_db),
+    req: BulkDeleteRequest,
+    current_user: User = Depends(deps.get_current_active_user)
+) -> Any:
+    """Delete multiple contacts at once."""
+    if not req.contact_ids:
+        return {"deleted": 0}
+        
+    stmt = select(ScrapedContact).where(ScrapedContact.id.in_(req.contact_ids))
+    res = await db.execute(stmt)
+    objs = res.scalars().all()
+    
+    deleted_count = 0
+    for obj in objs:
+        await db.delete(obj)
+        deleted_count += 1
+        
+    if deleted_count > 0:
+        await db.commit()
+        
+    return {"deleted": deleted_count}
+
 @router.post("/import")
 async def import_contacts(
     file: UploadFile = File(...),

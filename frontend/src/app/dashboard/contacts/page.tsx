@@ -11,12 +11,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { Users, Plus, Upload, Download, Trash2, Edit } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function ContactsPage() {
     const [contacts, setContacts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isOpen, setIsOpen] = useState(false);
     const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
     // Pagination
     const [page, setPage] = useState(1);
@@ -49,6 +51,7 @@ export default function ContactsPage() {
             toast.error("Network error fetching contacts.");
         } finally {
             setLoading(false);
+            setSelectedIds([]);
         }
     };
 
@@ -115,6 +118,48 @@ export default function ContactsPage() {
             toast.error(err.message);
         }
     };
+
+    const handleBulkDelete = async () => {
+        if (!selectedIds.length) return;
+        if (!confirm(`Delete ${selectedIds.length} selected contacts?`)) return;
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${API_BASE_URL}/api/v1/contacts/bulk-delete`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ contact_ids: selectedIds })
+            });
+            if (!res.ok) throw new Error("Failed to delete selected contacts.");
+            const data = await res.json();
+            toast.success(`Deleted ${data.deleted} contacts.`);
+            setSelectedIds([]);
+            fetchContacts();
+        } catch (err: any) {
+            toast.error(err.message);
+        }
+    };
+
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            setSelectedIds(contacts.map(c => c.id));
+        } else {
+            setSelectedIds([]);
+        }
+    };
+
+    const handleSelectOne = (id: number, checked: boolean) => {
+        if (checked) {
+            setSelectedIds(prev => [...prev, id]);
+        } else {
+            setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
+        }
+    };
+
+    const allSelected = contacts.length > 0 && selectedIds.length === contacts.length;
+    const someSelected = selectedIds.length > 0 && selectedIds.length < contacts.length;
 
     const handleExport = async () => {
         try {
@@ -241,6 +286,13 @@ export default function ContactsPage() {
                             <Table>
                                 <TableHeader className="bg-secondary/30">
                                     <TableRow>
+                                        <TableHead className="w-12 text-center">
+                                            <Checkbox
+                                                checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                                                onCheckedChange={handleSelectAll}
+                                                className="border-muted-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                                            />
+                                        </TableHead>
                                         <TableHead className="w-12 text-center text-[10px] uppercase font-medium text-muted-foreground/40">#</TableHead>
                                         <TableHead>Name</TableHead>
                                         <TableHead>Email</TableHead>
@@ -252,6 +304,13 @@ export default function ContactsPage() {
                                 <TableBody>
                                     {contacts.map((c: any, idx: number) => (
                                         <TableRow key={c.id}>
+                                            <TableCell className="text-center">
+                                                <Checkbox
+                                                    checked={selectedIds.includes(c.id)}
+                                                    onCheckedChange={(checked) => handleSelectOne(c.id, checked as boolean)}
+                                                    className="border-muted-foreground/30 data-[state=checked]:bg-foreground data-[state=checked]:text-background"
+                                                />
+                                            </TableCell>
                                             <TableCell className="text-center text-[10px] font-mono text-muted-foreground/40">{(page - 1) * pageSize + idx + 1}</TableCell>
                                             <TableCell className="font-medium text-foreground">{c.name || "—"}</TableCell>
                                             <TableCell className="text-foreground">{c.email}</TableCell>

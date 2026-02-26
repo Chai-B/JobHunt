@@ -81,6 +81,19 @@ async def extract_from_text(
         # Final Clean-up: If still no company, this row is likely low value/invalid
         if not email or not company:
             continue
+            
+        # Strict Garbage Fill Protection (User Request)
+        if name:
+            name = name.strip()
+            # Drop names that are insanely long, contain numbers, or website extensions
+            if len(name) > 30 or any(char.isdigit() for char in name) or ".com" in name.lower() or "http" in name.lower() or "@" in name:
+                name = ""
+        
+        if company:
+            company = company.strip()
+            # Drop companies that are overly verbose sentences or raw URLs
+            if len(company) > 50 or "http://" in company.lower() or "https://" in company.lower():
+                company = domain if 'domain' in locals() else "" # fallback
 
         entities.append(
             ExtractedEntity(
