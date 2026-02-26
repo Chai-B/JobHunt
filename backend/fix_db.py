@@ -7,7 +7,10 @@ from app.core.config import settings
 async def main():
     # Force the asyncpg driver into the URL string to bypass psycopg2 requirement
     async_url = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
-    engine = create_async_engine(async_url)
+    engine = create_async_engine(
+        async_url, 
+        connect_args={"prepared_statement_cache_size": 0, "statement_cache_size": 0}
+    )
     async with engine.begin() as conn:
         try:
             await conn.execute(sa.text("ALTER TABLE resumes ADD COLUMN file_data BYTEA;"))
