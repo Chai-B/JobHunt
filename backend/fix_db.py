@@ -6,7 +6,7 @@ from sqlalchemy import text, inspect
 from app.core.config import settings
 from app.db.base import Base
 # Import all models to ensure Base metadata is fully populated
-from app.db.models import user, resume, template, scraper, job, contact, application, setting, action_log
+from app.db.models import user, resume, email_template, job_posting, contact, application, setting, action_log
 
 async def migrate_missing_columns():
     async_url = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
