@@ -46,6 +46,35 @@ async def create_contact(
     await db.refresh(db_obj)
     return db_obj
 
+@router.post("/bulk")
+async def create_contacts_bulk(
+    *,
+    db: AsyncSession = Depends(deps.get_personal_db),
+    contacts_in: List[ScrapedContactCreate],
+    current_user: User = Depends(deps.get_current_active_user)
+) -> Any:
+    """Bulk create contacts with deduplication."""
+    if not contacts_in:
+        return {"message": "No contacts provided", "saved": 0}
+        
+    # Get existing emails
+    emails = [c.email for c in contacts_in]
+    stmt = select(ScrapedContact.email).where(ScrapedContact.email.in_(emails))
+    res = await db.execute(stmt)
+    existing_emails = set(res.scalars().all())
+    
+    new_objs = []
+    for c in contacts_in:
+        if c.email not in existing_emails:
+            new_objs.append(ScrapedContact(**c.model_dump()))
+            existing_emails.add(c.email) # Avoid duplicates in the input list itself
+            
+    if new_objs:
+        db.add_all(new_objs)
+        await db.commit()
+        
+    return {"message": f"Successfully processed {len(contacts_in)} contacts", "saved": len(new_objs)}
+
 @router.put("/{contact_id}", response_model=ScrapedContactRead)
 async def update_contact(
     *,

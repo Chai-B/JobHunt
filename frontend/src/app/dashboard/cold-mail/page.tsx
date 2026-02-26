@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Mail, Send, Users, Activity, Info, RefreshCw, Zap } from "lucide-react";
+import { Mail, Send, Users, Activity, Info, RefreshCw, Zap, CheckSquare, Square } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const Tip = ({ text }: { text: string }) => (
     <span className="relative inline-flex items-center ml-1.5 cursor-help group/tip">
@@ -32,6 +33,9 @@ export default function ColdMailPage() {
     const [sendingId, setSendingId] = useState<number | null>(null);
     const [batchSending, setBatchSending] = useState(false);
 
+    // Selection state
+    const [selectedContactIds, setSelectedContactIds] = useState<Set<number>>(new Set());
+
     const fetchData = async () => {
         setLoading(true);
         try {
@@ -39,7 +43,7 @@ export default function ColdMailPage() {
             const headers = { Authorization: `Bearer ${token}` };
 
             const [contactsRes, templatesRes, resumesRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/v1/scraper/contacts`, { headers }),
+                fetch(`${API_BASE_URL}/api/v1/contacts/`, { headers }),
                 fetch(`${API_BASE_URL}/api/v1/templates/`, { headers }),
                 fetch(`${API_BASE_URL}/api/v1/resumes/`, { headers }),
             ]);
@@ -66,6 +70,24 @@ export default function ColdMailPage() {
     useEffect(() => {
         fetchData();
     }, []);
+
+    const toggleSelectAll = () => {
+        if (selectedContactIds.size === contacts.length) {
+            setSelectedContactIds(new Set());
+        } else {
+            setSelectedContactIds(new Set(contacts.map(c => c.id)));
+        }
+    };
+
+    const toggleSelectContact = (id: number) => {
+        const newSet = new Set(selectedContactIds);
+        if (newSet.has(id)) {
+            newSet.delete(id);
+        } else {
+            newSet.add(id);
+        }
+        setSelectedContactIds(newSet);
+    };
 
     const sendColdMail = async (contactId: number) => {
         if (!selectedTemplate || !selectedResume) {
@@ -105,28 +127,39 @@ export default function ColdMailPage() {
             toast.error("Select a template and resume first.");
             return;
         }
+        if (selectedContactIds.size === 0) {
+            toast.error("Select at least one contact to send mails.");
+            return;
+        }
+
         setBatchSending(true);
         let sent = 0;
-        for (const contact of contacts.slice(0, 10)) {
+        let failed = 0;
+
+        const idsToBatch = Array.from(selectedContactIds);
+        for (const id of idsToBatch) {
             try {
                 const token = localStorage.getItem("token");
-                await fetch(`${API_BASE_URL}/api/v1/scraper/dispatch-mail`, {
+                const res = await fetch(`${API_BASE_URL}/api/v1/scraper/dispatch-mail`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                         Authorization: `Bearer ${token}`
                     },
                     body: JSON.stringify({
-                        contact_id: contact.id,
+                        contact_id: id,
                         template_id: parseInt(selectedTemplate),
                         resume_id: parseInt(selectedResume)
                     })
                 });
-                sent++;
-            } catch { }
+                if (res.ok) sent++;
+                else failed++;
+            } catch {
+                failed++;
+            }
         }
         setBatchSending(false);
-        toast.success(`Batch complete: ${sent} emails dispatched.`);
+        toast.success(`Batch complete: ${sent} dispatched, ${failed} failed.`);
     };
 
     const labelClass = "text-[11px] uppercase tracking-[0.15em] text-muted-foreground font-medium mb-1.5 flex items-center";
@@ -146,7 +179,6 @@ export default function ColdMailPage() {
                 </Button>
             </div>
 
-            {/* Configuration Panel */}
             <Card className="bg-card border-border shadow-sm">
                 <CardHeader className="border-b border-border pb-5">
                     <CardTitle className="text-foreground text-lg font-semibold">Outreach Configuration</CardTitle>
@@ -156,7 +188,7 @@ export default function ColdMailPage() {
                     <div className="grid md:grid-cols-3 gap-6">
                         <div>
                             <Label className={labelClass}>
-                                Email Template <Tip text="Choose which email template the AI will use. Variables like {{job_title}} will be auto-filled from contact data." />
+                                Email Template <Tip text="Choose which email template the AI will use. Variables like {{contact_name}} will be auto-filled." />
                             </Label>
                             <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
                                 <SelectTrigger className="bg-background border-border text-foreground">
@@ -171,7 +203,7 @@ export default function ColdMailPage() {
                         </div>
                         <div>
                             <Label className={labelClass}>
-                                Source Resume <Tip text="The AI will extract your skills and experience from this resume to personalize the outreach email." />
+                                Source Resume <Tip text="The AI will extract your skills and experience from this resume." />
                             </Label>
                             <Select value={selectedResume} onValueChange={setSelectedResume}>
                                 <SelectTrigger className="bg-background border-border text-foreground">
@@ -187,21 +219,27 @@ export default function ColdMailPage() {
                         <div className="flex items-end">
                             <Button
                                 onClick={sendBatchMails}
-                                disabled={batchSending || !selectedTemplate || !selectedResume || contacts.length === 0}
+                                disabled={batchSending || !selectedTemplate || !selectedResume || selectedContactIds.size === 0}
                                 className="w-full bg-foreground text-background hover:opacity-90 gap-2"
                             >
                                 <Zap className="w-4 h-4" />
-                                {batchSending ? "Sending..." : `Batch Send (${Math.min(contacts.length, 10)})`}
+                                {batchSending ? "Sending Batch..." : `Send to Selected (${selectedContactIds.size})`}
                             </Button>
                         </div>
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Contacts Table */}
             <Card className="bg-card border-border shadow-sm">
                 <CardHeader className="border-b border-border pb-5">
-                    <CardTitle className="text-foreground flex items-center gap-2"><Users className="w-5 h-5" /> Scraped Contacts</CardTitle>
+                    <div className="flex justify-between items-center">
+                        <CardTitle className="text-foreground flex items-center gap-2"><Users className="w-5 h-5" /> Scraped Contacts</CardTitle>
+                        {contacts.length > 0 && (
+                            <Badge variant="secondary" className="bg-secondary/50 text-foreground border-border">
+                                {selectedContactIds.size} / {contacts.length} Selected
+                            </Badge>
+                        )}
+                    </div>
                     <CardDescription className="text-muted-foreground">{contacts.length} contacts available for outreach.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -216,13 +254,20 @@ export default function ColdMailPage() {
                                 <Users className="w-6 h-6 text-muted-foreground" />
                             </div>
                             <h3 className="text-xl font-semibold text-foreground mb-2">No Contacts Found</h3>
-                            <p className="text-sm text-center max-w-sm">Run the Scraper to extract contacts first.</p>
+                            <p className="text-sm text-center max-w-sm">Run the Extractor to import contacts first.</p>
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
                             <Table>
                                 <TableHeader className="bg-secondary/30">
                                     <TableRow className="border-border hover:bg-transparent">
+                                        <TableHead className="w-12">
+                                            <Checkbox
+                                                checked={selectedContactIds.size === contacts.length && contacts.length > 0}
+                                                onCheckedChange={toggleSelectAll}
+                                                aria-label="Select all"
+                                            />
+                                        </TableHead>
                                         <TableHead className="text-muted-foreground font-medium">Email</TableHead>
                                         <TableHead className="text-muted-foreground font-medium">Name</TableHead>
                                         <TableHead className="text-muted-foreground font-medium">Company</TableHead>
@@ -232,11 +277,18 @@ export default function ColdMailPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {contacts.map((c: any) => (
-                                        <TableRow key={c.id} className="border-border hover:bg-secondary/50 transition-colors group">
+                                        <TableRow key={c.id} className={`border-border transition-colors group ${selectedContactIds.has(c.id) ? 'bg-primary/5' : 'hover:bg-secondary/50'}`}>
+                                            <TableCell>
+                                                <Checkbox
+                                                    checked={selectedContactIds.has(c.id)}
+                                                    onCheckedChange={() => toggleSelectContact(c.id)}
+                                                    aria-label={`Select ${c.email}`}
+                                                />
+                                            </TableCell>
                                             <TableCell className="font-mono text-xs text-foreground">{c.email}</TableCell>
                                             <TableCell className="text-muted-foreground">{c.name || "—"}</TableCell>
                                             <TableCell className="text-muted-foreground">{c.company || "—"}</TableCell>
-                                            <TableCell className="text-muted-foreground text-sm">{c.role || "—"}</TableCell>
+                                            <TableCell className="text-muted-foreground text-sm font-medium">{c.role || "—"}</TableCell>
                                             <TableCell className="text-right">
                                                 <Button
                                                     size="sm"

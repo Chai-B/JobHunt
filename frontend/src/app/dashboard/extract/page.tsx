@@ -79,9 +79,8 @@ export default function ExtractorPage() {
             }
 
             toast.success("Saved successfully!");
-            // Remove from list
             setResults(prev => prev.filter((_, i) => i !== index));
-            if (results.length === 1) setRawText(""); // Cleared all
+            if (results.length === 1) setRawText("");
         } catch (err: any) {
             toast.error(err.message);
         }
@@ -91,18 +90,66 @@ export default function ExtractorPage() {
         setResults(prev => prev.filter((_, i) => i !== index));
     };
 
+    const handleSaveAll = async () => {
+        const contactsToSave = results
+            .filter(r => r.type === "contact")
+            .map(r => ({ ...r.data, is_verified: false, source_url: "Universal Extractor" }));
+
+        if (contactsToSave.length === 0) {
+            toast.info("No contacts to save.");
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${API_BASE_URL}/api/v1/contacts/bulk`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify(contactsToSave)
+            });
+
+            if (!res.ok) throw new Error("Bulk save failed.");
+            const data = await res.json();
+            toast.success(`Successfully saved ${data.saved} new contacts!`);
+            setResults(prev => prev.filter(r => r.type !== "contact"));
+            if (results.length === contactsToSave.length) setRawText("");
+        } catch (err: any) {
+            toast.error(err.message);
+        }
+    };
+
+    const handleDiscardAll = () => {
+        setResults([]);
+        setRawText("");
+        toast.info("All results discarded.");
+    };
+
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div>
-                <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
-                    <Sparkles className="h-6 w-6" />
-                    Universal Extractor
-                </h1>
-                <p className="text-muted-foreground mt-1 text-sm">Paste any raw text—emails, LinkedIn profiles, or job descriptions—and we&apos;ll instantly parse it.</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
+                        <Sparkles className="h-6 w-6" />
+                        Universal Extractor
+                    </h1>
+                    <p className="text-muted-foreground mt-1 text-sm">Paste any raw text—emails, LinkedIn profiles, or job descriptions—and we&apos;ll instantly parse it.</p>
+                </div>
+                {results.length > 0 && (
+                    <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={handleDiscardAll} className="text-destructive border-destructive/20 hover:bg-destructive/10">
+                            <Trash2 className="w-4 h-4 mr-2" /> Discard All
+                        </Button>
+                        <Button size="sm" onClick={handleSaveAll} className="bg-primary text-primary-foreground">
+                            <Save className="w-4 h-4 mr-2" /> Save All Contacts
+                        </Button>
+                    </div>
+                )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Input Column */}
                 <Card className="bg-card border-border shadow-sm flex flex-col h-full">
                     <CardHeader className="pb-3 border-b border-border">
                         <CardTitle className="text-lg">Raw Text Data</CardTitle>
@@ -111,7 +158,7 @@ export default function ExtractorPage() {
                     <CardContent className="pt-4 flex-grow flex flex-col gap-4">
                         <Textarea
                             placeholder="Paste text here..."
-                            className="flex-grow min-h-[300px] font-mono text-sm resize-none bg-background border-border"
+                            className="flex-grow min-h-[400px] font-mono text-sm resize-none bg-background border-border"
                             value={rawText}
                             onChange={(e) => setRawText(e.target.value)}
                         />
@@ -126,10 +173,9 @@ export default function ExtractorPage() {
                     </CardContent>
                 </Card>
 
-                {/* Results Column */}
-                <div className="flex flex-col gap-4 h-full xl:max-h-[600px] overflow-y-auto pr-2">
+                <div className="flex flex-col gap-4 h-full xl:max-h-[700px] overflow-y-auto pr-2">
                     {results.length === 0 && !processing && (
-                        <div className="h-[300px] flex flex-col items-center justify-center text-muted-foreground border border-dashed border-border rounded-lg bg-card/50">
+                        <div className="h-[400px] flex flex-col items-center justify-center text-muted-foreground border border-dashed border-border rounded-lg bg-card/50">
                             <Sparkles className="w-8 h-8 opacity-20 mb-3" />
                             <p className="text-sm font-medium text-foreground">Awaiting Input</p>
                             <p className="text-xs text-center max-w-[200px] mt-1">Paste something on the left to see the magic happen.</p>
@@ -138,7 +184,6 @@ export default function ExtractorPage() {
 
                     {results.map((r, i) => (
                         <Card key={i} className="bg-card border-border shadow-md animate-in slide-in-from-right-4 relative overflow-hidden">
-                            {/* Color strip indicating type */}
                             <div className={`absolute left-0 top-0 bottom-0 w-1 ${r.type === 'contact' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
 
                             <CardHeader className="pb-3 pt-4 pl-6">
@@ -157,17 +202,17 @@ export default function ExtractorPage() {
                             <CardContent className="pl-6 pb-2">
                                 {r.type === 'contact' && (
                                     <div className="space-y-2 text-sm">
-                                        <div className="flex gap-2"><span className="text-muted-foreground w-16">Name:</span> <strong>{r.data.name || "—"}</strong></div>
-                                        <div className="flex gap-2"><span className="text-muted-foreground w-16">Email:</span> <strong>{r.data.email}</strong></div>
-                                        <div className="flex gap-2"><span className="text-muted-foreground w-16">Company:</span> <strong>{r.data.company || "—"}</strong></div>
-                                        {r.data.phone && <div className="flex gap-2"><span className="text-muted-foreground w-16">Phone:</span> <strong>{r.data.phone}</strong></div>}
+                                        <div className="flex gap-2"><span className="text-muted-foreground w-20">Email:</span> <strong className="text-blue-400">{r.data.email}</strong></div>
+                                        <div className="flex gap-2"><span className="text-muted-foreground w-20">Company:</span> <strong className="text-primary">{r.data.company}</strong></div>
+                                        <div className="flex gap-2"><span className="text-muted-foreground w-20">Name:</span> <strong>{r.data.name || "—"}</strong></div>
+                                        <div className="flex gap-2"><span className="text-muted-foreground w-20">Role:</span> <strong className="text-muted-foreground">{r.data.role || "—"}</strong></div>
                                     </div>
                                 )}
                                 {r.type === 'job' && (
                                     <div className="space-y-2 text-sm">
-                                        <div className="flex gap-2"><span className="text-muted-foreground w-16">Title:</span> <strong>{r.data.title}</strong></div>
-                                        <div className="flex gap-2"><span className="text-muted-foreground w-16">Company:</span> <strong>{r.data.company}</strong></div>
-                                        <div className="flex gap-2"><span className="text-muted-foreground w-16">Location:</span> <strong>{r.data.location}</strong></div>
+                                        <div className="flex gap-2"><span className="text-muted-foreground w-20">Title:</span> <strong>{r.data.title}</strong></div>
+                                        <div className="flex gap-2"><span className="text-muted-foreground w-20">Company:</span> <strong>{r.data.company}</strong></div>
+                                        <div className="flex gap-2"><span className="text-muted-foreground w-20">Location:</span> <strong>{r.data.location}</strong></div>
                                     </div>
                                 )}
                             </CardContent>
