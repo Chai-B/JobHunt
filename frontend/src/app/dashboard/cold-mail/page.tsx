@@ -14,6 +14,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const Tip = ({ text }: { text: string }) => (
     <span className="relative inline-flex items-center ml-1.5 cursor-help group/tip">
@@ -95,6 +105,13 @@ export default function ColdMailPage() {
     // Search
     const [searchQuery, setSearchQuery] = useState("");
 
+    // Validation & Profile
+    const [userProfile, setUserProfile] = useState<any>(null);
+    const [showValidationDialog, setShowValidationDialog] = useState(false);
+    const [missingTags, setMissingTags] = useState<string[]>([]);
+    const [manualTagValues, setManualTagValues] = useState<Record<string, string>>({});
+    const [pendingDispatch, setPendingDispatch] = useState<{ type: 'single' | 'batch', id?: number } | null>(null);
+
     const fetchData = async () => {
         setLoading(true);
         try {
@@ -103,10 +120,11 @@ export default function ColdMailPage() {
 
             const searchParam = searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : "";
 
-            const [contactsRes, templatesRes, resumesRes] = await Promise.all([
+            const [contactsRes, templatesRes, resumesRes, profileRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/v1/contacts/?skip=${(page - 1) * pageSize}&limit=${pageSize}${searchParam}`, { headers }),
                 fetch(`${API_BASE_URL}/api/v1/templates/`, { headers }),
                 fetch(`${API_BASE_URL}/api/v1/resumes/`, { headers }),
+                fetch(`${API_BASE_URL}/api/v1/users/me`, { headers }),
             ]);
 
             if (contactsRes.ok) {
@@ -121,6 +139,10 @@ export default function ColdMailPage() {
             if (resumesRes.ok) {
                 const data = await resumesRes.json();
                 setResumes(Array.isArray(data.items) ? data.items : (Array.isArray(data) ? data : []));
+            }
+            if (profileRes.ok) {
+                const data = await profileRes.json();
+                setUserProfile(data);
             }
         } catch (err) {
             toast.error("Failed to load outreach data.");
@@ -162,6 +184,37 @@ export default function ColdMailPage() {
             toast.error("Select a template and resume first.");
             return;
         }
+
+        // Validation Interceptor
+        const t = templates.find(temp => String(temp.id) === selectedTemplate);
+        const r = resumes.find(res => String(res.id) === selectedResume);
+        if (!t || !r) return;
+
+        const bodyTags = t.body_text.match(/{{(.*?)}}/g) || [];
+        const subjectTags = t.subject.match(/{{(.*?)}}/g) || [];
+        const needed = Array.from(new Set([...bodyTags, ...subjectTags])).map(tag => tag.replace(/{{|}}/g, ''));
+
+        const resumeParsed = r.parsed_json || {};
+        const missing: string[] = [];
+
+        needed.forEach(tag => {
+            // Skip contact-specific tags as they are external
+            if (['contact_name', 'job_title', 'company'].includes(tag)) return;
+
+            const val = resumeParsed[tag] || userProfile?.[tag] || (tag === 'user_name' ? userProfile?.full_name : null) || (tag === 'linkedin' ? userProfile?.linkedin_url : null) || (tag === 'github' ? userProfile?.github_url : null) || (tag === 'portfolio' ? userProfile?.portfolio_url : null) || (tag === 'user_email' ? userProfile?.email : null) || (tag === 'user_phone' ? userProfile?.phone : null);
+
+            if (!val || String(val).trim() === "") {
+                missing.push(tag);
+            }
+        });
+
+        if (missing.length > 0) {
+            setMissingTags(missing);
+            setPendingDispatch({ type: 'single', id: contactId });
+            setShowValidationDialog(true);
+            return;
+        }
+
         setSendingId(contactId);
         try {
             const token = localStorage.getItem("token");
@@ -190,6 +243,47 @@ export default function ColdMailPage() {
         }
     };
 
+    const handleSaveMissingTags = async () => {
+        if (!selectedResume || !pendingDispatch) return;
+
+        const r = resumes.find(res => String(res.id) === selectedResume);
+        if (!r) return;
+
+        try {
+            const token = localStorage.getItem("token");
+            const newParsed = { ...(r.parsed_json || {}), ...manualTagValues };
+
+            // Update Backend
+            const updateRes = await fetch(`${API_BASE_URL}/api/v1/resumes/${r.id}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    parsed_json: newParsed
+                })
+            });
+
+            if (!updateRes.ok) throw new Error("Failed to update resume tags");
+
+            // Update local state
+            setResumes(prev => prev.map(res => res.id === r.id ? { ...res, parsed_json: newParsed } : res));
+
+            setShowValidationDialog(false);
+            setManualTagValues({});
+
+            // Resume dispatch
+            if (pendingDispatch.type === 'single' && pendingDispatch.id) {
+                sendColdMail(pendingDispatch.id);
+            } else if (pendingDispatch.type === 'batch') {
+                sendBatchMails();
+            }
+        } catch (err) {
+            toast.error("Failed to save tags. Please try again.");
+        }
+    };
+
     const sendBatchMails = async () => {
         if (!selectedTemplate || !selectedResume) {
             toast.error("Select a template and resume first.");
@@ -197,6 +291,28 @@ export default function ColdMailPage() {
         }
         if (selectedContactIds.size === 0) {
             toast.error("Select recipients first.");
+            return;
+        }
+
+        // Batch Validation Interceptor
+        const t = templates.find(temp => String(temp.id) === selectedTemplate);
+        const r = resumes.find(res => String(res.id) === selectedResume);
+        if (!t || !r) return;
+
+        const allTags = Array.from(new Set([...(t.body_text.match(/{{(.*?)}}/g) || []), ...(t.subject.match(/{{(.*?)}}/g) || [])])).map(tag => tag.replace(/{{|}}/g, ''));
+        const resumeParsed = r.parsed_json || {};
+        const missing: string[] = [];
+
+        allTags.forEach(tag => {
+            if (['contact_name', 'job_title', 'company'].includes(tag)) return;
+            const val = resumeParsed[tag] || userProfile?.[tag] || (tag === 'user_name' ? userProfile?.full_name : null) || (tag === 'linkedin' ? userProfile?.linkedin_url : null) || (tag === 'github' ? userProfile?.github_url : null) || (tag === 'portfolio' ? userProfile?.portfolio_url : null) || (tag === 'user_email' ? userProfile?.email : null) || (tag === 'user_phone' ? userProfile?.phone : null);
+            if (!val || String(val).trim() === "") missing.push(tag);
+        });
+
+        if (missing.length > 0) {
+            setMissingTags(missing);
+            setPendingDispatch({ type: 'batch' });
+            setShowValidationDialog(true);
             return;
         }
 
@@ -459,6 +575,48 @@ export default function ColdMailPage() {
                     </div>
                 </div>
             )}
+
+            <AlertDialog open={showValidationDialog} onOpenChange={setShowValidationDialog}>
+                <AlertDialogContent className="bg-card border-border/50 shadow-2xl rounded-2xl max-w-md">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <Zap className="w-5 h-5 text-amber-500" />
+                            Missing Information
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-muted-foreground">
+                            Your selected template requires context that isn't in your resume or profile. Add it below to continue.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="py-4 space-y-4">
+                        {missingTags.map(tag => (
+                            <div key={tag} className="space-y-1.5">
+                                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{tag.replace(/_/g, ' ')}</Label>
+                                <Input
+                                    placeholder={`Enter ${tag.replace(/_/g, ' ')}...`}
+                                    value={manualTagValues[tag] || ""}
+                                    onChange={(e) => setManualTagValues(prev => ({ ...prev, [tag]: e.target.value }))}
+                                    className="bg-background/50 border-border/50 h-10 rounded-xl focus:ring-primary/20"
+                                />
+                            </div>
+                        ))}
+                    </div>
+                    <AlertDialogFooter className="gap-2">
+                        <AlertDialogCancel onClick={() => {
+                            setManualTagValues({});
+                            setPendingDispatch(null);
+                        }} className="rounded-xl border-border/50">Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleSaveMissingTags();
+                            }}
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl px-6"
+                        >
+                            Save & Dispatch
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

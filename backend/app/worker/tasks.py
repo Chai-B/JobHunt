@@ -60,16 +60,16 @@ async def process_resume_async(resume_id: int, file_bytes: bytes, filename: str)
             
             if settings and settings.gemini_api_keys:
                 extract_prompt = f"""You are a professional resume parser. Extract the following key details from this resume text to be used directly as replacement variables in cold emails and templates. 
-Return STRICTLY valid JSON with these exact keys:
+Return STRICTLY valid JSON with these exact keys. Your output values MUST strictly be concise, tight phrases without fluff. Do not write full sentences. Write them as if they are being dropped into the middle of a sentence (e.g. "3" instead of "I have 3 years of experience").
 {{
   "education": "e.g. BTech in CS from XYZ Univ",
   "recent_role": "e.g. Software Engineer at ABC Corp",
   "top_projects": "e.g. built a high-scale microservice architecture",
   "certifications": "e.g. AWS Certified Solutions Architect",
-  "experience_years": "e.g. 3 years",
-  "skills": "e.g. Python, React, AWS"
+  "experience_years": "e.g. 5",
+  "skills": "e.g. Python, React, PostgreSQL"
 }}
-If a field is not found or cannot be reasonably inferred, omit the key entirely or set it to an empty string "". Keep the phrases natural so they can be dropped right into an email sentence.
+If a field is not found or cannot be reasonably inferred, omit the key entirely or set it to an empty string "".
 Resume Text:
 {resume.raw_text[:10000]}"""
                 try:
@@ -711,11 +711,15 @@ async def run_cold_mail_async(user_id: int, contact_id: int, template_id: int, r
             ]
             
             if missing_tags and settings.gemini_api_keys:
-                fallback_prompt = f"""You are an elite email proofreader.
-The following email draft has several template variables. 
-The variables listed in MISSING_TAGS have no data available for this user.
-Instead of leaving blank spaces or weird punctuation, neatly rewrite the text to entirely omit the clause, sentence, or phrase that relied on the missing variable. 
-Do not change the rest of the email's meaning or tone.
+                fallback_prompt = f"""You are a precise email text processor.
+The following email template contains un-handled double-bracket variables.
+The specific variables listed in MISSING_TAGS have no user data available.
+
+CRITICAL INSTRUCTIONS:
+1. You must CAREFULLY delete or rewrite ONLY the specific clause, sentence, or phrase that relied on the missing variables listed below.
+2. DO NOT modify, resolve, or remove ANY OTHER `{{{{variables}}}}` present in the text. You must output all other `{{{{variables}}}}` EXACTLY as they appear in the original template.
+3. If the subject contains the missing tag, modify the subject.
+4. Do not invent replacement fake names or data. Just structure the sentence around the gap.
 
 MISSING_TAGS: {', '.join(missing_tags)}
 

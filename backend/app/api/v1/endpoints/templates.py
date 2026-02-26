@@ -120,17 +120,18 @@ async def generate_ai_template(
     {target_info}
     
     CRITICAL INSTRUCTION - VARIABLE INJECTION:
-    You MUST naturally weave the following exact literal variables into the text without making it sound like an AI fill-in-the-blank form.
+    You MUST naturally weave the following exact literal variables into the text. 
+    DO NOT ATTEMPT TO FILL THEM WITH FAKE DATA. Output the literal bracketed variable string exactly as shown:
     {{{{user_name}}}}, {{{{user_email}}}}, {{{{user_phone}}}}, {{{{linkedin}}}}, {{{{github}}}}, {{{{portfolio}}}}
     {{{{job_title}}}}, {{{{company}}}}, {{{{contact_name}}}}
     {{{{skills}}}}, {{{{experience_years}}}}, {{{{education}}}}, {{{{recent_role}}}}, {{{{top_projects}}}}, {{{{certifications}}}}
 
     WRITING RULES (NON-NEGOTIABLE):
-    1. Write exactly like a human professional. NEVER use AI-sounding corporate fluff (e.g., "thrilled", "dive deep", "game-changer", "landscape", "pivotal", "catalyst").
-    2. Be extremely concise. Do not use 10 words when 4 will do.
-    3. The Subject Line MUST be simple, clear, and look like it was typed manually by a busy person.
+    1. Write exactly like a human professional. NEVER use AI-sounding corporate fluff (e.g., "thrilled", "dive deep", "game-changer", "landscape", "pivotal", "catalyst", "testament").
+    2. Be extremely concise. Talk like a real person sending an email. Do not sound like a machine.
+    3. The Subject Line MUST be simple, clear, and look like it was typed manually by a busy person (NO Title Case for every word).
     4. Seamlessly incorporate {{{{experience_years}}}}, current/past role as {{{{recent_role}}}}, and top projects: {{{{top_projects}}}} into the prose natively.
-    5. Do NOT include placeholders like [Your Name]. ONLY use the exact {{{{variable}}}} formatted tags.
+    5. Do NOT include placeholders like [Your Name] or <Company>. ONLY use the exact {{{{variable}}}} formatted tags.
     
     Return STRICTLY valid JSON ONLY:
     {{
