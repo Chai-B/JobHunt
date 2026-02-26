@@ -4,6 +4,7 @@ from sqlalchemy import select
 import os
 from email.mime.base import MIMEBase
 from email import encoders
+from pathlib import Path
 from app.worker.celery_app import celery_app
 from app.db.session import AsyncSessionLocal
 from app.db.models.resume import Resume
@@ -745,9 +746,14 @@ Return STRICTLY valid JSON ONLY:
                 subject = subject.replace(tag, str(value) if value else "")
                 body = body.replace(tag, str(value) if value else "")
 
-            # Resolve DB-native Resume Attachment
-            attachment_data = resume.file_data
-            has_attachment = bool(attachment_data)
+            # Resolve Disk-based Resume Attachment
+            UPLOAD_DIR = Path("app/uploads/resumes")
+            file_path = UPLOAD_DIR / f"{resume.id}_{resume.filename}"
+            has_attachment = file_path.exists()
+            attachment_data = None
+            if has_attachment:
+                with open(file_path, "rb") as f:
+                    attachment_data = f.read()
 
             msg = MIMEMultipart()
             msg['From'] = settings.smtp_username or "user@example.com"

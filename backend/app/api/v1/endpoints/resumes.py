@@ -4,6 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from loguru import logger
 import asyncio
+import os
+from pathlib import Path
 
 from app.api import deps
 from app.db.models.user import User
@@ -13,6 +15,9 @@ from app.worker.tasks import process_resume_async
 from app.services.task_registry import register_task, cancel_user_tasks
 
 router = APIRouter()
+
+UPLOAD_DIR = Path("app/uploads/resumes")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {"pdf", "docx", "doc", "txt", "md"}
 
@@ -37,12 +42,16 @@ async def upload_resume(
         filename=file.filename,
         format=ext,
         label=label,
-        status="pending",
-        file_data=file_bytes
+        status="pending"
     )
     db.add(new_resume)
     await db.commit()
     await db.refresh(new_resume)
+    
+    # Save file physically to container volume
+    file_path = UPLOAD_DIR / f"{new_resume.id}_{file.filename}"
+    with open(file_path, "wb") as f:
+        f.write(file_bytes)
     
     # Run directly in the current event loop (non-blocking)
     task = asyncio.create_task(

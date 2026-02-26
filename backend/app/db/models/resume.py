@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Text, JSON, LargeBinary
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Text, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from pgvector.sqlalchemy import Vector
@@ -15,7 +15,7 @@ class Resume(Base):
     label = Column(String, nullable=True) # e.g., "Frontend Engineer", "Product Manager"
     
     # Storage
-    file_data = Column(LargeBinary, nullable=True) # Direct DB PDF/DOCX storage
+    # Physically stored on disk within app/uploads/resumes/
     
     # Extraction output
     raw_text = Column(Text, nullable=True)
