@@ -93,24 +93,22 @@ export default function LogsPage() {
                     <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
                         <Activity className="h-6 w-6" />
                         System Logs
-                        {runningCount > 0 && (
-                            <Badge variant="outline" className="border-blue-500/50 text-blue-500 bg-blue-500/10 animate-pulse ml-2">
-                                {runningCount} running
-                            </Badge>
-                        )}
+                        <Badge variant="outline" className={`transition-opacity duration-300 border-blue-500/50 text-blue-500 bg-blue-500/10 animate-pulse ml-2 ${runningCount > 0 ? 'opacity-100' : 'opacity-0 select-none'}`}>
+                            {runningCount} running
+                        </Badge>
                     </h1>
                     <p className="text-muted-foreground mt-1 text-sm">Monitor all background operations in real-time.</p>
                 </div>
-                <div className="flex gap-2">
-                    {runningCount > 0 && (
-                        <Button variant="destructive" size="sm" onClick={handleStopAll} disabled={stopping} className="gap-2">
-                            <StopCircle className={`w-4 h-4 ${stopping ? 'animate-spin' : ''}`} />
-                            Stop All
-                        </Button>
-                    )}
+                <div className="flex flex-row-reverse gap-2">
                     <Button variant="outline" size="sm" onClick={fetchLogs} disabled={loading} className="gap-2 border-border text-foreground">
                         <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
                     </Button>
+                    <div className={`overflow-hidden transition-all duration-300 ${runningCount > 0 ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}>
+                        <Button variant="destructive" size="sm" onClick={handleStopAll} disabled={stopping} className="gap-2 whitespace-nowrap">
+                            <StopCircle className={`w-4 h-4 ${stopping ? 'animate-spin' : ''}`} />
+                            Stop All
+                        </Button>
+                    </div>
                 </div>
             </div>
 

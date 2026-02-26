@@ -146,17 +146,6 @@ export default function SettingsPage() {
         }
     };
 
-    if (loading) return (
-        <div className="max-w-5xl space-y-8 p-10">
-            <Skeleton className="h-10 w-48" />
-            <Skeleton className="h-4 w-64" />
-            <div className="space-y-6 mt-10">
-                <Skeleton className="h-[200px] w-full rounded-xl" />
-                <Skeleton className="h-[200px] w-full rounded-xl" />
-                <Skeleton className="h-[200px] w-full rounded-xl" />
-            </div>
-        </div>
-    );
     return (
         <div className="max-w-5xl space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 relative pb-20">
             <div>
@@ -167,32 +156,40 @@ export default function SettingsPage() {
                 <p className="text-sm text-muted-foreground mt-2 max-w-2xl">Manage your application, automation, and integration preferences.</p>
             </div>
 
-            <form onSubmit={handleSave} className="space-y-8">
-                {/* Security Notice */}
-                <div className="flex items-start gap-4 p-5 bg-secondary/30 border border-border rounded-xl text-sm">
-                    <div className="h-10 w-10 bg-secondary rounded-lg flex items-center justify-center shrink-0 border border-border mt-0.5">
-                        <Info className="w-5 h-5 text-foreground" />
-                    </div>
-                    <div>
-                        <p className="font-semibold text-foreground">Secure Vault Integration</p>
-                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                            API keys and credentials are encrypted at rest and never leave your environment. They are used exclusively for server-side processing and are never exposed to the client or third parties.
-                        </p>
-                    </div>
+            {loading ? (
+                <div className="space-y-6 mt-10">
+                    <Skeleton className="h-[200px] w-full rounded-xl bg-secondary/20 fade-in" />
+                    <Skeleton className="h-[200px] w-full rounded-xl bg-secondary/20 fade-in delay-75" />
+                    <Skeleton className="h-[200px] w-full rounded-xl bg-secondary/20 fade-in delay-150" />
                 </div>
+            ) : (
+                <form onSubmit={handleSave} className="space-y-8">
+                    {/* Security Notice */}
+                    <div className="flex items-start gap-4 p-5 bg-secondary/30 border border-border rounded-xl text-sm">
+                        <div className="h-10 w-10 bg-secondary rounded-lg flex items-center justify-center shrink-0 border border-border mt-0.5">
+                            <Info className="w-5 h-5 text-foreground" />
+                        </div>
+                        <div>
+                            <p className="font-semibold text-foreground">Secure Vault Integration</p>
+                            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                API keys and credentials are encrypted at rest and never leave your environment. They are used exclusively for server-side processing and are never exposed to the client or third parties.
+                            </p>
+                        </div>
+                    </div>
 
-                <GeneralPanel formData={formData} handleChange={handleChange} />
-                <ScraperPanel formData={formData} handleChange={handleChange} />
-                <AIPanel formData={formData} handleChange={handleChange} />
-                <EmailPanel formData={formData} handleChange={handleChange} setFormData={setFormData} handleGmailConnect={handleGmailConnect} />
-                <DatabasePanel formData={formData} handleChange={handleChange} />
+                    <GeneralPanel formData={formData} handleChange={handleChange} />
+                    <ScraperPanel formData={formData} handleChange={handleChange} />
+                    <AIPanel formData={formData} handleChange={handleChange} />
+                    <EmailPanel formData={formData} handleChange={handleChange} setFormData={setFormData} handleGmailConnect={handleGmailConnect} />
+                    <DatabasePanel formData={formData} handleChange={handleChange} />
 
-                <div className="flex justify-end pt-6">
-                    <Button type="submit" disabled={saving} className="h-12 px-10 bg-foreground hover:opacity-90 text-background font-semibold transition-all rounded-lg shadow-lg">
-                        {saving ? "Saving Changes..." : "Save Settings"}
-                    </Button>
-                </div>
-            </form>
+                    <div className="flex justify-end pt-6">
+                        <Button type="submit" disabled={saving} className="h-12 px-10 bg-foreground hover:opacity-90 text-background font-semibold transition-all rounded-lg shadow-lg">
+                            {saving ? "Saving Changes..." : "Save Settings"}
+                        </Button>
+                    </div>
+                </form>
+            )}
         </div>
     );
 }

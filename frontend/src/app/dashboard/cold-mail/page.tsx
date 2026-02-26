@@ -1,7 +1,7 @@
 "use client";
 import { API_BASE_URL } from "@/lib/config";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Mail, Send, Users, Activity, Info, RefreshCw, Zap, CheckCircle2, ChevronRight, MousePointer2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Pagination } from "@/components/ui/pagination";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Tip = ({ text }: { text: string }) => (
     <span className="relative inline-flex items-center ml-1.5 cursor-help group/tip">
@@ -21,6 +22,55 @@ const Tip = ({ text }: { text: string }) => (
         </span>
     </span>
 );
+
+const ContactRow = React.memo(({ c, idx, isSelected, onToggle, onSend, sendingId, selectedTemplate, selectedResume, page, pageSize }: any) => {
+    return (
+        <TableRow
+            className={`border-border/20 transition-all duration-300 group ${isSelected ? 'bg-primary/5 hover:bg-primary/[0.08]' : 'hover:bg-secondary/40'}`}
+        >
+            <TableCell className="px-4 text-center text-[10px] font-mono text-muted-foreground/40">
+                {(page - 1) * pageSize + idx + 1}
+            </TableCell>
+            <TableCell className="px-6">
+                <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => onToggle(c.id)}
+                    className="rounded-md border-border/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary transition-all"
+                />
+            </TableCell>
+            <TableCell className="py-5">
+                <div className="flex flex-col gap-0.5">
+                    <span className="font-mono text-[13px] text-foreground font-medium group-hover:text-primary transition-colors">{c.email}</span>
+                    <span className="text-xs text-muted-foreground/70 font-sans">{c.name || "Unnamed Lead"}</span>
+                </div>
+            </TableCell>
+            <TableCell className="py-5">
+                <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-foreground/90">{c.company}</span>
+                        <CheckCircle2 className="w-3 h-3 text-emerald-500/30" />
+                    </div>
+                    <Badge variant="outline" className="w-fit text-[10px] rounded-md px-1.5 py-0 border-border/30 bg-background/30 text-muted-foreground/80 font-normal">
+                        {c.role || "Role Unmapped"}
+                    </Badge>
+                </div>
+            </TableCell>
+            <TableCell className="text-right pr-8">
+                <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-foreground border-border/50 hover:bg-primary hover:text-primary-foreground text-[11px] font-bold rounded-xl h-9 px-4 gap-2 transition-all hover:scale-105"
+                    onClick={() => onSend(c.id)}
+                    disabled={sendingId === c.id || !selectedTemplate || !selectedResume}
+                >
+                    {sendingId === c.id ? <Activity className="w-3 h-3 animate-pulse" /> : <Send className="w-3 h-3" />}
+                    {sendingId === c.id ? "Working..." : "Dispatch"}
+                </Button>
+            </TableCell>
+        </TableRow>
+    );
+});
+ContactRow.displayName = "ContactRow";
 
 export default function ColdMailPage() {
     const [contacts, setContacts] = useState<any[]>([]);
@@ -77,23 +127,26 @@ export default function ColdMailPage() {
         fetchData();
     }, [page]);
 
-    const toggleSelectAll = () => {
-        if (selectedContactIds.size === contacts.length) {
-            setSelectedContactIds(new Set());
-        } else {
-            setSelectedContactIds(new Set(contacts.map(c => c.id)));
-        }
-    };
+    const toggleSelectAll = useCallback(() => {
+        setSelectedContactIds(prev => {
+            if (prev.size === contacts.length && contacts.length > 0) {
+                return new Set();
+            }
+            return new Set(contacts.map(c => c.id));
+        });
+    }, [contacts]);
 
-    const toggleSelectContact = (id: number) => {
-        const newSet = new Set(selectedContactIds);
-        if (newSet.has(id)) {
-            newSet.delete(id);
-        } else {
-            newSet.add(id);
-        }
-        setSelectedContactIds(newSet);
-    };
+    const toggleSelectContact = useCallback((id: number) => {
+        setSelectedContactIds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(id)) {
+                newSet.delete(id);
+            } else {
+                newSet.add(id);
+            }
+            return newSet;
+        });
+    }, []);
 
     const sendColdMail = async (contactId: number) => {
         if (!selectedTemplate || !selectedResume) {
@@ -257,9 +310,43 @@ export default function ColdMailPage() {
                     </CardHeader>
                     <CardContent className="p-0">
                         {loading ? (
-                            <div className="py-32 flex flex-col items-center justify-center text-muted-foreground">
-                                <Activity className="w-8 h-8 animate-spin text-primary/40 mb-5" />
-                                <span className="text-sm font-medium uppercase tracking-widest opacity-50">Syncing database...</span>
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader className="bg-secondary/20">
+                                        <TableRow className="border-border/40 hover:bg-transparent">
+                                            <TableHead className="w-12 px-4"></TableHead>
+                                            <TableHead className="w-16 px-6"></TableHead>
+                                            <TableHead className="py-4">Identity & Reach</TableHead>
+                                            <TableHead className="py-4">Professional Context</TableHead>
+                                            <TableHead className="py-4 pr-8 text-right">Precision Send</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {[...Array(5)].map((_, i) => (
+                                            <TableRow key={i} className="border-border/20">
+                                                <TableCell className="px-4"><Skeleton className="h-4 w-4 bg-secondary/40" /></TableCell>
+                                                <TableCell className="px-6"><Skeleton className="h-4 w-4 bg-secondary/40" /></TableCell>
+                                                <TableCell className="py-5">
+                                                    <div className="space-y-2">
+                                                        <Skeleton className="h-4 w-[200px] bg-secondary/40" />
+                                                        <Skeleton className="h-3 w-[150px] bg-secondary/20" />
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="py-5">
+                                                    <div className="space-y-2">
+                                                        <Skeleton className="h-4 w-[150px] bg-secondary/40" />
+                                                        <Skeleton className="h-4 w-[100px] bg-secondary/20" />
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-right pr-8">
+                                                    <div className="flex justify-end">
+                                                        <Skeleton className="h-9 w-[100px] rounded-xl bg-secondary/40" />
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
                             </div>
                         ) : contacts.length === 0 ? (
                             <div className="py-40 flex flex-col items-center justify-center text-muted-foreground text-center px-10">
@@ -291,50 +378,19 @@ export default function ColdMailPage() {
                                     </TableHeader>
                                     <TableBody>
                                         {contacts.map((c: any, idx: number) => (
-                                            <TableRow
+                                            <ContactRow
                                                 key={c.id}
-                                                className={`border-border/20 transition-all duration-300 group ${selectedContactIds.has(c.id) ? 'bg-primary/5 hover:bg-primary/[0.08]' : 'hover:bg-secondary/40'}`}
-                                            >
-                                                <TableCell className="px-4 text-center text-[10px] font-mono text-muted-foreground/40">
-                                                    {(page - 1) * pageSize + idx + 1}
-                                                </TableCell>
-                                                <TableCell className="px-6">
-                                                    <Checkbox
-                                                        checked={selectedContactIds.has(c.id)}
-                                                        onCheckedChange={() => toggleSelectContact(c.id)}
-                                                        className="rounded-md border-border/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary transition-all"
-                                                    />
-                                                </TableCell>
-                                                <TableCell className="py-5">
-                                                    <div className="flex flex-col gap-0.5">
-                                                        <span className="font-mono text-[13px] text-foreground font-medium group-hover:text-primary transition-colors">{c.email}</span>
-                                                        <span className="text-xs text-muted-foreground/70 font-sans">{c.name || "Unnamed Lead"}</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="py-5">
-                                                    <div className="flex flex-col gap-1.5">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs font-bold text-foreground/90">{c.company}</span>
-                                                            <CheckCircle2 className="w-3 h-3 text-emerald-500/30" />
-                                                        </div>
-                                                        <Badge variant="outline" className="w-fit text-[10px] rounded-md px-1.5 py-0 border-border/30 bg-background/30 text-muted-foreground/80 font-normal">
-                                                            {c.role || "Role Unmapped"}
-                                                        </Badge>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-right pr-8">
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="text-foreground border-border/50 hover:bg-primary hover:text-primary-foreground text-[11px] font-bold rounded-xl h-9 px-4 gap-2 transition-all hover:scale-105"
-                                                        onClick={() => sendColdMail(c.id)}
-                                                        disabled={sendingId === c.id || !selectedTemplate || !selectedResume}
-                                                    >
-                                                        {sendingId === c.id ? <Activity className="w-3 h-3 animate-pulse" /> : <Send className="w-3 h-3" />}
-                                                        {sendingId === c.id ? "Working..." : "Dispatch"}
-                                                    </Button>
-                                                </TableCell>
-                                            </TableRow>
+                                                c={c}
+                                                idx={idx}
+                                                isSelected={selectedContactIds.has(c.id)}
+                                                onToggle={toggleSelectContact}
+                                                onSend={sendColdMail}
+                                                sendingId={sendingId}
+                                                selectedTemplate={selectedTemplate}
+                                                selectedResume={selectedResume}
+                                                page={page}
+                                                pageSize={pageSize}
+                                            />
                                         ))}
                                     </TableBody>
                                 </Table>

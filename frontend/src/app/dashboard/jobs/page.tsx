@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, Search, Briefcase, Globe, Activity, ExternalLink, MapPin, Building2, X, ChevronRight } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function JobsPage() {
     const [ingesting, setIngesting] = useState(false);
@@ -204,9 +205,26 @@ export default function JobsPage() {
 
             {/* Job Cards Grid */}
             {loading ? (
-                <div className="py-20 flex flex-col items-center justify-center text-muted-foreground">
-                    <Activity className="w-6 h-6 animate-pulse mb-4" />
-                    <span className="text-sm">Loading global jobs...</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mt-6">
+                    {[...Array(6)].map((_, i) => (
+                        <Card key={i} className="bg-card border-border shadow-sm flex flex-col h-[220px]">
+                            <CardContent className="p-5 flex flex-col flex-1 space-y-4">
+                                <Skeleton className="h-6 w-3/4 bg-secondary/40" />
+                                <div className="flex gap-4">
+                                    <Skeleton className="h-4 w-1/3 bg-secondary/20" />
+                                    <Skeleton className="h-4 w-1/4 bg-secondary/20" />
+                                </div>
+                                <div className="space-y-2 flex-1 mt-2">
+                                    <Skeleton className="h-3 w-full bg-secondary/20" />
+                                    <Skeleton className="h-3 w-5/6 bg-secondary/20" />
+                                </div>
+                                <div className="flex justify-between items-center mt-auto">
+                                    <Skeleton className="h-4 w-16 bg-secondary/40" />
+                                    <Skeleton className="h-7 w-20 bg-secondary/40 rounded-md" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
                 </div>
             ) : filteredJobs.length === 0 ? (
                 <div className="py-32 flex flex-col items-center justify-center text-muted-foreground">

@@ -1,7 +1,7 @@
 "use client";
 import { API_BASE_URL } from "@/lib/config";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { Plus, Mail, LayoutTemplate, Tag, X, Copy, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination } from "@/components/ui/pagination";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const DEFAULT_TAGS = [
     { tag: "{{job_title}}", label: "Job Title", desc: "Title of the target job position" },
@@ -33,6 +34,31 @@ const DEFAULT_TAGS = [
     { tag: "{{certifications}}", label: "Certifications", desc: "Relevant certifications" },
     { tag: "{{contact_name}}", label: "Contact Name", desc: "Recipient's name (cold mail only)" },
 ];
+
+const TemplateRow = React.memo(({ t, idx, page, pageSize, usedVars, onEdit }: any) => {
+    return (
+        <TableRow className="border-border hover:bg-secondary/50 transition-colors">
+            <TableCell className="text-center text-[10px] font-mono text-muted-foreground/40">{(page - 1) * pageSize + idx + 1}</TableCell>
+            <TableCell className="font-medium text-foreground">{t.name}</TableCell>
+            <TableCell className="text-muted-foreground max-w-xs truncate font-mono text-xs">{t.subject}</TableCell>
+            <TableCell>
+                <div className="flex flex-wrap gap-1">
+                    {usedVars.length > 0 ? usedVars.slice(0, 4).map((v: string) => (
+                        <Badge key={v} variant="outline" className="text-[10px] font-mono border-border text-muted-foreground">{v}</Badge>
+                    )) : <span className="text-xs text-muted-foreground">None</span>}
+                    {usedVars.length > 4 && <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">+{usedVars.length - 4}</Badge>}
+                </div>
+            </TableCell>
+            <TableCell className="text-muted-foreground text-sm">
+                {new Date(t.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+            </TableCell>
+            <TableCell className="text-right">
+                <Button variant="ghost" size="sm" onClick={() => onEdit(t)} className="h-8 text-xs px-2 hover:bg-secondary border border-transparent hover:border-border text-foreground transition-all">Edit</Button>
+            </TableCell>
+        </TableRow>
+    );
+});
+TemplateRow.displayName = "TemplateRow";
 
 export default function TemplatesPage() {
     const [templates, setTemplates] = useState<any[]>([]);
@@ -406,8 +432,29 @@ export default function TemplatesPage() {
                 </CardHeader>
                 <CardContent className="p-0">
                     {loading ? (
-                        <div className="py-20 flex flex-col items-center justify-center text-muted-foreground">
-                            <span className="text-sm">Loading templates...</span>
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader className="bg-secondary/30">
+                                    <TableRow className="border-border hover:bg-transparent">
+                                        <TableHead className="w-12 text-center text-[10px] uppercase font-bold text-muted-foreground/40">#</TableHead>
+                                        <TableHead className="text-muted-foreground font-medium">Name</TableHead>
+                                        <TableHead className="text-muted-foreground font-medium">Subject</TableHead>
+                                        <TableHead className="text-muted-foreground font-medium">Variables Used</TableHead>
+                                        <TableHead className="text-muted-foreground font-medium text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {[...Array(5)].map((_, i) => (
+                                        <TableRow key={i} className="border-border">
+                                            <TableCell className="text-center"><Skeleton className="h-4 w-4 bg-secondary/40 inline-block" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-[150px] bg-secondary/40" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-[250px] bg-secondary/20" /></TableCell>
+                                            <TableCell><Skeleton className="h-5 w-[120px] rounded-full bg-secondary/20" /></TableCell>
+                                            <TableCell className="text-right"><Skeleton className="h-8 w-12 bg-secondary/40 ml-auto rounded-md" /></TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
                         </div>
                     ) : templates.length === 0 ? (
                         <div className="py-32 text-center text-muted-foreground flex flex-col items-center justify-center">
@@ -432,28 +479,17 @@ export default function TemplatesPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {templates.map((t: any, idx: number) => {
-                                        // Count variables used in the template
                                         const usedVars = allTags.filter(tag => t.subject?.includes(tag) || t.body_text?.includes(tag));
                                         return (
-                                            <TableRow key={t.id} className="border-border hover:bg-secondary/50 transition-colors">
-                                                <TableCell className="text-center text-[10px] font-mono text-muted-foreground/40">{(page - 1) * pageSize + idx + 1}</TableCell>
-                                                <TableCell className="font-medium text-foreground">{t.name}</TableCell>
-                                                <TableCell className="text-muted-foreground max-w-xs truncate font-mono text-xs">{t.subject}</TableCell>
-                                                <TableCell>
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {usedVars.length > 0 ? usedVars.slice(0, 4).map(v => (
-                                                            <Badge key={v} variant="outline" className="text-[10px] font-mono border-border text-muted-foreground">{v}</Badge>
-                                                        )) : <span className="text-xs text-muted-foreground">None</span>}
-                                                        {usedVars.length > 4 && <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">+{usedVars.length - 4}</Badge>}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-muted-foreground text-sm">
-                                                    {new Date(t.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <Button variant="ghost" size="sm" onClick={() => handleEdit(t)} className="h-8 text-xs px-2 hover:bg-secondary border border-transparent hover:border-border text-foreground transition-all">Edit</Button>
-                                                </TableCell>
-                                            </TableRow>
+                                            <TemplateRow
+                                                key={t.id}
+                                                t={t}
+                                                idx={idx}
+                                                page={page}
+                                                pageSize={pageSize}
+                                                usedVars={usedVars}
+                                                onEdit={handleEdit}
+                                            />
                                         );
                                     })}
                                 </TableBody>

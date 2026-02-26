@@ -129,7 +129,7 @@ export default function ExtractorPage() {
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 min-h-[80px]">
                 <div>
                     <h1 className="text-4xl font-bold tracking-tight text-foreground flex items-center gap-3 font-sans">
                         <Sparkles className="h-8 w-8 text-primary animate-pulse" />
@@ -139,8 +139,8 @@ export default function ExtractorPage() {
                         AI-powered parsing for structured and unstructured data. Paste spreadsheets, emails, or job descriptions to extract high-quality leads.
                     </p>
                 </div>
-                {results.length > 0 && (
-                    <div className="flex gap-3 animate-in fade-in zoom-in duration-300">
+                <div className="flex gap-3 justify-end">
+                    <div className={`flex gap-3 transition-opacity duration-300 ${results.length > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                         <Button
                             variant="outline"
                             size="lg"
@@ -157,7 +157,7 @@ export default function ExtractorPage() {
                             <Save className="w-4 h-4 mr-2" /> Save All Contacts
                         </Button>
                     </div>
-                )}
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
