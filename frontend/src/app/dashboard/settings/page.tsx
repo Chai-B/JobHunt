@@ -2,6 +2,7 @@
 import { API_BASE_URL } from "@/lib/config";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,9 +17,13 @@ import { DatabasePanel } from "@/components/settings/database-panel";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SettingsPage() {
+    const { replace } = require("next/navigation").useRouter ? require("next/navigation").useRouter() : { replace: () => { } };
+    const searchParams = useSearchParams();
+
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [formData, setFormData] = useState({
+        gmail_connected: false,
         llm_provider: "gemini",
         gemini_api_keys: "",
         openai_api_key: "",
@@ -53,6 +58,7 @@ export default function SettingsPage() {
                 if (!res.ok) throw new Error("Failed to fetch settings");
                 const data = await res.json();
                 setFormData({
+                    gmail_connected: !!data.gmail_access_token,
                     llm_provider: data.llm_provider || "gemini",
                     gemini_api_keys: data.gemini_api_keys || "",
                     openai_api_key: data.openai_api_key || "",
@@ -83,7 +89,16 @@ export default function SettingsPage() {
             }
         };
         fetchSettings();
-    }, []);
+
+        // Check for Google OAuth Callback Success
+        if (searchParams?.get("gmail") === "connected") {
+            toast.success("Gmail connected successfully!");
+            // Clean up the URL
+            if (typeof window !== "undefined") {
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+    }, [searchParams]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -180,9 +195,16 @@ export default function SettingsPage() {
                         <div className="space-y-4">
                             <Label className="text-sm font-medium">Connect Gmail Account</Label>
                             <p className="text-xs text-muted-foreground">Authorize JobHunt to send cold mail directly via your Gmail.</p>
-                            <Button type="button" variant="outline" onClick={handleGmailConnect} className="w-full">
-                                Connect Gmail API
-                            </Button>
+                            {formData.gmail_connected ? (
+                                <div className="w-full flex items-center justify-center gap-2 h-9 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-sm font-medium">
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                    Gmail Connected
+                                </div>
+                            ) : (
+                                <Button type="button" variant="outline" onClick={handleGmailConnect} className="w-full">
+                                    Connect Gmail API
+                                </Button>
+                            )}
                         </div>
 
                         <div className="space-y-4">
