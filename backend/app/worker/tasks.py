@@ -53,6 +53,32 @@ async def process_resume_async(resume_id: int, file_bytes: bytes, filename: str)
             resume.structural_score = result["structural_score"]
             resume.semantic_score = result["semantic_score"]
             
+            # Extract precise tags using LLM to populate parsed_json for templating
+            stmt_set = select(UserSetting).where(UserSetting.user_id == resume.user_id)
+            settings = (await db.execute(stmt_set)).scalars().first()
+            
+            if settings and settings.gemini_api_keys:
+                extract_prompt = f"""You are a professional resume parser. Extract the following key details from this resume text to be used directly as replacement variables in cold emails and templates. 
+Return STRICTLY valid JSON with these exact keys:
+{{
+  "education": "e.g. BTech in CS from XYZ Univ",
+  "recent_role": "e.g. Software Engineer at ABC Corp",
+  "top_projects": "e.g. built a high-scale microservice architecture",
+  "certifications": "e.g. AWS Certified Solutions Architect",
+  "experience_years": "e.g. 3 years",
+  "skills": "e.g. Python, React, AWS"
+}}
+If a field is not found or cannot be reasonably inferred, omit the key entirely or set it to an empty string "". Keep the phrases natural so they can be dropped right into an email sentence.
+Resume Text:
+{resume.raw_text[:10000]}"""
+                try:
+                    raw_parsed = await call_llm(extract_prompt, settings, is_json=True)
+                    resume.parsed_json = json.loads(raw_parsed, strict=False)
+                    logger.info(f"Successfully extracted rich tags for resume {resume.id}")
+                except Exception as llm_e:
+                    logger.warning(f"LLM rich tag extraction failed for resume {resume.id}: {llm_e}")
+                    resume.parsed_json = {}
+
             ats_score = (resume.structural_score * 0.4 + resume.semantic_score * 0.6) * 100
             stmt_set = select(UserSetting).where(UserSetting.user_id == resume.user_id)
             settings = (await db.execute(stmt_set)).scalars().first()
@@ -650,24 +676,74 @@ async def run_cold_mail_async(user_id: int, contact_id: int, template_id: int, r
                     logger.error("Missing SMTP Configuration in User Settings.")
                     return
 
+            # Default fallback data
+            resume_data = resume.parsed_json or {}
+            
             # Build tag replacement map
             tag_map = {
                 "{{contact_name}}": contact.name or "",
                 "{{job_title}}": contact.role or "",
                 "{{company}}": contact.company or "",
-                "{{experience_years}}": getattr(user, 'experience_years', "") or "",
-                "{{skills}}": getattr(user, 'skills', "") or "",
+                "{{experience_years}}": resume_data.get("experience_years") or getattr(user, 'experience_years', "") or "",
+                "{{skills}}": resume_data.get("skills") or getattr(user, 'skills', "") or "",
+                "{{education}}": resume_data.get("education") or "",
+                "{{recent_role}}": resume_data.get("recent_role") or "",
+                "{{top_projects}}": resume_data.get("top_projects") or "",
+                "{{certifications}}": resume_data.get("certifications") or "",
                 "{{linkedin}}": user.linkedin_url or "",
+                "{{github}}": user.github_url or "",
                 "{{portfolio}}": getattr(user, 'portfolio_url', "") or "",
                 "{{user_name}}": user.full_name or "",
+                "{{user_email}}": user.email or "",
+                "{{user_phone}}": user.phone or "",
             }
 
-            # Fill template tags
+            # Fill template tags natively
             subject = template.subject
             body = template.body_text
+            
+            # We want to smartly remove sentences that contain tags with NO data
+            # Doing this via LLM is safest to maintain grammar and punctuation.
+            missing_tags = [
+                tag for tag, val in tag_map.items() 
+                if (not val or str(val).strip() == "") and (tag in subject or tag in body)
+            ]
+            
+            if missing_tags and settings.gemini_api_keys:
+                fallback_prompt = f"""You are an elite email proofreader.
+The following email draft has several template variables. 
+The variables listed in MISSING_TAGS have no data available for this user.
+Instead of leaving blank spaces or weird punctuation, neatly rewrite the text to entirely omit the clause, sentence, or phrase that relied on the missing variable. 
+Do not change the rest of the email's meaning or tone.
+
+MISSING_TAGS: {', '.join(missing_tags)}
+
+SUBJECT_TEMPLATE:
+{subject}
+
+BODY_TEMPLATE:
+{body}
+
+Return STRICTLY valid JSON ONLY:
+{{
+  "subject": "<Cleaned Subject line>",
+  "body_text": "<Cleaned Body text>"
+}}
+"""
+                try:
+                    from app.services.llm import call_llm
+                    import json
+                    cleaned_str = await call_llm(fallback_prompt, settings, is_json=True)
+                    cleaned_data = json.loads(cleaned_str, strict=False)
+                    subject = cleaned_data.get("subject", subject)
+                    body = cleaned_data.get("body_text", body)
+                except Exception as e:
+                    logger.warning(f"Fallback cleaner failed: {e}. Defaulting to string replacement.")
+
+            # Do final standard replacement for all tags (both valid and any remaining missing ones)
             for tag, value in tag_map.items():
-                subject = subject.replace(tag, str(value))
-                body = body.replace(tag, str(value))
+                subject = subject.replace(tag, str(value) if value else "")
+                body = body.replace(tag, str(value) if value else "")
 
             msg = MIMEMultipart()
             msg['From'] = settings.smtp_username or "user@example.com"

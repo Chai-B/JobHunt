@@ -21,6 +21,7 @@ class ResumeRead(ResumeBase):
     structural_score: Optional[float] = None
     semantic_score: Optional[float] = None
     raw_text: Optional[str] = None
+    parsed_json: Optional[dict] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 

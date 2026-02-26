@@ -27,6 +27,10 @@ const DEFAULT_TAGS = [
     { tag: "{{portfolio}}", label: "Portfolio", desc: "Your portfolio/website URL" },
     { tag: "{{skills}}", label: "Skills", desc: "Key skills extracted from your resume" },
     { tag: "{{experience_years}}", label: "Experience", desc: "Estimated years of experience" },
+    { tag: "{{education}}", label: "Education", desc: "Your highest/recent education" },
+    { tag: "{{recent_role}}", label: "Recent Role", desc: "Your most recent job role/title" },
+    { tag: "{{top_projects}}", label: "Top Projects", desc: "Key projects extracted from resume" },
+    { tag: "{{certifications}}", label: "Certifications", desc: "Relevant certifications" },
     { tag: "{{contact_name}}", label: "Contact Name", desc: "Recipient's name (cold mail only)" },
 ];
 
@@ -39,7 +43,12 @@ export default function TemplatesPage() {
     // Pagination
     const [page, setPage] = useState(1);
     const [total, setTotal] = useState(0);
-    const pageSize = 50;
+    const [pageSize, setPageSize] = useState(50);
+
+    const handlePageSizeChange = (newSize: number) => {
+        setPageSize(newSize);
+        setPage(1);
+    };
 
     const [name, setName] = useState("");
     const [subject, setSubject] = useState("");
@@ -52,6 +61,8 @@ export default function TemplatesPage() {
 
     const [aiPurpose, setAiPurpose] = useState("cold_outreach");
     const [aiTone, setAiTone] = useState("professional");
+    const [aiLength, setAiLength] = useState("short");
+    const [aiFocus, setAiFocus] = useState("achievements");
     const [generating, setGenerating] = useState(false);
 
     const fetchTemplates = async () => {
@@ -77,7 +88,7 @@ export default function TemplatesPage() {
 
     useEffect(() => {
         fetchTemplates();
-    }, [page]);
+    }, [page, pageSize]);
 
     const insertTag = (tag: string, target: "subject" | "body") => {
         if (target === "body") {
@@ -176,7 +187,12 @@ export default function TemplatesPage() {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`
                 },
-                body: JSON.stringify({ purpose: aiPurpose, tone: aiTone })
+                body: JSON.stringify({
+                    purpose: aiPurpose,
+                    tone: aiTone,
+                    length: aiLength,
+                    focus: aiFocus
+                })
             });
             if (!res.ok) {
                 const err = await res.json();
@@ -249,7 +265,28 @@ export default function TemplatesPage() {
                                             <SelectItem value="concise">Concise & Direct</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    <Button type="button" variant="outline" onClick={generateWithAI} disabled={generating} className="h-9 text-xs gap-1.5 border-border text-foreground hover:bg-secondary whitespace-nowrap">
+                                    <Select value={aiLength} onValueChange={setAiLength}>
+                                        <SelectTrigger className="bg-background border-border text-foreground text-xs h-9 flex-1">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-card border-border text-foreground">
+                                            <SelectItem value="short">Short (3-4 sentences)</SelectItem>
+                                            <SelectItem value="medium">Medium (2-3 paragraphs)</SelectItem>
+                                            <SelectItem value="long">Long (Detailed)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <Select value={aiFocus} onValueChange={setAiFocus}>
+                                        <SelectTrigger className="bg-background border-border text-foreground text-xs h-9 flex-1">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-card border-border text-foreground">
+                                            <SelectItem value="achievements">Focus: Achievements</SelectItem>
+                                            <SelectItem value="skills">Focus: Soft/Hard Skills</SelectItem>
+                                            <SelectItem value="culture">Focus: Culture Fit</SelectItem>
+                                            <SelectItem value="projects">Focus: Projects</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <Button type="button" variant="outline" onClick={generateWithAI} disabled={generating} className="h-9 w-full sm:w-auto text-xs gap-1.5 border-border text-foreground hover:bg-secondary whitespace-nowrap">
                                         <Sparkles className={`w-3.5 h-3.5 ${generating ? 'animate-spin' : ''}`} />
                                         {generating ? "Generating..." : "Generate"}
                                     </Button>
@@ -404,6 +441,7 @@ export default function TemplatesPage() {
                                 totalCount={total}
                                 pageSize={pageSize}
                                 onPageChange={setPage}
+                                onPageSizeChange={handlePageSizeChange}
                                 disabled={loading}
                             />
                         </div>

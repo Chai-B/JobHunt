@@ -21,7 +21,12 @@ export default function ContactsPage() {
     // Pagination
     const [page, setPage] = useState(1);
     const [total, setTotal] = useState(0);
-    const pageSize = 50;
+    const [pageSize, setPageSize] = useState(50);
+
+    const handlePageSizeChange = (newSize: number) => {
+        setPageSize(newSize);
+        setPage(1);
+    };
 
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
@@ -49,7 +54,7 @@ export default function ContactsPage() {
 
     useEffect(() => {
         fetchContacts();
-    }, [page]);
+    }, [page, pageSize]);
 
     const handleOpenCreate = () => {
         setSelectedContactId(null);
@@ -269,6 +274,7 @@ export default function ContactsPage() {
                                 totalCount={total}
                                 pageSize={pageSize}
                                 onPageChange={setPage}
+                                onPageSizeChange={handlePageSizeChange}
                                 disabled={loading}
                             />
                         </div>

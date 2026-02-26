@@ -16,6 +16,8 @@ router = APIRouter()
 class AITemplateRequest(BaseModel):
     purpose: str = "cold_outreach"
     tone: str = "professional"
+    length: str = "short"
+    focus: str = "achievements"
     target_role: Optional[str] = None
     target_company: Optional[str] = None
 
@@ -108,9 +110,30 @@ async def generate_ai_template(
     if req.target_company:
         target_info += f"Target Company: {req.target_company}\n"
     
-    prompt = f"""Write a {req.tone} {req.purpose.replace('_', ' ')} email. {target_info}
-Use vars: {{{{user_name}}}}, {{{{company}}}}, {{{{job_title}}}}, {{{{contact_name}}}}, {{{{skills}}}}, {{{{experience_years}}}}, {{{{linkedin}}}}, {{{{portfolio}}}}.
-Return JSON: {{"name":"<5 word name>","subject":"...","body_text":"..."}}"""
+    prompt = f"""You are an elite executive communications expert drafting a highly effective {req.purpose.replace('_', ' ')} email template.
+    
+    PARAMETERS:
+    - Tone: {req.tone}
+    - Length: {req.length} (short: 3-4 sentences max, medium: 2-3 short paragraphs, long: detailed and comprehensive)
+    - Primary Focus: {req.focus} (Make sure the template naturally emphasizes this aspect)
+    {target_info}
+    
+    AVAILABLE VARIABLES (Use exactly as written, including brackets):
+    {{{{contact_name}}}}, {{{{user_name}}}}, {{{{company}}}}, {{{{job_title}}}}, {{{{skills}}}}, {{{{experience_years}}}}, {{{{education}}}}, {{{{recent_role}}}}, {{{{top_projects}}}}, {{{{certifications}}}}, {{{{linkedin}}}}, {{{{github}}}}, {{{{portfolio}}}}
+    
+    CRITICAL INSTRUCTIONS:
+    1. Do NOT sound like a robot or a generic template. The email must flow naturally, as if written uniquely by a human.
+    2. Integrate the variables seamlessly. For example, instead of writing "My top projects include {{{{top_projects}}}}.", write "In my recent work, I spearheaded {{{{top_projects}}}}."
+    3. Not all variables must be used; use only those that fit the requested style and focus perfectly.
+    4. Provide a compelling Subject Line containing 1 or 2 relevant variables (e.g. `{{{{job_title}}}}` or `{{{{company}}}}`).
+    
+    Return STRICTLY valid JSON ONLY:
+    {{
+      "name": "<A short 3-5 word internal name for this template>",
+      "subject": "<Compelling Email Subject Line>",
+      "body_text": "<The actual email body string with variables>"
+    }}
+    """
     
     import json
     

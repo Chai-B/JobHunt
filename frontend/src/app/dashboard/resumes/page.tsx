@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { UploadCloud, Edit2, FileText, Activity, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Pagination } from "@/components/ui/pagination";
 
 export default function ResumesPage() {
     const [resumes, setResumes] = useState([]);
@@ -22,6 +23,16 @@ export default function ResumesPage() {
     const [saving, setSaving] = useState(false);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [deleting, setDeleting] = useState<number | null>(null);
+
+    // Pagination
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const [pageSize, setPageSize] = useState(50);
+
+    const handlePageSizeChange = (newSize: number) => {
+        setPageSize(newSize);
+        setPage(1);
+    };
 
     const handleDeleteResume = async (resumeId: number) => {
         if (!confirm("Are you sure you want to delete this resume?")) return;
@@ -45,12 +56,13 @@ export default function ResumesPage() {
     const fetchResumes = async () => {
         try {
             const token = localStorage.getItem("token");
-            const res = await fetch(`${API_BASE_URL}/api/v1/resumes/`, {
+            const res = await fetch(`${API_BASE_URL}/api/v1/resumes/?skip=${(page - 1) * pageSize}&limit=${pageSize}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.ok) {
                 const data = await res.json();
                 setResumes(data.items || []);
+                setTotal(data.total || 0);
             } else {
                 toast.error("Failed to fetch resumes.");
             }
@@ -97,7 +109,7 @@ export default function ResumesPage() {
         // Poll every 5s for background task completion
         const interval = setInterval(fetchResumes, 5000);
         return () => clearInterval(interval);
-    }, []);
+    }, [page, pageSize]);
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -239,6 +251,14 @@ export default function ResumesPage() {
                                     ))}
                                 </TableBody>
                             </Table>
+                            <Pagination
+                                currentPage={page}
+                                totalCount={total}
+                                pageSize={pageSize}
+                                onPageChange={setPage}
+                                onPageSizeChange={handlePageSizeChange}
+                                disabled={loading}
+                            />
                         </div>
                     )}
                 </CardContent>

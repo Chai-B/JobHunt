@@ -2,13 +2,16 @@
 
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface PaginationProps {
     currentPage: number;
     totalCount: number;
     pageSize: number;
     onPageChange: (page: number) => void;
+    onPageSizeChange?: (size: number) => void;
     disabled?: boolean;
+    pageSizeOptions?: number[];
 }
 
 export function Pagination({
@@ -16,16 +19,41 @@ export function Pagination({
     totalCount,
     pageSize,
     onPageChange,
+    onPageSizeChange,
     disabled = false,
+    pageSizeOptions = [10, 20, 50, 100],
 }: PaginationProps) {
     const totalPages = Math.ceil(totalCount / pageSize);
 
-    if (totalPages <= 1) return null;
+    if (totalCount === 0) return null;
 
     return (
-        <div className="flex items-center justify-between px-6 py-4 border-t border-border/40 bg-card/20 backdrop-blur-sm">
-            <div className="text-xs text-muted-foreground font-medium">
-                Showing <span className="text-foreground">{(currentPage - 1) * pageSize + 1}</span> - <span className="text-foreground">{Math.min(currentPage * pageSize, totalCount)}</span> of <span className="text-foreground">{totalCount}</span> records
+        <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-border/40 bg-card/20 backdrop-blur-sm gap-4">
+            <div className="flex items-center gap-4 text-xs text-muted-foreground font-medium">
+                <div>
+                    Showing <span className="text-foreground">{totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1}</span> - <span className="text-foreground">{Math.min(currentPage * pageSize, totalCount)}</span> of <span className="text-foreground">{totalCount}</span> records
+                </div>
+                {onPageSizeChange && (
+                    <div className="flex items-center gap-2">
+                        <span>Items per page:</span>
+                        <Select
+                            value={pageSize.toString()}
+                            onValueChange={(v) => onPageSizeChange(Number(v))}
+                            disabled={disabled}
+                        >
+                            <SelectTrigger className="h-8 w-[70px] text-xs">
+                                <SelectValue placeholder={pageSize.toString()} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {pageSizeOptions.map(opt => (
+                                    <SelectItem key={opt} value={opt.toString()} className="text-xs">
+                                        {opt}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
             </div>
             <div className="flex items-center gap-2">
                 <Button
@@ -55,8 +83,8 @@ export function Pagination({
                                 onClick={() => onPageChange(pageNum)}
                                 disabled={disabled}
                                 className={`h-8 w-8 p-0 text-xs font-medium transition-all ${currentPage === pageNum
-                                        ? "bg-foreground text-background shadow-md"
-                                        : "border-border/50 bg-background/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
+                                    ? "bg-foreground text-background shadow-md"
+                                    : "border-border/50 bg-background/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
                                     }`}
                             >
                                 {pageNum}
