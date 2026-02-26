@@ -146,15 +146,20 @@ Status Mapping Guide:
 """
                 prompt = f"Subject: {email['subject']}\nSender: {email['sender']}\nBody:\n{email['body']}"
                 
+                extraction_json = {}
                 try:
                     raw_llm = await call_llm(prompt, user_settings, is_json=True, system_prompt=system_prompt)
-                    extraction_json = json.loads(raw_llm)
-                    logger.info(f"LLM Extraction Success: {extraction_json.get('company_name')} -> {extraction_json.get('status')}")
+                    parsed = json.loads(raw_llm)
+                    if isinstance(parsed, dict):
+                        extraction_json = parsed
+                        logger.info(f"LLM Extraction Success: {extraction_json.get('company_name')} -> {extraction_json.get('status')}")
+                    else:
+                        logger.warning(f"LLM returned {type(parsed)} instead of dict. falling back.")
                 except Exception as e:
                     logger.warning(f"LLM extraction failed for email {email['id']}: {e}. Falling back to heuristics.")
 
                 # Metadata Assignment (LLM or Heuristic Fallback)
-                if extraction_json:
+                if extraction_json and isinstance(extraction_json, dict):
                     extracted_company = (extraction_json.get('company_name') or '').strip().title()
                     extracted_role = (extraction_json.get('role') or '').strip().title()
                     extracted_location = (extraction_json.get('location') or '').strip().title()
