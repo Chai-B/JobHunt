@@ -15,6 +15,7 @@ from app.db.models.user import User
 from app.db.models.setting import UserSetting
 from app.db.models.application import Application
 from app.db.session import AsyncSessionLocal
+from app.services.llm import call_llm
 
 class InboxScanner:
     def __init__(self, access_token: str, refresh_token: str):
@@ -121,164 +122,116 @@ async def run_inbox_scanner_async(user_id: int):
             await db.commit()
             
             for email in emails:
-                text_to_check = (email['subject'] + " " + email['body']).lower()
-                sender = email['sender'].lower()
-                subject_lower = email['subject'].lower()
+                logger.info(f"Analyzing email: {email['subject']} from {email['sender']}")
                 
-                # Heuristic 1: Extract Company Name, Role, and Location
-                extracted_company = None
-                extracted_role = None
-                extracted_location = None
-                
-                # Role Extraction
-                # e.g., "Application for Software Engineer", "Your application to Meta for Data Scientist", "Machine Learning Engineer at ..."
-                role_match = re.search(r'application for (.+?)(?: at |$)|application to .+? for (.+?)$|interest in the (.+?) position|update from .+?\s+(.+?)\s+at|sent to .+?\s+(.+?)\s+-\s+india', subject_lower)
-                if role_match:
-                    groups = [g for g in role_match.groups() if g]
-                    if groups:
-                        extracted_role = groups[0].strip().title()
-                
-                # Try finding role in Body if subject failed (common for LinkedIn)
-                if not extracted_role:
-                    role_body_match = re.search(r'^([A-Z][\w\s]+ Engineer|[A-Z][\w\s]+ Developer|[A-Z][\w\s]+ Analyst)', email['body'], re.MULTILINE)
-                    if role_body_match:
-                        extracted_role = role_body_match.group(1).strip()
+                # LLM-Powered Extraction
+                extraction_json = None
+                system_prompt = """You are an elite Recruitment Data Agent. 
+Extract structured job application data from the email provided.
+Return ONLY a valid JSON object with these keys:
+- company_name: (string) The hiring company.
+- role: (string) The job title (e.g., "Machine Learning Engineer").
+- location: (string) Location (e.g., "Remote", "Gurgaon").
+- contact_name: (string) Name of the recruiter/sender.
+- contact_email: (string) Email of the recruiter.
+- status: (string) STRICTLY one of: [applied, interviewed, assessment, rejected, selected].
+- source: (string) e.g., "LinkedIn", "Direct".
 
-                # Location Heuristics
-                if "remote" in text_to_check:
-                    extracted_location = "Remote"
+Status Mapping Guide:
+- 'applied': Thank you for applying, received application.
+- 'interviewed': Scheduling interview, invitation to chat, meeting link, huddle, round 1, round 2.
+- 'assessment': Case study, pre-hiring evaluation, test, assignment, presentation.
+- 'rejected': Not moving forward, unfortunately, wish you best, another candidate.
+- 'selected': Offer, congratulations, welcome onboard, hired.
+"""
+                prompt = f"Subject: {email['subject']}\nSender: {email['sender']}\nBody:\n{email['body']}"
+                
+                try:
+                    raw_llm = await call_llm(prompt, user_settings, is_json=True, system_prompt=system_prompt)
+                    extraction_json = json.loads(raw_llm)
+                    logger.info(f"LLM Extraction Success: {extraction_json.get('company_name')} -> {extraction_json.get('status')}")
+                except Exception as e:
+                    logger.warning(f"LLM extraction failed for email {email['id']}: {e}. Falling back to heuristics.")
+
+                # Metadata Assignment (LLM or Heuristic Fallback)
+                if extraction_json:
+                    extracted_company = extraction_json.get('company_name', '').strip().title()
+                    extracted_role = extraction_json.get('role', '').strip().title()
+                    extracted_location = extraction_json.get('location', '').strip().title()
+                    detected_status = extraction_json.get('status', '').lower()
+                    contact_name = extraction_json.get('contact_name')
+                    contact_email = extraction_json.get('contact_email')
+                    source_url = "https://www.linkedin.com" if extraction_json.get('source') == "LinkedIn" else None
                 else:
-                    loc_match = re.search(r'based in (.+?)(?:\.|,|$)|location: (.+?)(?:\.|,|$)|([\w\s]+) · India', email['body'])
-                    if loc_match:
-                        groups = [g for g in loc_match.groups() if g]
-                        if groups:
-                            extracted_location = groups[-1].strip().title()
+                    # HEURISTIC FALLBACK (Keep previous logic but simplify)
+                    text_to_check = (email['subject'] + " " + email['body']).lower()
+                    sender = email['sender'].lower()
+                    subject_lower = email['subject'].lower()
+                    
+                    extracted_company = None
+                    extracted_role = None
+                    extracted_location = None
+                    detected_status = None
 
-                # Company Extraction (Existing Logic...)
-                # Company Extraction
-                # Check 1: LinkedIn & Direct Application Confirmations
-                app_subject_match = re.search(r'application to (.+?) (?:was sent|for)|application for .+? at (.+?)\b|application for (.+?)\b|applying to (.+?)\b|update from (.+?)(?:\s|$)|sent to (.*?)(?:\s|$)', subject_lower)
-                if app_subject_match:
-                    groups = [g for g in app_subject_match.groups() if g]
-                    if groups:
+                    # Simplistic regex fallback
+                    app_subject_match = re.search(r'application to (.+?) (?:was sent|for)|application for .+? at (.+?)\b|update from (.+?)(?:\s|$)|sent to (.*?)(?:\s|$)', subject_lower)
+                    if app_subject_match:
+                        groups = [g for g in app_subject_match.groups() if g]
                         extracted_company = groups[-1].strip().title()
-                
-                # Try body for LinkedIn: "Company · Location"
-                if not extracted_company:
-                    body_comp_match = re.search(r'^([A-Z][\w\s]+) · India', email['body'], re.MULTILINE)
-                    if body_comp_match:
-                        extracted_company = body_comp_match.group(1).strip().title()
-
-                # Check 2: Try simple domain extraction and ATS Filtering
-                if not extracted_company:
-                    domain_match = re.search(r'@([\w.-]+)\.', sender)
                     
-                    # ATS domains and job boards that hide the real company
-                    ignore_domains = ["gmail", "yahoo", "hotmail", "outlook", "greenhouse", "lever", "workday", "ashbyhq", "myworkday", "linkedin", "bamboohr", "talent", "recruiting", "smartrecruiters", "icims", "jobvite", "breezy", "angel", "wellfound"]
-                    
-                    if domain_match:
-                        domain = domain_match.group(1).lower()
-                        if domain not in ignore_domains:
-                            extracted_company = domain.title()
-                
-                # Check 3: If domain is ATS or generic (like LinkedIn/Greenhouse), look at the Sender Name
-                # e.g., "Stripe via Greenhouse" or "Recruiter | Meta"
-                if not extracted_company:
-                    name_part = sender.split('<')[0].strip().lower()
-                    
-                    # Try to parse "Name | Company" or "Name from Company"
-                    name_comp_match = re.search(r'\| (.+?)$|@ (.+?)$|from (.+?)$|at (.+?)$', name_part)
-                    if name_comp_match:
-                        groups = [g for g in name_comp_match.groups() if g]
-                        if groups:
-                            extracted_company = groups[-1].strip().title()
-                    
-                    if not extracted_company:
-                        # Try to strip "via ATS" syntax
-                        via_match = re.search(r'(.+?) via |recruiting [\-\|] (.+?)$|(.+?) recruiting', name_part)
-                        if via_match:
-                            groups = [g for g in via_match.groups() if g]
-                            if groups:
-                                extracted_company = groups[-1].strip().title()
-                    
-                    # Fallback to checking against our DB known companies
-                    if not extracted_company:
-                        for c_name in known_companies.keys():
-                            if c_name in name_part or c_name in subject_lower:
-                                extracted_company = known_companies[c_name].company_name
-                                break
+                    for s in ["selected", "rejected", "assessment", "interviewed", "applied"]:
+                        if any(kw in text_to_check for kw in status_heuristics.get(s, [])):
+                            detected_status = s
+                            break
 
                 # Final validation block
-                if not extracted_company or extracted_company.lower() in ("unknown", "linkedin", "greenhouse", "application", "software engineer", "resume"):
-                    continue # Cannot bind this email to any tracked jobs
+                if not extracted_company or extracted_company.lower() in ("unknown", "linkedin", "greenhouse"):
+                    continue 
                 
-                # Bind to application or CREATE ONE natively
+                # Bind or Auto-Create
                 target_app = known_companies.get(extracted_company.lower())
-                
                 if not target_app:
-                    # Fuzzy match just in case
                     target_app = next((a for c, a in known_companies.items() if c in extracted_company.lower() or extracted_company.lower() in c), None)
                 
-                # If STILL no match, auto-create the Application row so the user doesn't lose the data!
                 if not target_app:
                     logger.info(f"Auto-creating missing application for: {extracted_company}")
                     
-                    # Extract contact details from sender: "Name <email@example.com>"
-                    contact_email = None
-                    contact_name = None
-                    email_match = re.search(r'<(.*?)>', email['sender'])
-                    if email_match:
-                        contact_email = email_match.group(1).strip()
-                        contact_name = email['sender'].split('<')[0].strip()
-                    else:
-                        contact_email = email['sender'].strip()
-                        contact_name = contact_email.split('@')[0]
-
-                    # Heuristic for Source (e.g., LinkedIn, Indeed)
-                    source_url = None
-                    if "linkedin" in email['sender'].lower() or "linkedin" in email['body'].lower():
-                        source_url = "https://www.linkedin.com"
+                    # Fallback contact extraction if LLM failed
+                    if not extraction_json:
+                        email_match = re.search(r'<(.*?)>', email['sender'])
+                        if email_match:
+                            contact_email = email_match.group(1).strip()
+                            contact_name = email['sender'].split('<')[0].strip()
+                        else:
+                            contact_email = email['sender'].strip()
+                            contact_name = contact_email.split('@')[0]
                     
                     target_app = Application(
                         user_id=user_id,
-                        job_id=None,
                         company_name=extracted_company,
                         application_type="Discovered (Email)",
-                        status="applied",
+                        status=detected_status or "applied",
                         contact_name=contact_name,
                         contact_email=contact_email,
                         contact_role=extracted_role,
                         location=extracted_location,
-                        source_url=source_url,
-                        notes=f"Auto-imported by Heuristic Engine from Gmail on {datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
+                        source_url=source_url if 'source_url' in locals() else None,
+                        notes=f"Auto-imported by AI Engine from Gmail on {datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
                     )
                     db.add(target_app)
-                    await db.flush() # get ID
+                    await db.flush() 
                     known_companies[extracted_company.lower()] = target_app
 
-                # Heuristic 2: Status Matching
-                detected_status = None
-                # Check in order of priority (Offer -> Rejected -> Interviewing -> Applied)
-                for s in ["offer", "rejected", "interviewing", "applied"]:
-                    # Removed word boundaries \b to allow sub-string matches like "offered" or "scheduling"
-                    if any(kw in text_to_check for kw in status_heuristics[s]):
-                        detected_status = s
-                        break
-                        
                 if detected_status:
-                    logger.info(f"Match found for {extracted_company}. Status: {detected_status}")
-                    # Rank maps (only 5 strictly allowed)
                     ranks = {"applied": 1, "interviewed": 2, "assessment": 3, "rejected": 4, "selected": 5}
                     curr_rank = ranks.get(target_app.status, 0)
                     new_rank = ranks.get(detected_status, 0)
                     
-                    # Selected and Rejected are terminal but Selected is higher rank
                     if new_rank > curr_rank or detected_status == "rejected":
                         target_app.status = detected_status
                     
-                    # Generate Timeline Node
                     existing_notes = target_app.notes or ""
-                    sender_clean = sender.split('<')[0].strip()
+                    sender_clean = email['sender'].split('<')[0].strip()
                     if str(email['id']) not in existing_notes:
                         timeline_node = f"\n[{email['date'][:16]}] {sender_clean}: {email['subject']}  -> (Status: {detected_status.upper()}) [ID: {email['id']}]"
                         target_app.notes = existing_notes + timeline_node
