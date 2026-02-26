@@ -17,14 +17,14 @@ export function AIPanel({ formData, handleChange }: { formData: any, handleChang
     const labelClass = "text-[11px] uppercase tracking-[0.15em] text-muted-foreground font-medium mb-1.5 flex items-center";
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 p-8 bg-card border border-border shadow-sm rounded-xl relative overflow-hidden group">
-            <div className="col-span-1 lg:col-span-1 lg:border-r border-border pr-6 relative z-10">
-                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                    <BrainCircuit className="w-4 h-4" /> Model Providers
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-10 p-8 bg-card border border-border shadow-sm rounded-xl relative overflow-hidden group">
+            <div className="col-span-1 lg:col-span-1 lg:border-r border-border pr-6 relative z-10 flex flex-col gap-2">
+                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2 italic">
+                    <BrainCircuit className="w-4 h-4 text-primary" /> Intelligence
                 </h3>
-                <p className="text-xs text-muted-foreground mt-2 leading-relaxed">Provide your API keys. Comma separation enables automatic round-robin key rotation.</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">Identity providers and model rotation.</p>
             </div>
-            <div className="col-span-3 grid gap-6 relative z-10">
+            <div className="col-span-1 lg:col-span-3 grid gap-8 relative z-10">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="md:col-span-2">
                         <Label htmlFor="llm_provider" className={labelClass}>LLM Provider</Label>

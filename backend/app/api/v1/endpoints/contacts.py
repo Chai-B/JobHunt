@@ -5,29 +5,33 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from fastapi.responses import StreamingResponse
 import pandas as pd
 
 from app.api import deps
 from app.db.models.user import User
 from app.db.models.contact import ScrapedContact
-from app.schemas.contact import ScrapedContactCreate, ScrapedContactRead
+from app.schemas.contact import ScrapedContactCreate, ScrapedContactRead, ScrapedContactList
 from loguru import logger
 
 router = APIRouter()
 
-@router.get("/", response_model=List[ScrapedContactRead])
+@router.get("/", response_model=ScrapedContactList)
 async def list_contacts(
     db: AsyncSession = Depends(deps.get_personal_db),
     skip: int = 0,
     limit: int = 200,
     current_user: User = Depends(deps.get_current_active_user)
 ) -> Any:
-    # We load contacts globally since ScrapedContact currently isn't user-specific,
-    # but in a personal DB environment, this loads from their personal DB.
+    # Get total count
+    count_stmt = select(func.count(ScrapedContact.id))
+    count_res = await db.execute(count_stmt)
+    total = count_res.scalar() or 0
+
     res = await db.execute(select(ScrapedContact).order_by(ScrapedContact.created_at.desc()).offset(skip).limit(limit))
-    return res.scalars().all()
+    items = res.scalars().all()
+    return {"items": items, "total": total}
 
 @router.post("/", response_model=ScrapedContactRead)
 async def create_contact(

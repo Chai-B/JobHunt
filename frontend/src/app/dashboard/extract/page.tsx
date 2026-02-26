@@ -133,7 +133,7 @@ export default function ExtractorPage() {
                 <div>
                     <h1 className="text-4xl font-bold tracking-tight text-foreground flex items-center gap-3 font-sans">
                         <Sparkles className="h-8 w-8 text-primary animate-pulse" />
-                        Universal Extractor
+                        Extractor
                     </h1>
                     <p className="text-muted-foreground mt-2 text-base max-w-2xl">
                         AI-powered parsing for structured and unstructured data. Paste spreadsheets, emails, or job descriptions to extract high-quality leads.
@@ -162,7 +162,7 @@ export default function ExtractorPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 {/* Input Column */}
-                <Card className="lg:col-span-5 bg-card/50 backdrop-blur-xl border-border/50 shadow-2xl flex flex-col h-full rounded-2xl overflow-hidden group">
+                <Card className="lg:col-span-4 bg-card/50 backdrop-blur-xl border-border/50 shadow-2xl flex flex-col h-full rounded-2xl overflow-hidden group">
                     <CardHeader className="pb-3 border-b border-border/50 bg-secondary/20">
                         <CardTitle className="text-xl font-semibold flex items-center gap-2">
                             Raw Input
@@ -194,7 +194,7 @@ export default function ExtractorPage() {
                 </Card>
 
                 {/* Results Column */}
-                <div className="lg:col-span-7 flex flex-col gap-4 h-full xl:max-h-[750px] overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-border">
+                <div className="lg:col-span-8 flex flex-col gap-4 h-full xl:max-h-[850px] overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-border">
                     {results.length === 0 && !processing && (
                         <div className="h-[450px] flex flex-col items-center justify-center text-muted-foreground border border-dashed border-border/50 rounded-2xl bg-card/20 backdrop-blur-sm animate-pulse">
                             <Sparkles className="w-12 h-12 opacity-10 mb-5" />
@@ -208,13 +208,13 @@ export default function ExtractorPage() {
                     {results.map((r, i) => (
                         <Card key={i} className="bg-card/40 backdrop-blur-md border-border/50 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 relative overflow-hidden rounded-2xl group/card">
                             {/* Accent indicator */}
-                            <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${r.type === 'contact' ? 'bg-blue-500/80' : 'bg-emerald-500/80'} group-hover/card:w-2 transition-all`} />
+                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${r.type === 'contact' ? 'bg-blue-500/80' : 'bg-emerald-500/80'} group-hover/card:w-1.5 transition-all`} />
 
-                            <CardHeader className="pb-4 pt-6 pl-8 pr-6 border-b border-border/20 bg-secondary/10">
+                            <CardHeader className="pb-4 pt-6 pl-6 pr-6 border-b border-border/20 bg-secondary/10">
                                 <div className="flex justify-between items-center">
                                     <div className="flex items-center gap-3">
                                         <div className={`p-2 rounded-lg ${r.type === 'contact' ? 'bg-blue-500/10 text-blue-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
-                                            {r.type === 'contact' ? <Users className="w-5 h-5" /> : <Briefcase className="w-5 h-5" />}
+                                            {r.type === 'contact' ? <Users className="w-4 h-4" /> : <Briefcase className="w-4 h-4" />}
                                         </div>
                                         <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">
                                             {r.type === 'contact' ? 'Contact Found' : 'Job Inferred'}
@@ -225,7 +225,7 @@ export default function ExtractorPage() {
                                     </Badge>
                                 </div>
                             </CardHeader>
-                            <CardContent className="pl-8 pt-6 pb-6 space-y-4">
+                            <CardContent className="pl-6 pt-6 pb-6 space-y-4">
                                 {r.type === 'contact' && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
                                         <div className="space-y-1">
@@ -264,7 +264,7 @@ export default function ExtractorPage() {
                                     </div>
                                 )}
                             </CardContent>
-                            <CardFooter className="pl-8 pt-4 pb-4 pr-6 flex gap-3 justify-end bg-secondary/5 border-t border-border/10">
+                            <CardFooter className="pl-6 pt-4 pb-4 pr-6 flex gap-3 justify-end bg-secondary/5 border-t border-border/10">
                                 <Button
                                     variant="ghost"
                                     size="sm"

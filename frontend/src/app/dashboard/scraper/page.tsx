@@ -47,8 +47,7 @@ export default function ScraperPage() {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.ok) {
-                const data = await res.json();
-                setContacts(Array.isArray(data) ? data : []);
+                // Not showing in this tab anymore to reduce clutter
             } else {
                 toast.error("Failed to fetch contacts.");
             }
@@ -223,56 +222,6 @@ export default function ScraperPage() {
                         </Button>
                     </CardContent>
                 </form>
-            </Card>
-
-            {/* Extracted Contacts */}
-            <Card className="bg-card border-border shadow-sm">
-                <CardHeader className="border-b border-border pb-5">
-                    <CardTitle className="flex items-center gap-2 text-foreground"><Users className="w-5 h-5" /> Extracted Contacts</CardTitle>
-                    <CardDescription className="text-muted-foreground">{contacts.length} contacts extracted. Use Cold Mail tab to send outreach.</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                    {loadingContacts ? (
-                        <div className="py-20 flex flex-col items-center justify-center text-muted-foreground">
-                            <Activity className="w-6 h-6 animate-pulse mb-4" />
-                            <span className="text-sm">Loading contacts...</span>
-                        </div>
-                    ) : contacts.length === 0 ? (
-                        <div className="py-20 text-center text-muted-foreground text-sm">
-                            No contacts extracted yet. Run the scraper to find contacts.
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader className="bg-secondary/30">
-                                    <TableRow className="border-border hover:bg-transparent">
-                                        <TableHead className="text-muted-foreground font-medium">Email Address</TableHead>
-                                        <TableHead className="text-muted-foreground font-medium">Full Name</TableHead>
-                                        <TableHead className="text-muted-foreground font-medium">Designation</TableHead>
-                                        <TableHead className="text-muted-foreground font-medium">Source</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {contacts.map((c: any) => (
-                                        <TableRow key={c.id} className="border-border hover:bg-secondary/50 transition-colors">
-                                            <TableCell className="font-medium text-foreground">{c.email}</TableCell>
-                                            <TableCell className="text-muted-foreground text-sm">{c.name || "—"}</TableCell>
-                                            <TableCell className="text-muted-foreground text-sm">
-                                                {c.role && <Badge variant="outline" className="mr-2 text-foreground border-border font-normal">{c.role}</Badge>}
-                                                {c.company && <span>{c.company}</span>}
-                                            </TableCell>
-                                            <TableCell className="text-xs text-muted-foreground truncate max-w-[200px]" title={c.source_url}>
-                                                <a href={c.source_url} target="_blank" rel="noreferrer" className="hover:text-foreground hover:underline transition-colors">
-                                                    {c.source_url}
-                                                </a>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    )}
-                </CardContent>
             </Card>
         </div>
     );

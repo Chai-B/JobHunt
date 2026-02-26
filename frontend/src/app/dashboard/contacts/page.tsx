@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Users, Plus, Upload, Download, Trash2, Edit } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
 
 export default function ContactsPage() {
     const [contacts, setContacts] = useState<any[]>([]);
@@ -17,20 +18,27 @@ export default function ContactsPage() {
     const [isOpen, setIsOpen] = useState(false);
     const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
 
+    // Pagination
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const pageSize = 50;
+
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [role, setRole] = useState("");
     const [company, setCompany] = useState("");
 
     const fetchContacts = async () => {
+        setLoading(true);
         try {
             const token = localStorage.getItem("token");
-            const res = await fetch(`${API_BASE_URL}/api/v1/contacts/`, {
+            const res = await fetch(`${API_BASE_URL}/api/v1/contacts/?skip=${(page - 1) * pageSize}&limit=${pageSize}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.ok) {
                 const data = await res.json();
-                setContacts(Array.isArray(data) ? data : []);
+                setContacts(data.items || []);
+                setTotal(data.total || 0);
             }
         } catch (err) {
             toast.error("Network error fetching contacts.");
@@ -41,7 +49,7 @@ export default function ContactsPage() {
 
     useEffect(() => {
         fetchContacts();
-    }, []);
+    }, [page]);
 
     const handleOpenCreate = () => {
         setSelectedContactId(null);
@@ -159,7 +167,7 @@ export default function ContactsPage() {
                 <div>
                     <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
                         <Users className="h-6 w-6" />
-                        Contacts Directory
+                        Contacts
                     </h1>
                     <p className="text-muted-foreground mt-1 text-sm">Manage your networking contacts and scraped leads.</p>
                 </div>
@@ -228,6 +236,7 @@ export default function ContactsPage() {
                             <Table>
                                 <TableHeader className="bg-secondary/30">
                                     <TableRow>
+                                        <TableHead className="w-12 text-center text-[10px] uppercase font-bold text-muted-foreground/40">#</TableHead>
                                         <TableHead>Name</TableHead>
                                         <TableHead>Email</TableHead>
                                         <TableHead>Role</TableHead>
@@ -236,10 +245,11 @@ export default function ContactsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {contacts.map((c: any) => (
+                                    {contacts.map((c: any, idx: number) => (
                                         <TableRow key={c.id}>
-                                            <TableCell className="font-medium">{c.name || "—"}</TableCell>
-                                            <TableCell>{c.email}</TableCell>
+                                            <TableCell className="text-center text-[10px] font-mono text-muted-foreground/40">{(page - 1) * pageSize + idx + 1}</TableCell>
+                                            <TableCell className="font-medium text-foreground">{c.name || "—"}</TableCell>
+                                            <TableCell className="text-foreground">{c.email}</TableCell>
                                             <TableCell className="text-muted-foreground">{c.role || "—"}</TableCell>
                                             <TableCell className="text-muted-foreground">{c.company || "—"}</TableCell>
                                             <TableCell className="text-right">
@@ -254,6 +264,13 @@ export default function ContactsPage() {
                                     ))}
                                 </TableBody>
                             </Table>
+                            <Pagination
+                                currentPage={page}
+                                totalCount={total}
+                                pageSize={pageSize}
+                                onPageChange={setPage}
+                                disabled={loading}
+                            />
                         </div>
                     )}
                 </CardContent>

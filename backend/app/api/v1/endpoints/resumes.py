@@ -101,7 +101,7 @@ async def extract_resume_to_profile(
         raise HTTPException(status_code=400, detail="Gemini API Key required in Settings to run AI extraction.")
         
     prompt = f"""Extract the following profile information from this resume text. If you cannot find a certain field, leave it empty.
-Return strictly valid JSON: {{"full_name": "", "email": "", "phone": "", "location": "", "linkedin_url": "", "bio": "", "skills": ""}}.
+Return strictly valid JSON: {{"full_name": "", "email": "", "phone": "", "location": "", "linkedin_url": "", "bio": "", "skills": "", "experience_years": null, "education": ""}}.
 Resume Text:
 {resume.raw_text[:10000]}"""
 

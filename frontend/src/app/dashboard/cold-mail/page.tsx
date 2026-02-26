@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Mail, Send, Users, Activity, Info, RefreshCw, Zap, CheckCircle2, ChevronRight, MousePointer2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Pagination } from "@/components/ui/pagination";
 
 const Tip = ({ text }: { text: string }) => (
     <span className="relative inline-flex items-center ml-1.5 cursor-help group/tip">
@@ -32,6 +33,11 @@ export default function ColdMailPage() {
     const [sendingId, setSendingId] = useState<number | null>(null);
     const [batchSending, setBatchSending] = useState(false);
 
+    // Pagination state
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const pageSize = 50;
+
     // Selection state
     const [selectedContactIds, setSelectedContactIds] = useState<Set<number>>(new Set());
 
@@ -42,14 +48,15 @@ export default function ColdMailPage() {
             const headers = { Authorization: `Bearer ${token}` };
 
             const [contactsRes, templatesRes, resumesRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/v1/contacts/`, { headers }),
+                fetch(`${API_BASE_URL}/api/v1/contacts/?skip=${(page - 1) * pageSize}&limit=${pageSize}`, { headers }),
                 fetch(`${API_BASE_URL}/api/v1/templates/`, { headers }),
                 fetch(`${API_BASE_URL}/api/v1/resumes/`, { headers }),
             ]);
 
             if (contactsRes.ok) {
                 const data = await contactsRes.json();
-                setContacts(Array.isArray(data) ? data : []);
+                setContacts(data.items || []);
+                setTotal(data.total || 0);
             }
             if (templatesRes.ok) {
                 const data = await templatesRes.json();
@@ -68,7 +75,7 @@ export default function ColdMailPage() {
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [page]);
 
     const toggleSelectAll = () => {
         if (selectedContactIds.size === contacts.length) {
@@ -168,10 +175,9 @@ export default function ColdMailPage() {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-1000 relative pb-24">
             <div className="flex justify-between items-end">
                 <div>
-                    <Badge variant="outline" className="mb-3 border-primary/20 bg-primary/5 text-primary-foreground text-[10px] uppercase tracking-widest px-3">Engine Active</Badge>
                     <h1 className="text-4xl font-bold tracking-tight text-foreground flex items-center gap-3 font-sans">
                         <Mail className="h-8 w-8 text-primary" />
-                        Outreach Outbound
+                        Cold Mail
                     </h1>
                     <p className="text-muted-foreground mt-2 text-base max-w-xl">Scale your personal reach by targeting high-value contacts with AI-crafted communications.</p>
                 </div>
@@ -270,6 +276,7 @@ export default function ColdMailPage() {
                                 <Table>
                                     <TableHeader className="bg-secondary/20">
                                         <TableRow className="border-border/40 hover:bg-transparent">
+                                            <TableHead className="w-12 px-4 text-center text-[10px] font-bold text-muted-foreground/40">#</TableHead>
                                             <TableHead className="w-16 px-6">
                                                 <Checkbox
                                                     checked={selectedContactIds.size === contacts.length && contacts.length > 0}
@@ -283,11 +290,14 @@ export default function ColdMailPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {contacts.map((c: any) => (
+                                        {contacts.map((c: any, idx: number) => (
                                             <TableRow
                                                 key={c.id}
                                                 className={`border-border/20 transition-all duration-300 group ${selectedContactIds.has(c.id) ? 'bg-primary/5 hover:bg-primary/[0.08]' : 'hover:bg-secondary/40'}`}
                                             >
+                                                <TableCell className="px-4 text-center text-[10px] font-mono text-muted-foreground/40">
+                                                    {(page - 1) * pageSize + idx + 1}
+                                                </TableCell>
                                                 <TableCell className="px-6">
                                                     <Checkbox
                                                         checked={selectedContactIds.has(c.id)}
@@ -328,6 +338,13 @@ export default function ColdMailPage() {
                                         ))}
                                     </TableBody>
                                 </Table>
+                                <Pagination
+                                    currentPage={page}
+                                    totalCount={total}
+                                    pageSize={pageSize}
+                                    onPageChange={setPage}
+                                    disabled={loading}
+                                />
                             </div>
                         )}
                     </CardContent>

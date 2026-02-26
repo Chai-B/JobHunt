@@ -8,7 +8,8 @@ from app.api import deps
 from app.db.models.user import User
 from app.db.models.email_template import EmailTemplate
 from app.db.models.setting import UserSetting
-from app.schemas.email_template import EmailTemplateCreate, EmailTemplateRead, EmailTemplateUpdate
+from app.schemas.email_template import EmailTemplateCreate, EmailTemplateRead, EmailTemplateUpdate, EmailTemplateList
+from sqlalchemy import func
 
 router = APIRouter()
 
@@ -41,15 +42,20 @@ async def create_template(
     await db.refresh(db_obj)
     return db_obj
 
-@router.get("/", response_model=List[EmailTemplateRead])
+@router.get("/", response_model=EmailTemplateList)
 async def list_templates(
     db: AsyncSession = Depends(deps.get_personal_db),
     skip: int = 0,
     limit: int = 100,
     current_user: User = Depends(deps.get_current_active_user)
 ) -> Any:
-    res = await db.execute(select(EmailTemplate).offset(skip).limit(limit))
-    return res.scalars().all()
+    count_stmt = select(func.count(EmailTemplate.id))
+    count_res = await db.execute(count_stmt)
+    total = count_res.scalar() or 0
+
+    res = await db.execute(select(EmailTemplate).offset(skip).limit(limit).order_by(EmailTemplate.created_at.desc()))
+    items = res.scalars().all()
+    return {"items": items, "total": total}
 
 @router.put("/{template_id}", response_model=EmailTemplateRead)
 async def update_template(

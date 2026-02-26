@@ -11,8 +11,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Mail, LayoutTemplate, Tag, X, Copy, Sparkles } from "lucide-react";
+import { Copy, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Pagination } from "@/components/ui/pagination";
 
 const DEFAULT_TAGS = [
     { tag: "{{job_title}}", label: "Job Title", desc: "Title of the target job position" },
@@ -31,9 +32,13 @@ const DEFAULT_TAGS = [
 
 export default function TemplatesPage() {
     const [templates, setTemplates] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
     const [isOpen, setIsOpen] = useState(false);
     const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+
+    // Pagination
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const pageSize = 50;
 
     const [name, setName] = useState("");
     const [subject, setSubject] = useState("");
@@ -49,14 +54,16 @@ export default function TemplatesPage() {
     const [generating, setGenerating] = useState(false);
 
     const fetchTemplates = async () => {
+        setLoading(true);
         try {
             const token = localStorage.getItem("token");
-            const res = await fetch(`${API_BASE_URL}/api/v1/templates/`, {
+            const res = await fetch(`${API_BASE_URL}/api/v1/templates/?skip=${(page - 1) * pageSize}&limit=${pageSize}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.ok) {
                 const data = await res.json();
-                setTemplates(Array.isArray(data) ? data : []);
+                setTemplates(data.items || []);
+                setTotal(data.total || 0);
             } else {
                 toast.error("Failed to load templates.");
             }
@@ -69,7 +76,7 @@ export default function TemplatesPage() {
 
     useEffect(() => {
         fetchTemplates();
-    }, []);
+    }, [page]);
 
     const insertTag = (tag: string, target: "subject" | "body") => {
         if (target === "body") {
@@ -192,7 +199,7 @@ export default function TemplatesPage() {
                 <div>
                     <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
                         <LayoutTemplate className="h-6 w-6" />
-                        Outreach Templates
+                        Templates
                     </h1>
                     <p className="text-muted-foreground mt-1 text-sm">Create dynamic templates with autofill variables for personalized emails.</p>
                 </div>
@@ -355,6 +362,7 @@ export default function TemplatesPage() {
                             <Table>
                                 <TableHeader className="bg-secondary/30">
                                     <TableRow className="border-border hover:bg-transparent">
+                                        <TableHead className="w-12 text-center text-[10px] uppercase font-bold text-muted-foreground/40">#</TableHead>
                                         <TableHead className="text-muted-foreground font-medium">Name</TableHead>
                                         <TableHead className="text-muted-foreground font-medium">Subject</TableHead>
                                         <TableHead className="text-muted-foreground font-medium">Variables Used</TableHead>
@@ -363,11 +371,12 @@ export default function TemplatesPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {templates.map((t: any) => {
+                                    {templates.map((t: any, idx: number) => {
                                         // Count variables used in the template
                                         const usedVars = allTags.filter(tag => t.subject?.includes(tag) || t.body_text?.includes(tag));
                                         return (
                                             <TableRow key={t.id} className="border-border hover:bg-secondary/50 transition-colors">
+                                                <TableCell className="text-center text-[10px] font-mono text-muted-foreground/40">{(page - 1) * pageSize + idx + 1}</TableCell>
                                                 <TableCell className="font-medium text-foreground">{t.name}</TableCell>
                                                 <TableCell className="text-muted-foreground max-w-xs truncate font-mono text-xs">{t.subject}</TableCell>
                                                 <TableCell>
@@ -389,6 +398,13 @@ export default function TemplatesPage() {
                                     })}
                                 </TableBody>
                             </Table>
+                            <Pagination
+                                currentPage={page}
+                                totalCount={total}
+                                pageSize={pageSize}
+                                onPageChange={setPage}
+                                disabled={loading}
+                            />
                         </div>
                     )}
                 </CardContent>

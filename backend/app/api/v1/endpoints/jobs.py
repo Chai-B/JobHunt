@@ -7,22 +7,30 @@ from loguru import logger
 from app.api import deps
 from app.db.models.user import User
 from app.db.models.job_posting import JobPosting
-from app.schemas.job import JobPostingCreate, JobPostingRead, JobMatchResult
+from app.schemas.job import JobPostingCreate, JobPostingRead, JobMatchResult, JobPostingList
+from sqlalchemy import func
 from app.services.job_ingestion import ManualJobAdapter
 from app.services.matching_engine import find_best_resume_for_job
 
 router = APIRouter()
 
-@router.get("/", response_model=List[JobPostingRead])
+@router.get("/", response_model=JobPostingList)
 async def list_all_jobs(
+    skip: int = 0,
+    limit: int = 100,
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_user)
 ) -> Any:
     """Returns all jobs from the global database, newest first."""
+    count_stmt = select(func.count(JobPosting.id))
+    count_res = await db.execute(count_stmt)
+    total = count_res.scalar() or 0
+
     result = await db.execute(
-        select(JobPosting).order_by(JobPosting.created_at.desc()).limit(200)
+        select(JobPosting).order_by(JobPosting.created_at.desc()).offset(skip).limit(limit)
     )
-    return result.scalars().all()
+    items = result.scalars().all()
+    return {"items": items, "total": total}
 
 @router.post("/ingest/manual", response_model=List[JobPostingRead])
 async def ingest_manual_job(

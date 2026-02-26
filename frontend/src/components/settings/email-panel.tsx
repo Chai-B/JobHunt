@@ -19,12 +19,14 @@ export function EmailPanel({ formData, handleChange, setFormData, handleGmailCon
     return (
         <div className="flex flex-col gap-8">
             {/* Primary Integration: Gmail & Automation */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 p-8 bg-card border border-border shadow-sm rounded-xl relative overflow-hidden group">
-                <div className="col-span-1 lg:col-span-1 lg:border-r border-border pr-6 relative z-10">
-                    <h3 className="text-lg font-semibold text-foreground flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> Core Integration</h3>
-                    <p className="text-xs text-muted-foreground mt-2 leading-relaxed">Modern Gmail OAuth and background automation pipelines.</p>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-10 p-8 bg-card border border-border shadow-sm rounded-xl relative overflow-hidden group">
+                <div className="col-span-1 lg:col-span-1 lg:border-r border-border pr-6 relative z-10 flex flex-col gap-2">
+                    <h3 className="text-lg font-semibold text-foreground flex items-center gap-2 italic">
+                        <Sparkles className="w-4 h-4 text-primary" /> Connectivity
+                    </h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">Gmail OAuth and pipeline automation.</p>
                 </div>
-                <div className="col-span-3 grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+                <div className="col-span-1 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10">
 
                     {/* Gmail Connection Column */}
                     <div className="space-y-6">
@@ -80,12 +82,12 @@ export function EmailPanel({ formData, handleChange, setFormData, handleGmailCon
             </div>
 
             {/* Legacy SMTP Fallback */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 p-8 bg-card/40 border border-border shadow-sm rounded-xl relative overflow-hidden group">
-                <div className="col-span-1 lg:col-span-1 lg:border-r border-border pr-6 relative z-10">
-                    <h3 className="text-lg font-semibold text-foreground flex items-center gap-2"><Network className="w-4 h-4" /> SMTP Fallback</h3>
-                    <p className="text-xs text-muted-foreground mt-2 leading-relaxed">Legacy SMTP credentials for automated outreach via simple mail transfer protocol. Ignored if Gmail OAuth is enabled.</p>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-10 p-8 bg-card/40 border border-border shadow-sm rounded-xl relative overflow-hidden group">
+                <div className="col-span-1 lg:col-span-1 lg:border-r border-border pr-6 relative z-10 flex flex-col gap-2">
+                    <h3 className="text-lg font-semibold text-foreground flex items-center gap-2 italic"><Network className="w-4 h-4 text-muted-foreground" /> Protocols</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">Legacy SMTP fallback services.</p>
                 </div>
-                <div className="col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                <div className="col-span-1 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
                     <div>
                         <Label htmlFor="smtp_server" className={labelClass}>SMTP Server</Label>
                         <Input id="smtp_server" name="smtp_server" value={formData.smtp_server} onChange={handleChange} placeholder="smtp.gmail.com" className={inputClass} />

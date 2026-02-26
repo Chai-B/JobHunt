@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 class EmailTemplateBase(BaseModel):
@@ -24,3 +24,7 @@ class EmailTemplateRead(EmailTemplateBase):
 
     class Config:
         from_attributes = True
+
+class EmailTemplateList(BaseModel):
+    items: List[EmailTemplateRead]
+    total: int

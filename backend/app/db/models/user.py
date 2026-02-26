@@ -21,6 +21,9 @@ class User(Base):
     portfolio_url = Column(String, nullable=True)
     location = Column(String, nullable=True)
     bio = Column(String, nullable=True)
+    skills = Column(String, nullable=True)
+    experience_years = Column(Integer, nullable=True)
+    education = Column(String, nullable=True)
     
     # Audit timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())

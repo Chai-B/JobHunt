@@ -12,6 +12,9 @@ class UserBase(BaseModel):
     portfolio_url: Optional[str] = None
     location: Optional[str] = None
     bio: Optional[str] = None
+    skills: Optional[str] = None
+    experience_years: Optional[int] = None
+    education: Optional[str] = None
     has_completed_onboarding: bool = False
     
     @field_validator("has_completed_onboarding", mode="before")
@@ -33,6 +36,9 @@ class UserUpdate(BaseModel):
     portfolio_url: Optional[str] = None
     location: Optional[str] = None
     bio: Optional[str] = None
+    skills: Optional[str] = None
+    experience_years: Optional[int] = None
+    education: Optional[str] = None
     password: Optional[str] = None
     has_completed_onboarding: Optional[bool] = None
 

@@ -23,6 +23,10 @@ class JobPostingRead(JobPostingBase):
     class Config:
         from_attributes = True
 
+class JobPostingList(BaseModel):
+    items: List[JobPostingRead]
+    total: int
+
 class JobMatchResult(BaseModel):
     job: JobPostingRead
     best_resume_id: int

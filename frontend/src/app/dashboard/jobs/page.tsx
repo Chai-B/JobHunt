@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, Search, Briefcase, Globe, Activity, ExternalLink, MapPin, Building2, X, ChevronRight } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
 
 export default function JobsPage() {
     const [ingesting, setIngesting] = useState(false);
@@ -17,6 +18,11 @@ export default function JobsPage() {
     const [matchResult, setMatchResult] = useState<any>(null);
     const [jobs, setJobs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Pagination
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const pageSize = 48;
 
     const [title, setTitle] = useState("");
     const [company, setCompany] = useState("");
@@ -26,14 +32,16 @@ export default function JobsPage() {
     const [selectedJob, setSelectedJob] = useState<any>(null);
 
     const fetchJobs = async () => {
+        setLoading(true);
         try {
             const token = localStorage.getItem("token");
-            const res = await fetch(`${API_BASE_URL}/api/v1/jobs/`, {
+            const res = await fetch(`${API_BASE_URL}/api/v1/jobs/?skip=${(page - 1) * pageSize}&limit=${pageSize}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.ok) {
                 const data = await res.json();
-                setJobs(Array.isArray(data) ? data : []);
+                setJobs(data.items || []);
+                setTotal(data.total || 0);
             } else {
                 toast.error("Failed to load jobs.");
             }
@@ -46,7 +54,7 @@ export default function JobsPage() {
 
     useEffect(() => {
         fetchJobs();
-    }, []);
+    }, [page]);
 
     const addToPipeline = async (jobId: number, resumeId: number) => {
         try {
@@ -127,7 +135,7 @@ export default function JobsPage() {
                 <div>
                     <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
                         <Briefcase className="h-6 w-6" />
-                        Global Jobs Database
+                        Jobs
                     </h1>
                     <p className="text-muted-foreground text-sm mt-1">All auto-scraped and manually added jobs from the global pool.</p>
                 </div>
@@ -185,7 +193,7 @@ export default function JobsPage() {
             {/* Stats Bar */}
             <div className="flex items-center gap-3">
                 <Badge variant="outline" className="border-border text-muted-foreground text-xs">
-                    <Globe className="w-3 h-3 mr-1.5" /> {filteredJobs.length} jobs
+                    <Globe className="w-3 h-3 mr-1.5" /> {total} jobs
                 </Badge>
                 {searchQuery && (
                     <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground" onClick={() => setSearchQuery("")}>
@@ -289,6 +297,15 @@ export default function JobsPage() {
                             </CardContent>
                         </Card>
                     ))}
+                </div>
+                <div className="mt-8">
+                    <Pagination
+                        currentPage={page}
+                        totalCount={total}
+                        pageSize={pageSize}
+                        onPageChange={setPage}
+                        disabled={loading}
+                    />
                 </div>
             )}
 

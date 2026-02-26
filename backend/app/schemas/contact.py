@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 class ScrapedContactBase(BaseModel):
@@ -19,3 +19,7 @@ class ScrapedContactRead(ScrapedContactBase):
     
     class Config:
         from_attributes = True
+
+class ScrapedContactList(BaseModel):
+    items: List[ScrapedContactRead]
+    total: int
