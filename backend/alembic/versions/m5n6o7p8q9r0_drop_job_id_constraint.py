@@ -19,14 +19,16 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Drop the NOT NULL constraint on job_id using asyncpg/postgresql syntax
-    op.alter_column('applications', 'job_id',
-               existing_type=sa.INTEGER(),
-               nullable=True)
+    # Drop the NOT NULL constraint on job_id using batch mode for SQLite compatibility
+    with op.batch_alter_table('applications', schema=None) as batch_op:
+        batch_op.alter_column('job_id',
+                   existing_type=sa.INTEGER(),
+                   nullable=True)
 
 
 def downgrade() -> None:
-    # Re-add the NOT NULL constraint (though this might fail if data exists)
-    op.alter_column('applications', 'job_id',
-               existing_type=sa.INTEGER(),
-               nullable=False)
+    # Re-add the NOT NULL constraint using batch mode
+    with op.batch_alter_table('applications', schema=None) as batch_op:
+        batch_op.alter_column('job_id',
+                   existing_type=sa.INTEGER(),
+                   nullable=False)

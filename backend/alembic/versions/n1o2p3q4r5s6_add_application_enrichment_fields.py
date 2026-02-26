@@ -15,15 +15,17 @@ branch_labels = None
 depends_on = None
 
 def upgrade():
-    op.add_column('applications', sa.Column('contact_name', sa.String(), nullable=True))
-    op.add_column('applications', sa.Column('contact_email', sa.String(), nullable=True))
-    op.add_column('applications', sa.Column('contact_role', sa.String(), nullable=True))
-    op.add_column('applications', sa.Column('source_url', sa.String(), nullable=True))
-    op.add_column('applications', sa.Column('location', sa.String(), nullable=True))
+    with op.batch_alter_table('applications', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('contact_name', sa.String(), nullable=True))
+        batch_op.add_column(sa.Column('contact_email', sa.String(), nullable=True))
+        batch_op.add_column(sa.Column('contact_role', sa.String(), nullable=True))
+        batch_op.add_column(sa.Column('source_url', sa.String(), nullable=True))
+        batch_op.add_column(sa.Column('location', sa.String(), nullable=True))
 
 def downgrade():
-    op.drop_column('applications', 'location')
-    op.drop_column('applications', 'source_url')
-    op.drop_column('applications', 'contact_role')
-    op.drop_column('applications', 'contact_email')
-    op.drop_column('applications', 'contact_name')
+    with op.batch_alter_table('applications', schema=None) as batch_op:
+        batch_op.drop_column('location')
+        batch_op.drop_column('source_url')
+        batch_op.drop_column('contact_role')
+        batch_op.drop_column('contact_email')
+        batch_op.drop_column('contact_name')
