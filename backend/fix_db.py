@@ -70,3 +70,24 @@ async def migrate_missing_columns():
 
 if __name__ == "__main__":
     asyncio.run(migrate_missing_columns())
+import asyncio
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy import text
+from app.core.config import settings
+
+async def remove_job_id_constraint():
+    async_url = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+    engine = create_async_engine(
+        async_url,
+        connect_args={"prepared_statement_cache_size": 0, "statement_cache_size": 0}
+    )
+    async with engine.begin() as conn:
+        print("Dropping NOT NULL constraint on applications.job_id...")
+        try:
+            await conn.execute(text("ALTER TABLE applications ALTER COLUMN job_id DROP NOT NULL;"))
+            print("Successfully dropped constraint.")
+        except Exception as e:
+            print(f"Error dropping constraint: {e}")
+
+if __name__ == "__main__":
+    asyncio.run(remove_job_id_constraint())
