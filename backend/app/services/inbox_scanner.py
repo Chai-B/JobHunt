@@ -113,38 +113,52 @@ async def run_inbox_scanner_async(user_id: int):
                 # Heuristic 1: Extract Company Name
                 extracted_company = None
                 
-                # Try simple domain extraction first
-                domain_match = re.search(r'@([\w.-]+)\.', sender)
+                # Check 1: LinkedIn Easy Apply & Generic Application Confirmations
+                # Subject examples: "Your application to Stripe was sent", "Application for Software Engineer at Meta", "We have received your application for Google"
+                app_subject_match = re.search(r'application to (.+?) was sent|application for (.+?) at (.+?)\b|application for (.+?)\b|applying to (.+?)\b|interest in (.+?)\b', subject_lower)
+                if app_subject_match:
+                    # Filter out the capture groups to find the actual match
+                    groups = [g for g in app_subject_match.groups() if g]
+                    # The company is usually the last match in our generic OR groups above ("Stripe", "Meta", "Google")
+                    if groups:
+                        extracted_company = groups[-1].strip().title()
+
+                # Check 2: Try simple domain extraction and ATS Filtering
+                if not extracted_company:
+                    domain_match = re.search(r'@([\w.-]+)\.', sender)
+                    
+                    # ATS domains and job boards that hide the real company
+                    ignore_domains = ["gmail", "yahoo", "hotmail", "outlook", "greenhouse", "lever", "workday", "ashbyhq", "myworkday", "linkedin", "bamboohr", "talent", "recruiting", "smartrecruiters", "icims", "jobvite", "breezy", "angel", "wellfound"]
+                    
+                    if domain_match:
+                        domain = domain_match.group(1).lower()
+                        if domain not in ignore_domains:
+                            extracted_company = domain.title()
                 
-                # ATS domains that hide the real company
-                ignore_domains = ["gmail", "yahoo", "hotmail", "outlook", "greenhouse", "lever", "workday", "ashbyhq", "myworkday", "linkedin", "bamboohr", "talent", "recruiting", "smartrecruiters", "icims", "jobvite"]
-                
-                if domain_match:
-                    domain = domain_match.group(1).lower()
-                    if domain not in ignore_domains:
-                        extracted_company = domain.title()
-                
-                # If domain is ATS or generic (like LinkedIn), try looking at the Sender Name or Subject
+                # Check 3: If domain is ATS or generic (like LinkedIn/Greenhouse), look at the Sender Name
+                # e.g., "Stripe via Greenhouse" or "Recruiting | Meta"
                 if not extracted_company:
                     name_part = sender.split('<')[0].strip().lower()
-                    subject_lower = email['subject'].lower()
                     
-                    # 1. Check known companies first
-                    for c_name in known_companies.keys():
-                        if c_name in name_part or c_name in subject_lower:
-                            extracted_company = known_companies[c_name].company_name
-                            break
+                    # Try to strip "via ATS" syntax
+                    via_match = re.search(r'(.+?) via |recruiting [\-\|] (.+?)$|(.+?) recruiting', name_part)
+                    if via_match:
+                        groups = [g for g in via_match.groups() if g]
+                        if groups:
+                            extracted_company = groups[-1].strip().title()
                     
-                    # 2. LinkedIn Easy Apply fallback: "Your application to [Company] was sent"
-                    if not extracted_company and "linkedin" in sender:
-                        match = re.search(r'application to (.+?) was sent|viewed your application for (.+?)\b|application for (.+?) at (.+?)\b', subject_lower)
-                        if match:
-                            extracted_company = next((m for m in match.groups() if m), "Unknown").strip().title()
+                    # Fallback to checking against our DB known companies
+                    if not extracted_company:
+                        for c_name in known_companies.keys():
+                            if c_name in name_part or c_name in subject_lower:
+                                extracted_company = known_companies[c_name].company_name
+                                break
 
-                if not extracted_company or extracted_company.lower() in ("unknown", "linkedin", "greenhouse"):
+                # Final validation block
+                if not extracted_company or extracted_company.lower() in ("unknown", "linkedin", "greenhouse", "application", "software engineer", "resume"):
                     continue # Cannot bind this email to any tracked jobs
                 
-                # Bind to application or CREATE ONE
+                # Bind to application or CREATE ONE natively
                 target_app = known_companies.get(extracted_company.lower())
                 
                 if not target_app:
@@ -159,7 +173,7 @@ async def run_inbox_scanner_async(user_id: int):
                         company_name=extracted_company,
                         application_type="Discovered (Email)",
                         status="applied",
-                        notes=f"Auto-imported from Gmail on {datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
+                        notes=f"Auto-imported by Heuristic Engine from Gmail on {datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
                     )
                     db.add(target_app)
                     await db.flush() # get ID
