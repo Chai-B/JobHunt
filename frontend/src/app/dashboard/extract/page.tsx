@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Sparkles, Users, Briefcase, Save, Trash2, ArrowRight } from "lucide-react";
+import { Sparkles, Users, Briefcase, Save, Trash2, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function ExtractorPage() {
@@ -128,100 +128,158 @@ export default function ExtractorPage() {
     };
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
-                        <Sparkles className="h-6 w-6" />
+                    <h1 className="text-4xl font-bold tracking-tight text-foreground flex items-center gap-3 font-sans">
+                        <Sparkles className="h-8 w-8 text-primary animate-pulse" />
                         Universal Extractor
                     </h1>
-                    <p className="text-muted-foreground mt-1 text-sm">Paste any raw text—emails, LinkedIn profiles, or job descriptions—and we&apos;ll instantly parse it.</p>
+                    <p className="text-muted-foreground mt-2 text-base max-w-2xl">
+                        AI-powered parsing for structured and unstructured data. Paste spreadsheets, emails, or job descriptions to extract high-quality leads.
+                    </p>
                 </div>
                 {results.length > 0 && (
-                    <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={handleDiscardAll} className="text-destructive border-destructive/20 hover:bg-destructive/10">
+                    <div className="flex gap-3 animate-in fade-in zoom-in duration-300">
+                        <Button
+                            variant="outline"
+                            size="lg"
+                            onClick={handleDiscardAll}
+                            className="text-destructive border-destructive/20 hover:bg-destructive/10 rounded-xl px-6"
+                        >
                             <Trash2 className="w-4 h-4 mr-2" /> Discard All
                         </Button>
-                        <Button size="sm" onClick={handleSaveAll} className="bg-primary text-primary-foreground">
+                        <Button
+                            size="lg"
+                            onClick={handleSaveAll}
+                            className="bg-primary text-primary-foreground hover:opacity-90 rounded-xl px-8 shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-all hover:scale-105 active:scale-95"
+                        >
                             <Save className="w-4 h-4 mr-2" /> Save All Contacts
                         </Button>
                     </div>
                 )}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <Card className="bg-card border-border shadow-sm flex flex-col h-full">
-                    <CardHeader className="pb-3 border-b border-border">
-                        <CardTitle className="text-lg">Raw Text Data</CardTitle>
-                        <CardDescription>We&apos;ll look for names, emails, companies, and job titles.</CardDescription>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                {/* Input Column */}
+                <Card className="lg:col-span-5 bg-card/50 backdrop-blur-xl border-border/50 shadow-2xl flex flex-col h-full rounded-2xl overflow-hidden group">
+                    <CardHeader className="pb-3 border-b border-border/50 bg-secondary/20">
+                        <CardTitle className="text-xl font-semibold flex items-center gap-2">
+                            Raw Input
+                            <Badge variant="secondary" className="text-[10px] uppercase tracking-tighter">Draft</Badge>
+                        </CardTitle>
+                        <CardDescription className="text-sm">We&apos;ll automatically identify Email, Company, Name, and Role.</CardDescription>
                     </CardHeader>
-                    <CardContent className="pt-4 flex-grow flex flex-col gap-4">
-                        <Textarea
-                            placeholder="Paste text here..."
-                            className="flex-grow min-h-[400px] font-mono text-sm resize-none bg-background border-border"
-                            value={rawText}
-                            onChange={(e) => setRawText(e.target.value)}
-                        />
+                    <CardContent className="pt-6 flex-grow flex flex-col gap-6">
+                        <div className="relative group/textarea">
+                            <Textarea
+                                placeholder="Paste spreadsheet data or raw text here..."
+                                className="flex-grow min-h-[450px] font-mono text-sm resize-none bg-background/30 border-border/50 focus:border-primary/50 rounded-xl transition-all p-4 leading-relaxed"
+                                value={rawText}
+                                onChange={(e) => setRawText(e.target.value)}
+                            />
+                            <div className="absolute bottom-4 right-4 text-[10px] text-muted-foreground/50 font-mono">
+                                {rawText.length} characters
+                            </div>
+                        </div>
                         <Button
-                            className="w-full gap-2 bg-foreground text-background"
+                            className="w-full h-14 text-lg font-semibold gap-3 bg-foreground text-background hover:bg-foreground/90 rounded-xl shadow-xl transition-all hover:gap-5"
                             disabled={!rawText.trim() || processing}
                             onClick={handleExtract}
                         >
-                            {processing ? "Extracting..." : "Extract Data"}
-                            {!processing && <ArrowRight className="w-4 h-4" />}
+                            {processing ? "Analysing Text..." : "Begin Extraction"}
+                            {!processing && <ArrowRight className="w-5 h-5" />}
                         </Button>
                     </CardContent>
                 </Card>
 
-                <div className="flex flex-col gap-4 h-full xl:max-h-[700px] overflow-y-auto pr-2">
+                {/* Results Column */}
+                <div className="lg:col-span-7 flex flex-col gap-4 h-full xl:max-h-[750px] overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-border">
                     {results.length === 0 && !processing && (
-                        <div className="h-[400px] flex flex-col items-center justify-center text-muted-foreground border border-dashed border-border rounded-lg bg-card/50">
-                            <Sparkles className="w-8 h-8 opacity-20 mb-3" />
-                            <p className="text-sm font-medium text-foreground">Awaiting Input</p>
-                            <p className="text-xs text-center max-w-[200px] mt-1">Paste something on the left to see the magic happen.</p>
+                        <div className="h-[450px] flex flex-col items-center justify-center text-muted-foreground border border-dashed border-border/50 rounded-2xl bg-card/20 backdrop-blur-sm animate-pulse">
+                            <Sparkles className="w-12 h-12 opacity-10 mb-5" />
+                            <p className="text-lg font-medium text-foreground/60">Awaiting Data Input</p>
+                            <p className="text-sm text-center max-w-[280px] mt-2 leading-relaxed opacity-50 font-sans">
+                                Once you provide raw text, our AI will generate structured contact and job blocks here.
+                            </p>
                         </div>
                     )}
 
                     {results.map((r, i) => (
-                        <Card key={i} className="bg-card border-border shadow-md animate-in slide-in-from-right-4 relative overflow-hidden">
-                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${r.type === 'contact' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
+                        <Card key={i} className="bg-card/40 backdrop-blur-md border-border/50 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 relative overflow-hidden rounded-2xl group/card">
+                            {/* Accent indicator */}
+                            <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${r.type === 'contact' ? 'bg-blue-500/80' : 'bg-emerald-500/80'} group-hover/card:w-2 transition-all`} />
 
-                            <CardHeader className="pb-3 pt-4 pl-6">
-                                <div className="flex justify-between items-start">
-                                    <div className="flex items-center gap-2">
-                                        {r.type === 'contact' ? <Users className="w-4 h-4 text-blue-500" /> : <Briefcase className="w-4 h-4 text-emerald-500" />}
-                                        <CardTitle className="text-base uppercase tracking-wider text-muted-foreground">
-                                            Found {r.type === 'contact' ? 'Contact' : 'Job Posting'}
+                            <CardHeader className="pb-4 pt-6 pl-8 pr-6 border-b border-border/20 bg-secondary/10">
+                                <div className="flex justify-between items-center">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-lg ${r.type === 'contact' ? 'bg-blue-500/10 text-blue-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                                            {r.type === 'contact' ? <Users className="w-5 h-5" /> : <Briefcase className="w-5 h-5" />}
+                                        </div>
+                                        <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">
+                                            {r.type === 'contact' ? 'Contact Found' : 'Job Inferred'}
                                         </CardTitle>
                                     </div>
-                                    <Badge variant="outline" className="text-[10px] font-mono border-border bg-secondary">
-                                        {(r.confidence * 100).toFixed(0)}% Match
+                                    <Badge variant="outline" className="text-[10px] font-mono border-border/50 bg-background/50 backdrop-blur-sm px-3 py-1">
+                                        {(r.confidence * 100).toFixed(0)}% MATCH
                                     </Badge>
                                 </div>
                             </CardHeader>
-                            <CardContent className="pl-6 pb-2">
+                            <CardContent className="pl-8 pt-6 pb-6 space-y-4">
                                 {r.type === 'contact' && (
-                                    <div className="space-y-2 text-sm">
-                                        <div className="flex gap-2"><span className="text-muted-foreground w-20">Email:</span> <strong className="text-blue-400">{r.data.email}</strong></div>
-                                        <div className="flex gap-2"><span className="text-muted-foreground w-20">Company:</span> <strong className="text-primary">{r.data.company}</strong></div>
-                                        <div className="flex gap-2"><span className="text-muted-foreground w-20">Name:</span> <strong>{r.data.name || "—"}</strong></div>
-                                        <div className="flex gap-2"><span className="text-muted-foreground w-20">Role:</span> <strong className="text-muted-foreground">{r.data.role || "—"}</strong></div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
+                                        <div className="space-y-1">
+                                            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter block">Email Address</span>
+                                            <strong className="text-base text-blue-400 font-mono break-all">{r.data.email}</strong>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter block">Current Company</span>
+                                            <div className="flex items-center gap-2">
+                                                <strong className="text-base text-primary">{r.data.company}</strong>
+                                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500/50" />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter block">Lead Name</span>
+                                            <strong className="text-base text-foreground/90">{r.data.name || "—"}</strong>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter block">Professional Role</span>
+                                            <Badge variant="secondary" className="mt-0.5 rounded-md px-2 py-0.5 text-[11px] font-medium border-border/50">
+                                                {r.data.role || "Not Identified"}
+                                            </Badge>
+                                        </div>
                                     </div>
                                 )}
                                 {r.type === 'job' && (
-                                    <div className="space-y-2 text-sm">
-                                        <div className="flex gap-2"><span className="text-muted-foreground w-20">Title:</span> <strong>{r.data.title}</strong></div>
-                                        <div className="flex gap-2"><span className="text-muted-foreground w-20">Company:</span> <strong>{r.data.company}</strong></div>
-                                        <div className="flex gap-2"><span className="text-muted-foreground w-20">Location:</span> <strong>{r.data.location}</strong></div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter block">Role Title</span>
+                                            <strong className="text-base text-emerald-400">{r.data.title}</strong>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter block">Organisation</span>
+                                            <strong className="text-base text-foreground/90">{r.data.company}</strong>
+                                        </div>
                                     </div>
                                 )}
                             </CardContent>
-                            <CardFooter className="pl-6 pt-2 pb-4 flex gap-2 justify-end bg-secondary/20">
-                                <Button variant="ghost" size="sm" onClick={() => handleDiscard(i)} className="text-muted-foreground hover:text-destructive">
-                                    <Trash2 className="w-4 h-4 mr-1" /> Discard
+                            <CardFooter className="pl-8 pt-4 pb-4 pr-6 flex gap-3 justify-end bg-secondary/5 border-t border-border/10">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDiscard(i)}
+                                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-lg px-4"
+                                >
+                                    <Trash2 className="w-4 h-4 mr-2" /> Discard
                                 </Button>
-                                <Button size="sm" onClick={() => handleSaveEntity(r, i)} className="bg-foreground text-background">
-                                    <Save className="w-4 h-4 mr-1" /> Save {r.type === 'contact' ? 'Contact' : 'Job'}
+                                <Button
+                                    size="sm"
+                                    onClick={() => handleSaveEntity(r, i)}
+                                    className="bg-foreground text-background rounded-lg px-5 font-semibold transition-all hover:px-7"
+                                >
+                                    <Save className="w-4 h-4 mr-2" />
+                                    Confirm & Save
                                 </Button>
                             </CardFooter>
                         </Card>
