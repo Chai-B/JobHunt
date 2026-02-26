@@ -124,5 +124,5 @@ async def gmail_callback(request: Request, code: str, state: str, db: AsyncSessi
         return {"message": "Gmail connected successfully. You can close this window.", "success": True}
         
     except Exception as e:
-        logger.error(f"Failed to fetch Google OAuth token: {e}")
-        raise HTTPException(status_code=400, detail="Failed to connect Gmail.")
+        logger.error(f"Failed to fetch Google OAuth token: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Failed to connect Gmail: {str(e)}")
