@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Header
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
@@ -124,8 +125,24 @@ async def gmail_callback(request: Request, code: str, state: str, db: AsyncSessi
         
         await db.commit()
         
-        # Once successful, close the popup and notify frontend
-        return {"message": "Gmail connected successfully. You can close this window.", "success": True}
+        # Return an HTML script that automatically closes the popup and signals the parent window
+        return HTMLResponse("""
+            <html>
+                <body>
+                    <script>
+                        if (window.opener) {
+                            // Try to notify the parent window to refresh
+                            window.opener.postMessage('gmail_connected', '*');
+                        }
+                        // Close the popup
+                        window.close();
+                        
+                        // Fallback text if popup blocker prevents automatic closing
+                        document.body.innerHTML = "<h3>Gmail connected successfully! You can close this window and refresh your settings page.</h3>";
+                    </script>
+                </body>
+            </html>
+        """)
         
     except Exception as e:
         logger.error(f"Failed to fetch Google OAuth token: {str(e)}")
