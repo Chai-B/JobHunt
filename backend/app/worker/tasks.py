@@ -639,10 +639,6 @@ async def run_cold_mail_async(user_id: int, contact_id: int, template_id: int, r
                 logger.error("Missing required context/entities for cold mail.")
                 return
 
-            if not settings.gemini_api_keys:
-                logger.error("No Gemini key configured for cold mail personalization.")
-                return
-                
             if getattr(settings, 'use_gmail_for_send', False):
                 if not getattr(settings, 'gmail_access_token', None):
                     logger.error("Missing Gmail tokens but use_gmail_for_send is enabled.")
@@ -652,63 +648,37 @@ async def run_cold_mail_async(user_id: int, contact_id: int, template_id: int, r
                     logger.error("Missing SMTP Configuration in User Settings.")
                     return
 
-            # Add Gemini customization
-            api_key = settings.gemini_api_keys.split(",")[0].strip()
-            genai.configure(api_key=api_key)
-            model_name = settings.preferred_model or "gemini-2.0-flash"
-            model = genai.GenerativeModel(model_name)
-            
-            user_profile = f"Name: {user.full_name}, Bio: {user.bio} LinkedIn: {user.linkedin_url}"
-            resume_text = resume.raw_text[:15000] if resume.raw_text else ""
-            
-            prompt = f"""
-            Personalize this generic email template for the recipient.
-            
-            RECIPIENT CONTACT:
-            Name: {contact.name or 'Unknown'}
-            Role: {contact.role or 'Unknown'}
-            Company: {contact.company or 'Unknown'}
-            
-            SENDER PROFILE:
-            {user_profile}
-            Resume Text: {resume_text}
-            
-            TEMPLATE SUBJECT: {template.subject}
-            TEMPLATE BODY: {template.body_text}
-            
-            Instructions:
-            1. Replace all placeholders in the template with actual details.
-            2. Sound professional, natural, and persuasive.
-            3. Keep the spirit of the original template.
-            
-            Output strictly as JSON:
-            {{
-                "subject": "Personalized Subject Line",
-                "body": "Personalized email body text formatted nicely with linebreaks"
-            }}
-            """
-            
-            ai_response = model.generate_content(prompt)
-            raw_json_str = ai_response.text
-            if raw_json_str.startswith('```json'):
-                raw_json_str = raw_json_str.split('```json')[1].split('```')[0].strip()
-            elif raw_json_str.startswith('```'):
-                raw_json_str = raw_json_str.split('```')[1].split('```')[0].strip()
-                
-            email_data = json.loads(raw_json_str, strict=False)
-            
+            # Build tag replacement map
+            tag_map = {
+                "{{contact_name}}": contact.name or "",
+                "{{job_title}}": contact.role or "",
+                "{{company}}": contact.company or "",
+                "{{experience_years}}": getattr(user, 'experience_years', "") or "",
+                "{{skills}}": getattr(user, 'skills', "") or "",
+                "{{linkedin}}": user.linkedin_url or "",
+                "{{portfolio}}": getattr(user, 'portfolio_url', "") or "",
+                "{{user_name}}": user.full_name or "",
+            }
+
+            # Fill template tags
+            subject = template.subject
+            body = template.body_text
+            for tag, value in tag_map.items():
+                subject = subject.replace(tag, str(value))
+                body = body.replace(tag, str(value))
+
             msg = MIMEMultipart()
             msg['From'] = settings.smtp_username or "user@example.com"
             msg['To'] = contact.email
-            msg['Subject'] = email_data["subject"]
-            msg.attach(MIMEText(email_data["body"], 'plain'))
+            msg['Subject'] = subject
+            msg.attach(MIMEText(body, 'plain'))
             
             port = settings.smtp_port or 587
             try:
                 if getattr(settings, 'use_gmail_for_send', False) and getattr(settings, 'gmail_access_token', None) and getattr(settings, 'gmail_refresh_token', None):
                     from app.services.gmail_service import GmailService
                     gmail_service = GmailService(settings.gmail_access_token, settings.gmail_refresh_token)
-                    gmail_service.send_email(contact.email, email_data["subject"], email_data["body"])
+                    gmail_service.send_email(contact.email, subject, body)
                     success_msg = f"Successfully sent cold mail to {contact.email} via Gmail"
                 else:
                     server = smtplib.SMTP(settings.smtp_server, port)
