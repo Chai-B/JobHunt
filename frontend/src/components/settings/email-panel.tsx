@@ -21,7 +21,7 @@ export function EmailPanel({ formData, handleChange, setFormData, handleGmailCon
             {/* Primary Integration: Gmail & Automation */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-10 p-8 bg-card border border-border shadow-sm rounded-xl relative overflow-hidden group">
                 <div className="col-span-1 lg:col-span-1 lg:border-r border-border pr-6 relative z-10 flex flex-col gap-2">
-                    <h3 className="text-lg font-semibold text-foreground flex items-center gap-2 italic">
+                    <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
                         <Sparkles className="w-4 h-4 text-primary" /> Connectivity
                     </h3>
                     <p className="text-xs text-muted-foreground leading-relaxed">Gmail OAuth and pipeline automation.</p>
@@ -84,7 +84,7 @@ export function EmailPanel({ formData, handleChange, setFormData, handleGmailCon
             {/* Legacy SMTP Fallback */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-10 p-8 bg-card/40 border border-border shadow-sm rounded-xl relative overflow-hidden group">
                 <div className="col-span-1 lg:col-span-1 lg:border-r border-border pr-6 relative z-10 flex flex-col gap-2">
-                    <h3 className="text-lg font-semibold text-foreground flex items-center gap-2 italic"><Network className="w-4 h-4 text-muted-foreground" /> Protocols</h3>
+                    <h3 className="text-lg font-semibold text-foreground flex items-center gap-2"><Network className="w-4 h-4 text-muted-foreground" /> Protocols</h3>
                     <p className="text-xs text-muted-foreground leading-relaxed">Legacy SMTP fallback services.</p>
                 </div>
                 <div className="col-span-1 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
