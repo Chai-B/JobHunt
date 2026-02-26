@@ -132,7 +132,10 @@ export default function SettingsPage() {
     const handleGmailConnect = async () => {
         try {
             const token = localStorage.getItem("token");
-            const res = await fetch(`${API_BASE_URL}/api/v1/gmail/connect`, {
+            // Grab the current visible window URL, stripping off any existing query parameters
+            const returnUrl = encodeURIComponent(window.location.href.split('?')[0]);
+
+            const res = await fetch(`${API_BASE_URL}/api/v1/gmail/connect?return_url=${returnUrl}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (!res.ok) throw new Error("Could not initialize Gmail connect sequence.");

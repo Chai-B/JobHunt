@@ -25,7 +25,7 @@ SCOPES = [
 ]
 
 @router.get("/connect")
-async def connect_gmail(request: Request, current_user: User = Depends(get_current_user), token: str = Depends(reusable_oauth2)):
+async def connect_gmail(request: Request, return_url: str = None, current_user: User = Depends(get_current_user), token: str = Depends(reusable_oauth2)):
     """
     Initiates the OAuth flow to connect a Gmail account.
     Returns the authorization URL.
@@ -57,11 +57,14 @@ async def connect_gmail(request: Request, current_user: User = Depends(get_curre
         # Needs to match the authorized redirect URI
         flow.redirect_uri = client_config["web"]["redirect_uris"][0]
         
+        
+        state_payload = f"{token}:::{return_url}" if return_url else token
+        
         authorization_url, state = flow.authorization_url(
             access_type='offline',
             include_granted_scopes='true',
             prompt='consent',
-            state=token # Pass the JWT as state so we can read it on callback
+            state=state_payload # Pass the JWT & return_url as state so we can read it on callback
         )
         
         return {"auth_url": authorization_url, "state": state}
@@ -78,7 +81,13 @@ async def gmail_callback(request: Request, code: str, state: str, db: AsyncSessi
     if not code or not state:
         raise HTTPException(status_code=400, detail="No code or state provided.")
         
-    current_user = await get_current_user(db=db, token=state)
+    if ":::" in state:
+        token, return_url = state.split(":::", 1)
+    else:
+        token = state
+        return_url = None
+        
+    current_user = await get_current_user(db=db, token=token)
         
     base_url = str(request.base_url).rstrip('/')
     if "localhost" not in base_url and "127.0.0.1" not in base_url and base_url.startswith("http://"):
@@ -125,11 +134,15 @@ async def gmail_callback(request: Request, code: str, state: str, db: AsyncSessi
         
         await db.commit()
         
-        # Return a clean 302 redirect back to the frontend dashboard settings page
-        frontend_url = "http://localhost:3000"
+        # Return a clean 302 redirect back to the exact frontend URL the user started from
+        if return_url:
+            separator = "&" if "?" in return_url else "?"
+            return RedirectResponse(f"{return_url}{separator}gmail=connected")
+            
+        frontend_url = "https://job-hunt-ebon.vercel.app"
         if hasattr(settings, "BACKEND_CORS_ORIGINS") and settings.BACKEND_CORS_ORIGINS:
-            # Safely cast AnyHttpUrl to string and strip trailing slash
-            frontend_url = str(settings.BACKEND_CORS_ORIGINS[0]).rstrip('/')
+            # Safely cast AnyHttpUrl to string and strip trailing slash. Use last origin as prod fallback.
+            frontend_url = str(settings.BACKEND_CORS_ORIGINS[-1]).rstrip('/')
             
         return RedirectResponse(f"{frontend_url}/dashboard/settings?gmail=connected")
         
