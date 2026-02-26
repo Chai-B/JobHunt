@@ -181,57 +181,8 @@ export default function SettingsPage() {
                 <GeneralPanel formData={formData} handleChange={handleChange} />
                 <ScraperPanel formData={formData} handleChange={handleChange} />
                 <AIPanel formData={formData} handleChange={handleChange} />
-                <EmailPanel formData={formData} handleChange={handleChange} />
+                <EmailPanel formData={formData} handleChange={handleChange} setFormData={setFormData} handleGmailConnect={handleGmailConnect} />
                 <DatabasePanel formData={formData} handleChange={handleChange} />
-
-                {/* Additional Agent Options */}
-                <div className="p-6 bg-card border border-border rounded-xl shadow-sm space-y-6">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Mail className="w-5 h-5 text-foreground" />
-                        <h2 className="text-lg font-semibold">Gmail & Automation Integrations</h2>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                            <Label className="text-sm font-medium">Connect Gmail Account</Label>
-                            <p className="text-xs text-muted-foreground">Authorize JobHunt to send cold mail directly via your Gmail.</p>
-                            {formData.gmail_connected ? (
-                                <div className="w-full flex items-center justify-center gap-2 h-9 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-sm font-medium">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                                    Gmail Connected
-                                </div>
-                            ) : (
-                                <Button type="button" variant="outline" onClick={handleGmailConnect} className="w-full">
-                                    Connect Gmail API
-                                </Button>
-                            )}
-                        </div>
-
-                        <div className="space-y-4">
-                            <Label className="text-sm font-medium">Use Gmail for Cold Emailing</Label>
-                            <div className="flex items-center gap-3 mt-2">
-                                <Input type="checkbox" name="use_gmail_for_send" checked={formData.use_gmail_for_send} onChange={(e) => setFormData({ ...formData, use_gmail_for_send: e.target.checked })} className="w-4 h-4 cursor-pointer" />
-                                <span className="text-sm text-foreground">Enabled</span>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <Label className="text-sm font-medium">Automate Background Playwright Applications</Label>
-                            <div className="flex items-center gap-3 mt-2">
-                                <Input type="checkbox" name="auto_apply_enabled" checked={formData.auto_apply_enabled} onChange={(e) => setFormData({ ...formData, auto_apply_enabled: e.target.checked })} className="w-4 h-4 cursor-pointer" />
-                                <span className="text-sm text-foreground">Enabled</span>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <Label className="text-sm font-medium">Automate Cold Mailing (AI Pipeline)</Label>
-                            <div className="flex items-center gap-3 mt-2">
-                                <Input type="checkbox" name="cold_mail_automation_enabled" checked={formData.cold_mail_automation_enabled} onChange={(e) => setFormData({ ...formData, cold_mail_automation_enabled: e.target.checked })} className="w-4 h-4 cursor-pointer" />
-                                <span className="text-sm text-foreground">Enabled</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <div className="flex justify-end pt-6">
                     <Button type="submit" disabled={saving} className="h-12 px-10 bg-foreground hover:opacity-90 text-background font-semibold transition-all rounded-lg shadow-lg">
