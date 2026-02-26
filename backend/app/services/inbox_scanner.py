@@ -106,9 +106,16 @@ async def run_inbox_scanner_async(user_id: int):
             }
 
             matched_count = 0
+            
+            from app.db.models.action_log import ActionLog
+            log_start = ActionLog(user_id=user_id, action_type="scraper", status="running", message="Running Heuristic Inbox Sync")
+            db.add(log_start)
+            await db.commit()
+            
             for email in emails:
                 text_to_check = (email['subject'] + " " + email['body']).lower()
                 sender = email['sender'].lower()
+                subject_lower = email['subject'].lower()
                 
                 # Heuristic 1: Extract Company Name
                 extracted_company = None
@@ -211,8 +218,17 @@ async def run_inbox_scanner_async(user_id: int):
             user_settings.last_inbox_sync_time = func.now()
             db.add(user_settings)
             
+            log_start.status = "completed"
+            log_start.message = f"Heuristic Inbox Sync completed. Integrated {matched_count} new updates."
+            db.add(log_start)
+            
             await db.commit()
             logger.info(f"Inbox Scan completed for User {user_id}. Integrated {matched_count} new timeline nodes.")
             
         except Exception as e:
             logger.error(f"Inbox Scanner failed for User {user_id}: {e}")
+            if 'log_start' in locals():
+                log_start.status = "failed"
+                log_start.message = f"Heuristic Inbox Sync failed: {str(e)}"
+                db.add(log_start)
+                await db.commit()
