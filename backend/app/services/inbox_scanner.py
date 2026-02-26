@@ -155,10 +155,10 @@ Status Mapping Guide:
 
                 # Metadata Assignment (LLM or Heuristic Fallback)
                 if extraction_json:
-                    extracted_company = extraction_json.get('company_name', '').strip().title()
-                    extracted_role = extraction_json.get('role', '').strip().title()
-                    extracted_location = extraction_json.get('location', '').strip().title()
-                    detected_status = extraction_json.get('status', '').lower()
+                    extracted_company = (extraction_json.get('company_name') or '').strip().title()
+                    extracted_role = (extraction_json.get('role') or '').strip().title()
+                    extracted_location = (extraction_json.get('location') or '').strip().title()
+                    detected_status = (extraction_json.get('status') or '').lower()
                     contact_name = extraction_json.get('contact_name')
                     contact_email = extraction_json.get('contact_email')
                     source_url = "https://www.linkedin.com" if extraction_json.get('source') == "LinkedIn" else None
@@ -188,10 +188,11 @@ Status Mapping Guide:
                 if not extracted_company or extracted_company.lower() in ("unknown", "linkedin", "greenhouse"):
                     continue 
                 
-                # Bind or Auto-Create
+                # Bind or Auto-Create (Robust Deduplication)
                 target_app = known_companies.get(extracted_company.lower())
                 if not target_app:
-                    target_app = next((a for c, a in known_companies.items() if c in extracted_company.lower() or extracted_company.lower() in c), None)
+                    # Search for existing company in DB if not in local cache or do fuzzy lookup
+                    target_app = next((a for c, a in known_companies.items() if (c in extracted_company.lower() or extracted_company.lower() in c) and len(c) > 3), None)
                 
                 if not target_app:
                     logger.info(f"Auto-creating missing application for: {extracted_company}")
@@ -221,12 +222,23 @@ Status Mapping Guide:
                     db.add(target_app)
                     await db.flush() 
                     known_companies[extracted_company.lower()] = target_app
+                else:
+                    # Update existing app with new info if missing
+                    if not target_app.contact_role and extracted_role:
+                        target_app.contact_role = extracted_role
+                    if not target_app.location and extracted_location:
+                        target_app.location = extracted_location
+                    if not target_app.contact_name and contact_name:
+                        target_app.contact_name = contact_name
+                    if not target_app.contact_email and contact_email:
+                        target_app.contact_email = contact_email
 
                 if detected_status:
                     ranks = {"applied": 1, "interviewed": 2, "assessment": 3, "rejected": 4, "selected": 5}
                     curr_rank = ranks.get(target_app.status, 0)
                     new_rank = ranks.get(detected_status, 0)
                     
+                    # Advance status only if it's a forward move or terminal rejection
                     if new_rank > curr_rank or detected_status == "rejected":
                         target_app.status = detected_status
                     
