@@ -131,7 +131,9 @@ async def generate_ai_template(
     2. Be extremely concise. Talk like a real person sending an email. Do not sound like a machine.
     3. The Subject Line MUST be simple, clear, and look like it was typed manually by a busy person (NO Title Case for every word).
     4. Seamlessly incorporate {{{{experience_years}}}}, current/past role as {{{{recent_role}}}}, and top projects: {{{{top_projects}}}} into the prose natively.
-    5. Do NOT include placeholders like [Your Name] or <Company>. ONLY use the exact {{{{variable}}}} formatted tags.
+    5. UNIQUE CONTENT ONLY: Do not mention specific projects or achievements more than once in the text.
+    6. SUFFIX AWARENESS: The system will append the word 'years' after `{{{{experience_years}}}}`, so do NOT write "for {{{{experience_years}}}} years" anymore; just write "with {{{{experience_years}}}} of experience" or similar.
+    7. Do NOT include placeholders like [Your Name] or <Company>. ONLY use the exact {{{{variable}}}} formatted tags.
     
     Return STRICTLY valid JSON ONLY:
     {{

@@ -60,14 +60,24 @@ async def process_resume_async(resume_id: int, file_bytes: bytes, filename: str)
             
             if settings and settings.gemini_api_keys:
                 extract_prompt = f"""You are a professional resume parser. Extract the following key details from this resume text to be used directly as replacement variables in cold emails and templates. 
-Return STRICTLY valid JSON with these exact keys. Your output values MUST strictly be concise, tight phrases without fluff. Do not write full sentences. Write them as if they are being dropped into the middle of a sentence (e.g. "3" instead of "I have 3 years of experience").
+Return STRICTLY valid JSON with these exact keys. 
+Your output values MUST strictly be concise, tight phrases without fluff. Do not write full sentences. Write them as if they are being dropped into the middle of a sentence.
+
+CONSTRAINTS:
+- "experience_years": Integer string ONLY (e.g. "5"). NO reasoning, NO text like "estimated from". If unknown, use "0".
+- "skills": Top 10 skills max, comma separated (e.g. "Python, React, AWS").
+- "top_projects": 1 short phrase per project, max 2 projects (e.g. "built a scalable API and optimized DB queries").
+- "education": Shortest form (e.g. "BTech CS, XYZ Univ").
+- "recent_role": Specific title and company (e.g. "Senior Dev at ABC").
+- "certifications": comma separated.
+
 {{
-  "education": "e.g. BTech in CS from XYZ Univ",
-  "recent_role": "e.g. Software Engineer at ABC Corp",
-  "top_projects": "e.g. built a high-scale microservice architecture",
-  "certifications": "e.g. AWS Certified Solutions Architect",
-  "experience_years": "e.g. 5",
-  "skills": "e.g. Python, React, PostgreSQL"
+  "education": "...",
+  "recent_role": "...",
+  "top_projects": "...",
+  "certifications": "...",
+  "experience_years": "...",
+  "skills": "..."
 }}
 If a field is not found or cannot be reasonably inferred, omit the key entirely or set it to an empty string "".
 Resume Text:
@@ -717,9 +727,11 @@ The specific variables listed in MISSING_TAGS have no user data available.
 
 CRITICAL INSTRUCTIONS:
 1. You must CAREFULLY delete or rewrite ONLY the specific clause, sentence, or phrase that relied on the missing variables listed below.
-2. DO NOT modify, resolve, or remove ANY OTHER `{{{{variables}}}}` present in the text. You must output all other `{{{{variables}}}}` EXACTLY as they appear in the original template.
-3. If the subject contains the missing tag, modify the subject.
-4. Do not invent replacement fake names or data. Just structure the sentence around the gap.
+2. If a variable is missing, you must also remove any introductory or descriptive phrases associated with it (e.g., "My portfolio, which includes {{portfolio}}," should be deleted entirely if {{portfolio}} is missing).
+3. DO NOT modify, resolve, or remove ANY OTHER `{{{{variables}}}}` present in the text. You must output all other `{{{{variables}}}}` EXACTLY as they appear in the original template.
+4. If the subject contains the missing tag, modify the subject.
+5. Fix any resulting orphaned punctuation (e.g., double spaces, trailing commas, or weird periods).
+6. Do not invent replacement fake names or data. Just structure the sentence around the gap.
 
 MISSING_TAGS: {', '.join(missing_tags)}
 
@@ -754,6 +766,7 @@ Return STRICTLY valid JSON ONLY:
             UPLOAD_DIR = Path("app/uploads/resumes")
             file_path = UPLOAD_DIR / f"{resume.id}_{resume.filename}"
             has_attachment = file_path.exists()
+            logger.info(f"Checking for resume at {file_path}. Exists: {has_attachment}")
             attachment_data = None
             if has_attachment:
                 with open(file_path, "rb") as f:

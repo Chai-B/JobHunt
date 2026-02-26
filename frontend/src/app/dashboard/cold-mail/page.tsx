@@ -588,17 +588,25 @@ export default function ColdMailPage() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <div className="py-4 space-y-4">
-                        {missingTags.map(tag => (
-                            <div key={tag} className="space-y-1.5">
-                                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{tag.replace(/_/g, ' ')}</Label>
-                                <Input
-                                    placeholder={`Enter ${tag.replace(/_/g, ' ')}...`}
-                                    value={manualTagValues[tag] || ""}
-                                    onChange={(e) => setManualTagValues(prev => ({ ...prev, [tag]: e.target.value }))}
-                                    className="bg-background/50 border-border/50 h-10 rounded-xl focus:ring-primary/20"
-                                />
-                            </div>
-                        ))}
+                        {missingTags.map(tag => {
+                            const isProfile = ['user_name', 'user_email', 'user_phone', 'linkedin', 'github', 'portfolio'].includes(tag);
+                            return (
+                                <div key={tag} className="space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{tag.replace(/_/g, ' ')}</Label>
+                                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground font-sans tracking-wide">
+                                            {isProfile ? "Profile Source" : "Resume Source"}
+                                        </span>
+                                    </div>
+                                    <Input
+                                        placeholder={`Enter ${tag.replace(/_/g, ' ')}...`}
+                                        value={manualTagValues[tag] || ""}
+                                        onChange={(e) => setManualTagValues(prev => ({ ...prev, [tag]: e.target.value }))}
+                                        className="bg-background/50 border-border/50 h-10 rounded-xl focus:ring-primary/20"
+                                    />
+                                </div>
+                            );
+                        })}
                     </div>
                     <AlertDialogFooter className="gap-2">
                         <AlertDialogCancel onClick={() => {
