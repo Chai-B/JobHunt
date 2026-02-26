@@ -177,6 +177,7 @@ async def run_inbox_scanner_async(user_id: int):
                     logger.info(f"Auto-creating missing application for: {extracted_company}")
                     target_app = Application(
                         user_id=user_id,
+                        job_id=None,
                         company_name=extracted_company,
                         application_type="Discovered (Email)",
                         status="applied",
