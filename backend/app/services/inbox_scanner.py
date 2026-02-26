@@ -43,44 +43,22 @@ class InboxScanner:
         logger.info(f"Found {len(messages)} potential emails matching query criteria.")
         
         email_data = []
-        def get_body_recursive(p):
-            inner_body = ""
-            if p.get('mimeType') == 'text/plain' and 'data' in p.get('body', {}):
-                try:
-                    raw_data = base64.urlsafe_b64decode(p['body']['data'])
-                    inner_body += raw_data.decode('utf-8', errors='replace')
-                except Exception as e:
-                    logger.warning(f"Failed to decode part: {e}")
-            
-            if 'parts' in p:
-                for part in p['parts']:
-                    inner_body += get_body_recursive(part)
-            return inner_body
-
-        for i, msg in enumerate(messages):
-            try:
-                logger.info(f"Processing email {i+1}/{len(messages)} [ID: {msg['id']}]")
-                msg_full = self.service.users().messages().get(userId='me', id=msg['id'], format='full').execute()
-                payload = msg_full.get('payload', {})
-                headers = payload.get('headers', [])
-                
-                subject = next((h['value'] for h in headers if h['name'].lower() == 'subject'), "No Subject")
-                sender = next((h['value'] for h in headers if h['name'].lower() == 'from'), "Unknown")
-                date = next((h['value'] for h in headers if h['name'].lower() == 'date'), "Unknown")
-                
-                body = get_body_recursive(payload)
-                    
-                email_data.append({
-                    "id": msg['id'],
-                    "subject": subject,
-                    "sender": sender,
-                    "date": date,
-                    "body": body[:5000] # Increased context slightly for better heuristics
-                })
-            except Exception as e:
-                logger.error(f"Error fetching detail for email {msg['id']}: {e}")
-                
-        return email_data
+def clean_body(text: str) -> str:
+    """Aggressively clean email body to minimize tokens while preserving core info."""
+    if not text: return ""
+    # Remove technical headers/footers often found in redirected emails
+    text = re.sub(r'-----Original Message-----.*$', '', text, flags=re.DOTALL | re.M)
+    text = re.sub(r'From:.*?\nTo:.*?\nSubject:.*?\n', '', text, flags=re.DOTALL | re.I)
+    
+    # Remove common signatures patterns (heuristic: many dashes or long blocks of lines with links)
+    text = re.sub(r'--\s*\n.*$', '', text, flags=re.DOTALL | re.M)
+    
+    # Collapse whitespace
+    lines = [line.strip() for line in text.split('\n') if line.strip()]
+    cleaned = " ".join(lines)
+    
+    # Limit to 1500 chars per email for batching safety
+    return cleaned[:1500]
 
 async def run_inbox_scanner_async(user_id: int):
     async with AsyncSessionLocal() as db:
@@ -88,188 +66,134 @@ async def run_inbox_scanner_async(user_id: int):
         user_settings = (await db.execute(select(UserSetting).where(UserSetting.user_id == user_id))).scalars().first()
         
         if not user_settings or not getattr(user_settings, 'gmail_access_token', None):
-            logger.info(f"User {user_id} does not have Gmail connected for scanning.")
             return
 
-        logger.info(f"Starting Heuristic Inbox Scanner for User {user_id}")
+        logger.info(f"Starting High-Performance Batch Inbox Scanner for User {user_id}")
         try:
+            from app.db.models.action_log import ActionLog
+            log_start = ActionLog(user_id=user_id, action_type="scraper", status="running", message="Running Batch AI Inbox Sync")
+            db.add(log_start)
+            await db.commit()
+
             scanner = InboxScanner(user_settings.gmail_access_token, getattr(user_settings, 'gmail_refresh_token', ''))
-            
-            # Use tracked watermark
             watermark = user_settings.last_inbox_sync_time
             emails = scanner.fetch_recent_emails(watermark=watermark, max_results=50)
             
-            # Fetch existing applications
-            apps_result = await db.execute(select(Application).where(Application.user_id == user_id))
-            applications = apps_result.scalars().all()
+            if not emails:
+                log_start.status = "success"
+                log_start.message = "Inbox Sync completed. No new emails found."
+                await db.commit()
+                return
+
+            # Group emails into batches of 5 for efficiency
+            BATCH_SIZE = 5
+            email_batches = [emails[i:i + BATCH_SIZE] for i in range(0, len(emails), BATCH_SIZE)]
             
-            # Build fast lookup for company matching
-            known_companies = {a.company_name.lower().strip(): a for a in applications if a.company_name}
-            
-            status_heuristics = {
-                "assessment": [r"case study", r"pre-hiring evaluation", r"test", r"task", r"assignment", r"presentation", r"shortlisted for hr round 1"],
-                "interviewed": [r"interview", r"schedule", r"huddle", r"meeting room", r"timings", r"office address", r"round 1"],
-                "rejected": [r"not moving forward", r"unfortunate", r"wish you all the best", r"another candidate", r"won't be able to move forward", r"not move forward"],
-                "selected": [r"offer", r"congratulations", r"onboard", r"welcome", r"hired", r"package", r"selected"],
-                "applied": [r"received", r"thank you for applying", r"application was sent", r"confirmed", r"interest in the"]
-            }
+            system_prompt = """You are an elite Recruitment Data Processor. 
+Task: Extract structured job application statuses from a list of emails.
+Statuses: [applied, interviewed, assessment, rejected, selected]
+
+Return JSON: 
+{
+  "extractions": [
+    {
+      "email_id": "string",
+      "company_name": "string",
+      "role": "string",
+      "location": "string",
+      "status": "applied|interviewed|assessment|rejected|selected",
+      "confidence": 0-1
+    }
+  ]
+}
+Precise Rules:
+1. company_name: Extract the hiring organization. Ignore 'LinkedIn', 'Internshala', 'Wellfound' unless they are the employer.
+2. role: The job title (e.g. Software Engineer).
+3. status: Map 'Round 1/2' or 'Schedule' to 'interviewed'. Map 'Test/Assignment' to 'assessment'. Map 'Not moving forward' to 'rejected'.
+4. If an email is NOT about a job application, set company_name to null.
+"""
 
             matched_count = 0
-            
-            from app.db.models.action_log import ActionLog
-            log_start = ActionLog(user_id=user_id, action_type="scraper", status="running", message="Running Heuristic Inbox Sync")
-            db.add(log_start)
-            await db.commit()
-            
-            for email in emails:
-                logger.info(f"Analyzing email: {email['subject']} from {email['sender']}")
-                
-                # LLM-Powered Extraction
-                extraction_json = None
-                system_prompt = """You are an elite Recruitment Data Agent. 
-Extract structured job application data from the email provided.
-Return ONLY a valid JSON object with these keys:
-- company_name: (string) The hiring company.
-- role: (string) The job title (e.g., "Machine Learning Engineer").
-- location: (string) Location (e.g., "Remote", "Gurgaon").
-- contact_name: (string) Name of the recruiter/sender.
-- contact_email: (string) Email of the recruiter.
-- status: (string) STRICTLY one of: [applied, interviewed, assessment, rejected, selected].
-- source: (string) e.g., "LinkedIn", "Direct".
+            # Fetch existing apps for deduplication
+            apps_result = await db.execute(select(Application).where(Application.user_id == user_id))
+            applications = {a.company_name.lower(): a for a in apps_result.scalars().all() if a.company_name}
 
-Status Mapping Guide:
-- 'applied': Thank you for applying, received application.
-- 'interviewed': Scheduling interview, invitation to chat, meeting link, huddle, round 1, round 2.
-- 'assessment': Case study, pre-hiring evaluation, test, assignment, presentation.
-- 'rejected': Not moving forward, unfortunately, wish you best, another candidate.
-- 'selected': Offer, congratulations, welcome onboard, hired.
-"""
-                prompt = f"Subject: {email['subject']}\nSender: {email['sender']}\nBody:\n{email['body']}"
+            for batch in email_batches:
+                batch_text = "\n---\n".join([f"ID: {e['id']}\nSubject: {e['subject']}\nSender: {e['sender']}\nBody: {clean_body(e['body'])}" for e in batch])
                 
-                extraction_json = {}
                 try:
-                    raw_llm = await call_llm(prompt, user_settings, is_json=True, system_prompt=system_prompt)
+                    raw_llm = await call_llm(batch_text, user_settings, is_json=True, system_prompt=system_prompt)
                     parsed = json.loads(raw_llm)
-                    if isinstance(parsed, dict):
-                        extraction_json = parsed
-                        logger.info(f"LLM Extraction Success: {extraction_json.get('company_name')} -> {extraction_json.get('status')}")
-                    else:
-                        logger.warning(f"LLM returned {type(parsed)} instead of dict. falling back.")
-                except Exception as e:
-                    logger.warning(f"LLM extraction failed for email {email['id']}: {e}. Falling back to heuristics.")
+                    extractions = parsed.get("extractions", [])
+                    
+                    for ext in extractions:
+                        if not ext.get("company_name") or ext.get("confidence", 0) < 0.3:
+                            continue
+                            
+                        email = next((e for e in batch if e['id'] == ext['email_id']), None)
+                        if not email: continue
 
-                # Metadata Assignment (LLM or Heuristic Fallback)
-                if extraction_json and isinstance(extraction_json, dict):
-                    extracted_company = (extraction_json.get('company_name') or '').strip().title()
-                    extracted_role = (extraction_json.get('role') or '').strip().title()
-                    extracted_location = (extraction_json.get('location') or '').strip().title()
-                    detected_status = (extraction_json.get('status') or '').lower()
-                    contact_name = extraction_json.get('contact_name')
-                    contact_email = extraction_json.get('contact_email')
-                    source_url = "https://www.linkedin.com" if extraction_json.get('source') == "LinkedIn" else None
-                else:
-                    # HEURISTIC FALLBACK (Keep previous logic but simplify)
-                    text_to_check = (email['subject'] + " " + email['body']).lower()
-                    sender = email['sender'].lower()
-                    subject_lower = email['subject'].lower()
-                    
-                    extracted_company = None
-                    extracted_role = None
-                    extracted_location = None
-                    detected_status = None
+                        co_name = ext['company_name'].strip().title()
+                        role = ext.get('role', '').strip().title()
+                        status = ext.get('status', 'applied').lower()
+                        loc = ext.get('location', '').strip().title()
 
-                    # Simplistic regex fallback
-                    app_subject_match = re.search(r'application to (.+?) (?:was sent|for)|application for .+? at (.+?)\b|update from (.+?)(?:\s|$)|sent to (.*?)(?:\s|$)', subject_lower)
-                    if app_subject_match:
-                        groups = [g for g in app_subject_match.groups() if g]
-                        extracted_company = groups[-1].strip().title()
-                    
-                    for s in ["selected", "rejected", "assessment", "interviewed", "applied"]:
-                        if any(kw in text_to_check for kw in status_heuristics.get(s, [])):
-                            detected_status = s
-                            break
+                        # Logic: Bind or Create
+                        target_app = applications.get(co_name.lower())
+                        if not target_app:
+                            # Fuzzy matching fallback
+                            target_app = next((a for c, a in applications.items() if (c in co_name.lower() or co_name.lower() in c) and len(c) > 3), None)
 
-                # Final validation block
-                if not extracted_company or extracted_company.lower() in ("unknown", "linkedin", "greenhouse"):
-                    continue 
-                
-                # Bind or Auto-Create (Robust Deduplication)
-                target_app = known_companies.get(extracted_company.lower())
-                if not target_app:
-                    # Search for existing company in DB if not in local cache or do fuzzy lookup
-                    target_app = next((a for c, a in known_companies.items() if (c in extracted_company.lower() or extracted_company.lower() in c) and len(c) > 3), None)
-                
-                if not target_app:
-                    logger.info(f"Auto-creating missing application for: {extracted_company}")
-                    
-                    # Fallback contact extraction if LLM failed
-                    if not extraction_json:
-                        email_match = re.search(r'<(.*?)>', email['sender'])
-                        if email_match:
-                            contact_email = email_match.group(1).strip()
-                            contact_name = email['sender'].split('<')[0].strip()
-                        else:
-                            contact_email = email['sender'].strip()
-                            contact_name = contact_email.split('@')[0]
-                    
-                    target_app = Application(
-                        user_id=user_id,
-                        company_name=extracted_company,
-                        application_type="Discovered (Email)",
-                        status=detected_status or "applied",
-                        contact_name=contact_name,
-                        contact_email=contact_email,
-                        contact_role=extracted_role,
-                        location=extracted_location,
-                        source_url=source_url if 'source_url' in locals() else None,
-                        notes=f"Auto-imported by AI Engine from Gmail on {datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
-                    )
-                    db.add(target_app)
-                    await db.flush() 
-                    known_companies[extracted_company.lower()] = target_app
-                else:
-                    # Update existing app with new info if missing
-                    if not target_app.contact_role and extracted_role:
-                        target_app.contact_role = extracted_role
-                    if not target_app.location and extracted_location:
-                        target_app.location = extracted_location
-                    if not target_app.contact_name and contact_name:
-                        target_app.contact_name = contact_name
-                    if not target_app.contact_email and contact_email:
-                        target_app.contact_email = contact_email
+                        if not target_app:
+                            logger.info(f"AI Sync: Creating new app for {co_name}")
+                            target_app = Application(
+                                user_id=user_id,
+                                company_name=co_name,
+                                application_type="Discovered (Email)",
+                                status=status,
+                                contact_role=role,
+                                location=loc,
+                                notes=f"Imported from Gmail on {datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
+                            )
+                            db.add(target_app)
+                            await db.flush()
+                            applications[co_name.lower()] = target_app
+                        
+                        # Update status if forward move or terminal
+                        ranks = {"applied": 1, "interviewed": 2, "assessment": 3, "rejected": 4, "selected": 5}
+                        if ranks.get(status, 0) > ranks.get(target_app.status, 0) or status == "rejected":
+                            target_app.status = status
+                        
+                        # Enrich missing metadata
+                        if role and not target_app.contact_role: target_app.contact_role = role
+                        if loc and not target_app.location: target_app.location = loc
 
-                if detected_status:
-                    ranks = {"applied": 1, "interviewed": 2, "assessment": 3, "rejected": 4, "selected": 5}
-                    curr_rank = ranks.get(target_app.status, 0)
-                    new_rank = ranks.get(detected_status, 0)
-                    
-                    # Advance status only if it's a forward move or terminal rejection
-                    if new_rank > curr_rank or detected_status == "rejected":
-                        target_app.status = detected_status
-                    
-                    existing_notes = target_app.notes or ""
-                    sender_clean = email['sender'].split('<')[0].strip()
-                    if str(email['id']) not in existing_notes:
-                        timeline_node = f"\n[{email['date'][:16]}] {sender_clean}: {email['subject']}  -> (Status: {detected_status.upper()}) [ID: {email['id']}]"
-                        target_app.notes = existing_notes + timeline_node
-                        db.add(target_app)
-                        matched_count += 1
-            
+                        # Timeline Node
+                        if str(email['id']) not in (target_app.notes or ""):
+                            timeline = f"\n[{email['date'][:16]}] {email['subject']} -> {status.upper()} [Ref: {email['id']}]"
+                            target_app.notes = (target_app.notes or "") + timeline
+                            matched_count += 1
+                            db.add(target_app)
+
+                except Exception as batch_error:
+                    logger.warning(f"Batch processing error: {batch_error}")
+                    continue
+
             from sqlalchemy.sql import func
             user_settings.last_inbox_sync_time = func.now()
             db.add(user_settings)
             
             log_start.status = "success"
-            log_start.message = f"Heuristic Inbox Sync completed. Integrated {matched_count} new updates."
+            log_start.message = f"Batch Sync completed. Processed {len(emails)} emails, found {matched_count} updates."
             db.add(log_start)
             
             await db.commit()
-            logger.info(f"Inbox Scan completed for User {user_id}. Integrated {matched_count} new timeline nodes.")
+            logger.info(f"Inbox Scan completed for User {user_id}. {matched_count} nodes integrated.")
             
         except Exception as e:
-            logger.error(f"Inbox Scanner failed for User {user_id}: {e}")
+            logger.error(f"Inbox Scanner critical failure: {e}")
             if 'log_start' in locals():
                 log_start.status = "failed"
-                log_start.message = f"Heuristic Inbox Sync failed: {str(e)}"
+                log_start.message = f"Scan failed: {str(e)}"
                 db.add(log_start)
                 await db.commit()
