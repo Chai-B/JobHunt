@@ -10,8 +10,8 @@ async def main():
     engine = create_async_engine(async_url)
     async with engine.begin() as conn:
         try:
-            await conn.execute(sa.text("ALTER TABLE user_settings ADD COLUMN last_inbox_sync_time TIMESTAMP WITH TIME ZONE;"))
-            print("Successfully added last_inbox_sync_time column!")
+            await conn.execute(sa.text("ALTER TABLE resumes ADD COLUMN file_data BYTEA;"))
+            print("Successfully added resumes.file_data column!")
         except Exception as e:
             print(f"Error (column might already exist): {e}")
 
