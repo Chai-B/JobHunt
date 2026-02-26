@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Copy, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Mail, LayoutTemplate, Tag, X, Copy, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination } from "@/components/ui/pagination";
 
@@ -32,6 +32,7 @@ const DEFAULT_TAGS = [
 
 export default function TemplatesPage() {
     const [templates, setTemplates] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
     const [isOpen, setIsOpen] = useState(false);
     const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
 

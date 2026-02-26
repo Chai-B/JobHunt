@@ -217,96 +217,98 @@ export default function JobsPage() {
                     <p className="text-sm max-w-sm text-center">Add a job manually or run the scraper to populate the global database.</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {filteredJobs.map((job) => (
-                        <Card
-                            key={job.id}
-                            className="bg-card border-border shadow-sm hover:shadow-md hover:border-foreground/20 transition-all duration-200 cursor-pointer group overflow-hidden flex flex-col"
-                            onClick={() => setSelectedJob(job)}
-                        >
-                            <CardContent className="p-5 flex flex-col flex-1">
-                                {/* Header */}
-                                <div className="flex items-start justify-between gap-3 mb-3">
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="text-base font-semibold text-foreground leading-tight line-clamp-2 group-hover:text-foreground/90 transition-colors">
-                                            {job.title}
-                                        </h3>
-                                    </div>
-                                    <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-foreground/60 transition-colors shrink-0 mt-1" />
-                                </div>
-
-                                {/* Company & Location */}
-                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-4">
-                                    <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                        <Building2 className="w-3.5 h-3.5 shrink-0" />
-                                        <span className="truncate max-w-[180px]">{job.company || "Unknown"}</span>
-                                    </span>
-                                    {job.location && job.location !== "Not specified" && (
-                                        <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                            <MapPin className="w-3.5 h-3.5 shrink-0" />
-                                            <span className="truncate max-w-[150px]">{job.location}</span>
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Description Preview */}
-                                <p className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-3 mb-4 flex-1">
-                                    {job.description?.substring(0, 150) || "No description available."}
-                                </p>
-
-                                {/* Footer */}
-                                <div className="flex items-center justify-between pt-3 border-t border-border/50">
-                                    {job.source_url ? (
-                                        <a
-                                            href={job.source_url}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            <ExternalLink className="w-3 h-3" /> Source
-                                        </a>
-                                    ) : (
-                                        <Badge variant="outline" className="text-[10px] border-border text-muted-foreground h-5">{job.source || "Manual"}</Badge>
-                                    )}
-
-                                    {matchResult && matchResult.jobId === job.id ? (
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs text-muted-foreground">{matchResult?.score ?? 0}%</span>
-                                            <Button
-                                                size="sm"
-                                                className="bg-foreground text-background hover:opacity-90 text-xs h-7 px-3"
-                                                onClick={(e) => { e.stopPropagation(); addToPipeline(job.id, matchResult?.resumeId); }}
-                                            >
-                                                Apply
-                                            </Button>
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {filteredJobs.map((job) => (
+                            <Card
+                                key={job.id}
+                                className="bg-card border-border shadow-sm hover:shadow-md hover:border-foreground/20 transition-all duration-200 cursor-pointer group overflow-hidden flex flex-col"
+                                onClick={() => setSelectedJob(job)}
+                            >
+                                <CardContent className="p-5 flex flex-col flex-1">
+                                    {/* Header */}
+                                    <div className="flex items-start justify-between gap-3 mb-3">
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="text-base font-semibold text-foreground leading-tight line-clamp-2 group-hover:text-foreground/90 transition-colors">
+                                                {job.title}
+                                            </h3>
                                         </div>
-                                    ) : (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="opacity-0 group-hover:opacity-100 transition-opacity text-foreground border-border hover:bg-secondary text-xs h-7 px-3"
-                                            onClick={(e) => { e.stopPropagation(); checkMatch(job.id); }}
-                                            disabled={matchingJobId === job.id}
-                                        >
-                                            <Search className={`w-3 h-3 mr-1 ${matchingJobId === job.id ? 'animate-spin' : ''}`} />
-                                            {matchingJobId === job.id ? "..." : "Match"}
-                                        </Button>
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-                <div className="mt-8">
-                    <Pagination
-                        currentPage={page}
-                        totalCount={total}
-                        pageSize={pageSize}
-                        onPageChange={setPage}
-                        disabled={loading}
-                    />
-                </div>
+                                        <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-foreground/60 transition-colors shrink-0 mt-1" />
+                                    </div>
+
+                                    {/* Company & Location */}
+                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-4">
+                                        <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                            <Building2 className="w-3.5 h-3.5 shrink-0" />
+                                            <span className="truncate max-w-[180px]">{job.company || "Unknown"}</span>
+                                        </span>
+                                        {job.location && job.location !== "Not specified" && (
+                                            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                                <MapPin className="w-3.5 h-3.5 shrink-0" />
+                                                <span className="truncate max-w-[150px]">{job.location}</span>
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* Description Preview */}
+                                    <p className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-3 mb-4 flex-1">
+                                        {job.description?.substring(0, 150) || "No description available."}
+                                    </p>
+
+                                    {/* Footer */}
+                                    <div className="flex items-center justify-between pt-3 border-t border-border/50">
+                                        {job.source_url ? (
+                                            <a
+                                                href={job.source_url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <ExternalLink className="w-3 h-3" /> Source
+                                            </a>
+                                        ) : (
+                                            <Badge variant="outline" className="text-[10px] border-border text-muted-foreground h-5">{job.source || "Manual"}</Badge>
+                                        )}
+
+                                        {matchResult && matchResult.jobId === job.id ? (
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs text-muted-foreground">{matchResult?.score ?? 0}%</span>
+                                                <Button
+                                                    size="sm"
+                                                    className="bg-foreground text-background hover:opacity-90 text-xs h-7 px-3"
+                                                    onClick={(e) => { e.stopPropagation(); addToPipeline(job.id, matchResult?.resumeId); }}
+                                                >
+                                                    Apply
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="opacity-0 group-hover:opacity-100 transition-opacity text-foreground border-border hover:bg-secondary text-xs h-7 px-3"
+                                                onClick={(e) => { e.stopPropagation(); checkMatch(job.id); }}
+                                                disabled={matchingJobId === job.id}
+                                            >
+                                                <Search className={`w-3 h-3 mr-1 ${matchingJobId === job.id ? 'animate-spin' : ''}`} />
+                                                {matchingJobId === job.id ? "..." : "Match"}
+                                            </Button>
+                                        )}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                    <div className="mt-8">
+                        <Pagination
+                            currentPage={page}
+                            totalCount={total}
+                            pageSize={pageSize}
+                            onPageChange={setPage}
+                            disabled={loading}
+                        />
+                    </div>
+                </>
             )}
 
             {/* Job Detail Dialog */}
