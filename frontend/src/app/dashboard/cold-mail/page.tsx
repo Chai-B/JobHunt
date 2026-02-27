@@ -96,6 +96,7 @@ export default function ColdMailPage() {
     const [selectedTemplate, setSelectedTemplate] = useState("");
     const [selectedResume, setSelectedResume] = useState("");
     const [templateOpen, setTemplateOpen] = useState(false);
+    const [resumeOpen, setResumeOpen] = useState(false);
     const [sendingId, setSendingId] = useState<number | null>(null);
     const [batchSending, setBatchSending] = useState(false);
     const [contactScope, setContactScope] = useState("global");
@@ -452,16 +453,50 @@ export default function ColdMailPage() {
                                 <Label className={labelClass}>
                                     Strategic Resume <Tip text="This resume provides the skill-context for AI personality matching." />
                                 </Label>
-                                <Select value={selectedResume} onValueChange={setSelectedResume}>
-                                    <SelectTrigger className="bg-background/50 border-border/50 text-foreground h-12 rounded-xl focus:ring-primary/20">
-                                        <SelectValue placeholder="Choose a resume" />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-card border-border/50 text-foreground rounded-xl shadow-2xl">
-                                        {resumes.map((r: any) => (
-                                            <SelectItem key={r.id} value={String(r.id)} className="rounded-lg">{r.filename || `Resume #${r.id}`}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <Popover open={resumeOpen} onOpenChange={setResumeOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            aria-expanded={resumeOpen}
+                                            className="w-full justify-between bg-background/50 border-border/50 text-foreground h-12 rounded-xl focus:ring-primary/20 hover:bg-background/80"
+                                        >
+                                            {selectedResume
+                                                ? resumes.find((r) => String(r.id) === selectedResume)?.filename || `Resume #${selectedResume}`
+                                                : "Choose a resume..."}
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[300px] xl:w-[350px] p-0 bg-card border-border/50 shadow-2xl rounded-xl">
+                                        <Command>
+                                            <CommandInput placeholder="Search resumes..." className="h-10 text-xs" />
+                                            <CommandList className="max-h-[250px] overflow-y-auto custom-scrollbar">
+                                                <CommandEmpty className="py-4 text-center text-xs text-muted-foreground">No resumes found.</CommandEmpty>
+                                                <CommandGroup>
+                                                    {resumes.map((r: any) => (
+                                                        <CommandItem
+                                                            key={r.id}
+                                                            value={r.filename || `Resume #${r.id}`}
+                                                            onSelect={() => {
+                                                                setSelectedResume(String(r.id));
+                                                                setResumeOpen(false);
+                                                            }}
+                                                            className="text-xs"
+                                                        >
+                                                            <Check
+                                                                className={cn(
+                                                                    "mr-2 h-4 w-4 text-primary",
+                                                                    selectedResume === String(r.id) ? "opacity-100" : "opacity-0"
+                                                                )}
+                                                            />
+                                                            {r.filename || `Resume #${r.id}`}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </div>
 
