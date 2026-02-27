@@ -384,88 +384,89 @@ export default function TemplatesPage() {
                         </DialogContent>
                     </Dialog>
                 </div>
-
-                <Card className="bg-card border-border shadow-sm">
-                    <CardHeader className="border-b border-border pb-5">
-                        <CardTitle className="text-foreground text-lg font-medium">Saved Templates</CardTitle>
-                        <CardDescription className="text-muted-foreground">Your templates ready for outreach. Click a tag in the editor to autofill.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        {loading ? (
-                            <div className="overflow-x-auto">
-                                <Table>
-                                    <TableHeader className="bg-secondary/30">
-                                        <TableRow className="border-border hover:bg-transparent">
-                                            <TableHead className="w-12 text-center text-[10px] uppercase font-medium text-muted-foreground/40">#</TableHead>
-                                            <TableHead className="text-muted-foreground font-medium">Name</TableHead>
-                                            <TableHead className="text-muted-foreground font-medium">Subject</TableHead>
-                                            <TableHead className="text-muted-foreground font-medium">Variables Used</TableHead>
-                                            <TableHead className="text-muted-foreground font-medium text-right">Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {[...Array(5)].map((_, i) => (
-                                            <TableRow key={i} className="border-border">
-                                                <TableCell className="text-center"><Skeleton className="h-4 w-4 bg-secondary/40 inline-block" /></TableCell>
-                                                <TableCell><Skeleton className="h-4 w-[150px] bg-secondary/40" /></TableCell>
-                                                <TableCell><Skeleton className="h-4 w-[250px] bg-secondary/20" /></TableCell>
-                                                <TableCell><Skeleton className="h-5 w-[120px] rounded-full bg-secondary/20" /></TableCell>
-                                                <TableCell className="text-right"><Skeleton className="h-8 w-12 bg-secondary/40 ml-auto rounded-md" /></TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        ) : templates.length === 0 ? (
-                            <div className="py-32 text-center text-muted-foreground flex flex-col items-center justify-center">
-                                <div className="h-16 w-16 bg-secondary/50 rounded-full flex items-center justify-center mb-4 border border-border">
-                                    <LayoutTemplate className="w-6 h-6 text-muted-foreground" />
-                                </div>
-                                <p className="text-foreground font-medium text-lg mb-1">No Templates Found</p>
-                                <p className="text-sm max-w-sm">Create a template to enable personalized automated outreach.</p>
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <Table>
-                                    <TableHeader className="bg-secondary/30">
-                                        <TableRow className="border-border hover:bg-transparent">
-                                            <TableHead className="w-12 text-center text-[10px] uppercase font-medium text-muted-foreground/40">#</TableHead>
-                                            <TableHead className="text-muted-foreground font-medium">Name</TableHead>
-                                            <TableHead className="text-muted-foreground font-medium">Subject</TableHead>
-                                            <TableHead className="text-muted-foreground font-medium">Variables Used</TableHead>
-                                            <TableHead className="text-muted-foreground font-medium">Created</TableHead>
-                                            <TableHead className="text-muted-foreground font-medium text-right">Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {templates.map((t: any, idx: number) => {
-                                            const usedVars = allTags.filter(tag => t.subject?.includes(tag) || t.body_text?.includes(tag));
-                                            return (
-                                                <TemplateRow
-                                                    key={t.id}
-                                                    t={t}
-                                                    idx={idx}
-                                                    page={page}
-                                                    pageSize={pageSize}
-                                                    usedVars={usedVars}
-                                                    onEdit={handleEdit}
-                                                />
-                                            );
-                                        })}
-                                    </TableBody>
-                                </Table>
-                                <Pagination
-                                    currentPage={page}
-                                    totalCount={total}
-                                    pageSize={pageSize}
-                                    onPageChange={setPage}
-                                    onPageSizeChange={handlePageSizeChange}
-                                    disabled={loading}
-                                />
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
             </div>
-            );
+
+            <Card className="bg-card border-border shadow-sm">
+                <CardHeader className="border-b border-border pb-5">
+                    <CardTitle className="text-foreground text-lg font-medium">Saved Templates</CardTitle>
+                    <CardDescription className="text-muted-foreground">Your templates ready for outreach. Click a tag in the editor to autofill.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                    {loading ? (
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader className="bg-secondary/30">
+                                    <TableRow className="border-border hover:bg-transparent">
+                                        <TableHead className="w-12 text-center text-[10px] uppercase font-medium text-muted-foreground/40">#</TableHead>
+                                        <TableHead className="text-muted-foreground font-medium">Name</TableHead>
+                                        <TableHead className="text-muted-foreground font-medium">Subject</TableHead>
+                                        <TableHead className="text-muted-foreground font-medium">Variables Used</TableHead>
+                                        <TableHead className="text-muted-foreground font-medium text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {[...Array(5)].map((_, i) => (
+                                        <TableRow key={i} className="border-border">
+                                            <TableCell className="text-center"><Skeleton className="h-4 w-4 bg-secondary/40 inline-block" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-[150px] bg-secondary/40" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-[250px] bg-secondary/20" /></TableCell>
+                                            <TableCell><Skeleton className="h-5 w-[120px] rounded-full bg-secondary/20" /></TableCell>
+                                            <TableCell className="text-right"><Skeleton className="h-8 w-12 bg-secondary/40 ml-auto rounded-md" /></TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    ) : templates.length === 0 ? (
+                        <div className="py-32 text-center text-muted-foreground flex flex-col items-center justify-center">
+                            <div className="h-16 w-16 bg-secondary/50 rounded-full flex items-center justify-center mb-4 border border-border">
+                                <LayoutTemplate className="w-6 h-6 text-muted-foreground" />
+                            </div>
+                            <p className="text-foreground font-medium text-lg mb-1">No Templates Found</p>
+                            <p className="text-sm max-w-sm">Create a template to enable personalized automated outreach.</p>
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader className="bg-secondary/30">
+                                    <TableRow className="border-border hover:bg-transparent">
+                                        <TableHead className="w-12 text-center text-[10px] uppercase font-medium text-muted-foreground/40">#</TableHead>
+                                        <TableHead className="text-muted-foreground font-medium">Name</TableHead>
+                                        <TableHead className="text-muted-foreground font-medium">Subject</TableHead>
+                                        <TableHead className="text-muted-foreground font-medium">Variables Used</TableHead>
+                                        <TableHead className="text-muted-foreground font-medium">Created</TableHead>
+                                        <TableHead className="text-muted-foreground font-medium text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {templates.map((t: any, idx: number) => {
+                                        const usedVars = allTags.filter(tag => t.subject?.includes(tag) || t.body_text?.includes(tag));
+                                        return (
+                                            <TemplateRow
+                                                key={t.id}
+                                                t={t}
+                                                idx={idx}
+                                                page={page}
+                                                pageSize={pageSize}
+                                                usedVars={usedVars}
+                                                onEdit={handleEdit}
+                                            />
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                            <Pagination
+                                currentPage={page}
+                                totalCount={total}
+                                pageSize={pageSize}
+                                onPageChange={setPage}
+                                onPageSizeChange={handlePageSizeChange}
+                                disabled={loading}
+                            />
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
+    );
 }
