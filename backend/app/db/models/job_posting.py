@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, Float, DateTime, Text, JSON
 from sqlalchemy.sql import func
 from pgvector.sqlalchemy import Vector
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 class JobPosting(Base):
     __tablename__ = "job_postings"

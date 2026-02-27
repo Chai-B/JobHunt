@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Float, JSON
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql import func
-from app.db.base import Base
+from app.db.base_class import Base
 
 class UserSetting(Base):
     """
