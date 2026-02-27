@@ -4,11 +4,14 @@ import { API_BASE_URL } from "@/lib/config";
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Briefcase, FileText, Send, Mail, Settings, LogOut, UserCircle, Globe, TerminalSquare, Zap, Activity, Users, Sparkles } from "lucide-react";
+import { LayoutDashboard, Briefcase, FileText, Send, Mail, Settings, LogOut, UserCircle, Globe, TerminalSquare, Zap, Activity, Users, Sparkles, MessageSquare, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useClerk } from "@clerk/nextjs";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { TutorialOverlay } from "@/components/tutorial-overlay";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 const navigation = [
     { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
@@ -31,6 +34,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const pathname = usePathname();
     const [user, setUser] = useState<any>(null);
     const [runningProcesses, setRunningProcesses] = useState<any[]>([]);
+
+    const [feedbackOpen, setFeedbackOpen] = useState(false);
+    const [feedbackText, setFeedbackText] = useState("");
+    const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+
+    const handleFeedbackSubmit = async () => {
+        if (!feedbackText.trim()) return;
+        setIsSubmittingFeedback(true);
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${API_BASE_URL}/api/v1/feedbacks/`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ message: feedbackText })
+            });
+            if (res.ok) {
+                toast.success("Feedback submitted. Thank you!");
+                setFeedbackOpen(false);
+                setFeedbackText("");
+            } else {
+                toast.error("Failed to submit feedback.");
+            }
+        } catch (err) {
+            toast.error("Network error.");
+        } finally {
+            setIsSubmittingFeedback(false);
+        }
+    };
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -182,16 +216,68 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             {/* Main Content */}
             <main className="flex-1 overflow-y-auto w-full p-6 sm:p-10 bg-background relative">
+                <div className="absolute top-6 right-8 flex items-center gap-3 z-50">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 rounded-xl bg-background/50 backdrop-blur-md border-border/50 text-muted-foreground hover:text-foreground shadow-sm h-9 px-3"
+                        onClick={() => window.dispatchEvent(new Event('trigger-tutorial'))}
+                    >
+                        <HelpCircle className="w-4 h-4" />
+                        Help
+                    </Button>
+                    <Button
+                        variant="default"
+                        size="sm"
+                        className="gap-2 rounded-xl shadow-md h-9 px-3"
+                        onClick={() => setFeedbackOpen(true)}
+                    >
+                        <MessageSquare className="w-4 h-4" />
+                        Feedback
+                    </Button>
+                </div>
+
                 {user && user.has_completed_onboarding === false && (
                     <OnboardingWizard user={user} onComplete={() => setUser({ ...user, has_completed_onboarding: true })} />
                 )}
                 {user && user.has_completed_onboarding === true && (
                     <TutorialOverlay />
                 )}
-                <div className="max-w-[1400px] mx-auto z-10 relative">
+                <div className="max-w-[1400px] mx-auto z-10 relative pt-8 sm:pt-4">
                     {children}
                 </div>
             </main>
+
+            <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
+                <DialogContent className="sm:max-w-[425px] bg-card border-border/50 rounded-2xl shadow-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <MessageSquare className="w-5 h-5 text-primary" />
+                            Submit Feedback
+                        </DialogTitle>
+                        <DialogDescription>
+                            Have an idea, caught a bug, or just want to share your thoughts? We're listening.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <Textarea
+                            placeholder="Type your feedback here..."
+                            className="bg-background/50 border-border/50 focus-visible:ring-primary min-h-[120px] rounded-xl"
+                            value={feedbackText}
+                            onChange={(e) => setFeedbackText(e.target.value)}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            onClick={handleFeedbackSubmit}
+                            disabled={!feedbackText.trim() || isSubmittingFeedback}
+                            className="rounded-xl px-6"
+                        >
+                            {isSubmittingFeedback ? "Submitting..." : "Send Feedback"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

@@ -1,3 +1,10 @@
-from sqlalchemy.ext.declarative import declarative_base
-
-Base = declarative_base()
+from app.db.base_class import Base  # noqa
+from app.db.models.user import User  # noqa
+from app.db.models.resume import Resume  # noqa
+from app.db.models.job_posting import JobPosting  # noqa
+from app.db.models.contact import ScrapedContact  # noqa
+from app.db.models.setting import UserSetting  # noqa
+from app.db.models.action_log import ActionLog  # noqa
+from app.db.models.email_template import EmailTemplate  # noqa
+from app.db.models.application import Application  # noqa
+from app.db.models.feedback import Feedback  # noqa

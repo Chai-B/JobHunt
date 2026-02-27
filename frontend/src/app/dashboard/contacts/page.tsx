@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Users, Plus, Upload, Download, Trash2, Edit, Search } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ContactsPage() {
     const [contacts, setContacts] = useState<any[]>([]);
@@ -20,6 +21,7 @@ export default function ContactsPage() {
     const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
+    const [scope, setScope] = useState("global");
 
     // Pagination
     const [page, setPage] = useState(1);
@@ -40,7 +42,7 @@ export default function ContactsPage() {
         setLoading(true);
         try {
             const token = localStorage.getItem("token");
-            let url = `${API_BASE_URL}/api/v1/contacts/?skip=${(page - 1) * pageSize}&limit=${pageSize}`;
+            let url = `${API_BASE_URL}/api/v1/contacts/?skip=${(page - 1) * pageSize}&limit=${pageSize}&scope=${scope}`;
             if (searchQuery.trim() !== "") {
                 url += `&search=${encodeURIComponent(searchQuery.trim())}`;
             }
@@ -65,7 +67,7 @@ export default function ContactsPage() {
             fetchContacts();
         }, 300); // 300ms debounce
         return () => clearTimeout(timer);
-    }, [page, pageSize, searchQuery]);
+    }, [page, pageSize, searchQuery, scope]);
 
     const handleOpenCreate = () => {
         setSelectedContactId(null);
@@ -231,6 +233,13 @@ export default function ContactsPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
+                    <Tabs value={scope} onValueChange={setScope} className="w-[180px]">
+                        <TabsList className="grid w-full grid-cols-2 h-9 border-border bg-card shadow-sm">
+                            <TabsTrigger value="global" className="text-xs">Global</TabsTrigger>
+                            <TabsTrigger value="my" className="text-xs">My Contacts</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+
                     <div className="relative w-full sm:w-64 mr-2">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input

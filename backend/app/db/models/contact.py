@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 from app.db.base import Base
 
 class ScrapedContact(Base):
@@ -10,6 +11,7 @@ class ScrapedContact(Base):
     __tablename__ = "scraped_contacts"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     
     name = Column(String, nullable=True)
     email = Column(String, unique=True, index=True, nullable=False)
@@ -22,3 +24,5 @@ class ScrapedContact(Base):
     # Audit timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    owner = relationship("User", backref="contacts", foreign_keys=[user_id])

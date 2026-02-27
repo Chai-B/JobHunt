@@ -85,31 +85,24 @@ async def run_inbox_scanner_async(user_id: int):
                 await db.commit()
                 return
 
-            # Group emails into batches of 5 for efficiency
-            BATCH_SIZE = 5
-            email_batches = [emails[i:i + BATCH_SIZE] for i in range(0, len(emails), BATCH_SIZE)]
-            
             system_prompt = """You are an elite Recruitment Data Processor. 
-Task: Extract structured job application statuses from a list of emails.
+Task: Extract structured job application info from a SINGLE email.
 Statuses: [applied, interviewed, assessment, rejected, selected]
 
 Return JSON: 
 {
-  "extractions": [
-    {
-      "email_id": "string",
-      "company_name": "string",
-      "role": "string",
-      "location": "string",
-      "status": "applied|interviewed|assessment|rejected|selected",
-      "confidence": 0-1
-    }
-  ]
+  "company_name": "string",
+  "role": "string",
+  "location": "string",
+  "source": "string",
+  "status": "applied|interviewed|assessment|rejected|selected",
+  "confidence": 0-1
 }
+
 Precise Rules:
-1. company_name: Extract the hiring organization. Ignore 'LinkedIn', 'Internshala', 'Wellfound' unless they are the employer.
+1. company_name: YOU MUST EXTRACT OR INFER THIS. Look at the sender domain, email signature, or text. Ignore 'LinkedIn', 'Internshala', 'Wellfound' unless they are the employer (extract the actual hiring company instead). Avoid returning individual recruiter names.
 2. role: The job title (e.g. Software Engineer).
-3. status: Map 'Round 1/2' or 'Schedule' to 'interviewed'. Map 'Test/Assignment' to 'assessment'. Map 'Not moving forward' to 'rejected'.
+3. status: Map 'Round 1/2' or 'Schedule' to 'interviewed'. Map 'Test/Assignment' to 'assessment'. Map 'Not moving forward' to 'rejected'. Make an implicit guess based on context if ambiguous.
 4. If an email is NOT about a job application, set company_name to null.
 """
 
@@ -118,66 +111,76 @@ Precise Rules:
             apps_result = await db.execute(select(Application).where(Application.user_id == user_id))
             applications = {a.company_name.lower(): a for a in apps_result.scalars().all() if a.company_name}
 
-            for batch in email_batches:
-                batch_text = "\n---\n".join([f"ID: {e['id']}\nSubject: {e['subject']}\nSender: {e['sender']}\nBody: {clean_body(e['body'])}" for e in batch])
-                
+            async def process_single_email(email):
+                text_payload = f"Subject: {email['subject']}\nSender: {email['sender']}\nBody: {clean_body(email['body'])}"
                 try:
-                    raw_llm = await call_llm(batch_text, user_settings, is_json=True, system_prompt=system_prompt)
+                    raw_llm = await call_llm(text_payload, user_settings, is_json=True, system_prompt=system_prompt)
                     parsed = json.loads(raw_llm)
-                    extractions = parsed.get("extractions", [])
                     
-                    for ext in extractions:
-                        if not ext.get("company_name") or ext.get("confidence", 0) < 0.3:
-                            continue
-                            
-                        email = next((e for e in batch if e['id'] == ext['email_id']), None)
-                        if not email: continue
-
-                        co_name = ext['company_name'].strip().title()
-                        role = ext.get('role', '').strip().title()
-                        status = ext.get('status', 'applied').lower()
-                        loc = ext.get('location', '').strip().title()
-
-                        # Logic: Bind or Create
-                        target_app = applications.get(co_name.lower())
-                        if not target_app:
-                            # Fuzzy matching fallback
-                            target_app = next((a for c, a in applications.items() if (c in co_name.lower() or co_name.lower() in c) and len(c) > 3), None)
-
-                        if not target_app:
-                            logger.info(f"AI Sync: Creating new app for {co_name}")
-                            target_app = Application(
-                                user_id=user_id,
-                                company_name=co_name,
-                                application_type="Discovered (Email)",
-                                status=status,
-                                contact_role=role,
-                                location=loc,
-                                notes=f"Imported from Gmail on {datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
-                            )
-                            db.add(target_app)
-                            await db.flush()
-                            applications[co_name.lower()] = target_app
+                    if not parsed.get("company_name") or parsed.get("confidence", 0) < 0.3:
+                        return None
                         
-                        # Update status if forward move or terminal
-                        ranks = {"applied": 1, "interviewed": 2, "assessment": 3, "rejected": 4, "selected": 5}
-                        if ranks.get(status, 0) > ranks.get(target_app.status, 0) or status == "rejected":
-                            target_app.status = status
-                        
-                        # Enrich missing metadata
-                        if role and not target_app.contact_role: target_app.contact_role = role
-                        if loc and not target_app.location: target_app.location = loc
+                    return {
+                        "email": email,
+                        "extraction": parsed
+                    }
+                except Exception as e:
+                    logger.warning(f"Error processing email {email['id']}: {e}")
+                    return None
 
-                        # Timeline Node
-                        if str(email['id']) not in (target_app.notes or ""):
-                            timeline = f"\n[{email['date'][:16]}] {email['subject']} -> {status.upper()} [Ref: {email['id']}]"
-                            target_app.notes = (target_app.notes or "") + timeline
-                            matched_count += 1
-                            db.add(target_app)
+            # Process all emails in parallel
+            tasks = [process_single_email(e) for e in emails]
+            results = await asyncio.gather(*tasks)
+            valid_results = [r for r in results if r is not None]
 
-                except Exception as batch_error:
-                    logger.warning(f"Batch processing error: {batch_error}")
-                    continue
+            for res in valid_results:
+                email = res['email']
+                ext = res['extraction']
+                
+                co_name = ext['company_name'].strip().title()
+                role = ext.get('role', '').strip().title()
+                status = ext.get('status', 'applied').lower()
+                loc = ext.get('location', '').strip().title()
+                src = ext.get('source', 'Email')
+
+                # Logic: Bind or Create
+                target_app = applications.get(co_name.lower())
+                if not target_app:
+                    # Fuzzy matching fallback
+                    target_app = next((a for c, a in applications.items() if (c in co_name.lower() or co_name.lower() in c) and len(c) > 3), None)
+
+                if not target_app:
+                    logger.info(f"AI Sync: Creating new app for {co_name}")
+                    target_app = Application(
+                        user_id=user_id,
+                        company_name=co_name,
+                        application_type="Discovered (Email)",
+                        status=status,
+                        contact_role=role,
+                        location=loc,
+                        source_url=src,
+                        notes=f"Imported from Gmail on {datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
+                    )
+                    db.add(target_app)
+                    await db.flush()
+                    applications[co_name.lower()] = target_app
+                
+                # Update status if forward move or terminal
+                ranks = {"applied": 1, "interviewed": 2, "assessment": 3, "rejected": 4, "selected": 5}
+                if ranks.get(status, 0) > ranks.get(target_app.status, 0) or status == "rejected":
+                    target_app.status = status
+                
+                # Enrich missing metadata
+                if role and not target_app.contact_role: target_app.contact_role = role
+                if loc and not target_app.location: target_app.location = loc
+                if src and src != 'Email' and not target_app.source_url: target_app.source_url = src
+
+                # Timeline Node
+                if str(email['id']) not in (target_app.notes or ""):
+                    timeline = f"\n[{email['date'][:16]}] {email['subject']} -> {status.upper()} [Ref: {email['id']}]"
+                    target_app.notes = (target_app.notes or "") + timeline
+                    matched_count += 1
+                    db.add(target_app)
 
             from sqlalchemy.sql import func
             user_settings.last_inbox_sync_time = func.now()

@@ -37,7 +37,8 @@ async def create_template(
         name=template_in.name,
         subject=template_in.subject,
         body_text=template_in.body_text,
-        is_active=template_in.is_active
+        is_active=template_in.is_active,
+        user_id=current_user.id
     )
     db.add(db_obj)
     await db.commit()
@@ -49,13 +50,25 @@ async def list_templates(
     db: AsyncSession = Depends(deps.get_personal_db),
     skip: int = 0,
     limit: int = 100,
+    scope: str = "global",
     current_user: User = Depends(deps.get_current_active_user)
 ) -> Any:
+    filters = []
+    if scope == "my":
+        filters.append(EmailTemplate.user_id == current_user.id)
+
     count_stmt = select(func.count(EmailTemplate.id))
+    if filters:
+        count_stmt = count_stmt.where(*filters)
+        
     count_res = await db.execute(count_stmt)
     total = count_res.scalar() or 0
 
-    res = await db.execute(select(EmailTemplate).offset(skip).limit(limit).order_by(EmailTemplate.created_at.desc()))
+    stmt = select(EmailTemplate).order_by(EmailTemplate.created_at.desc()).offset(skip).limit(limit)
+    if filters:
+        stmt = stmt.where(*filters)
+        
+    res = await db.execute(stmt)
     items = res.scalars().all()
     return {"items": items, "total": total}
 

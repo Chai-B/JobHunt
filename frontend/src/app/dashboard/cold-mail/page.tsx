@@ -10,8 +10,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Mail, Send, Users, Activity, Info, RefreshCw, Zap, CheckCircle2, ChevronRight, MousePointer2, Search } from "lucide-react";
+import { Mail, Send, Users, Activity, Info, RefreshCw, Zap, CheckCircle2, ChevronRight, MousePointer2, Search, Check, ChevronsUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -91,8 +95,10 @@ export default function ColdMailPage() {
 
     const [selectedTemplate, setSelectedTemplate] = useState("");
     const [selectedResume, setSelectedResume] = useState("");
+    const [templateOpen, setTemplateOpen] = useState(false);
     const [sendingId, setSendingId] = useState<number | null>(null);
     const [batchSending, setBatchSending] = useState(false);
+    const [contactScope, setContactScope] = useState("global");
 
     // Pagination state
     const [page, setPage] = useState(1);
@@ -120,9 +126,10 @@ export default function ColdMailPage() {
             const headers = { Authorization: `Bearer ${token}` };
 
             const searchParam = searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : "";
+            const scopeParam = `&scope=${contactScope}`;
 
             const [contactsRes, templatesRes, resumesRes, profileRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/v1/contacts/?skip=${(page - 1) * pageSize}&limit=${pageSize}${searchParam}`, { headers }),
+                fetch(`${API_BASE_URL}/api/v1/contacts/?skip=${(page - 1) * pageSize}&limit=${pageSize}${searchParam}${scopeParam}`, { headers }),
                 fetch(`${API_BASE_URL}/api/v1/templates/`, { headers }),
                 fetch(`${API_BASE_URL}/api/v1/resumes/`, { headers }),
                 fetch(`${API_BASE_URL}/api/v1/users/me`, { headers }),
@@ -157,7 +164,7 @@ export default function ColdMailPage() {
             fetchData();
         }, 300);
         return () => clearTimeout(timeoutId);
-    }, [page, searchQuery]);
+    }, [page, searchQuery, contactScope]);
 
     const toggleSelectAll = useCallback(() => {
         setSelectedContactIds(prev => {
@@ -396,16 +403,50 @@ export default function ColdMailPage() {
                                 <Label className={labelClass}>
                                     Messaging Template <Tip text="Select the base template. The AI will weave in contact-specific nuances for maximum conversion." />
                                 </Label>
-                                <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-                                    <SelectTrigger className="bg-background/50 border-border/50 text-foreground h-12 rounded-xl focus:ring-primary/20">
-                                        <SelectValue placeholder="Choose a template" />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-card border-border/50 text-foreground rounded-xl shadow-2xl">
-                                        {templates.map((t: any) => (
-                                            <SelectItem key={t.id} value={String(t.id)} className="rounded-lg">{t.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <Popover open={templateOpen} onOpenChange={setTemplateOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            aria-expanded={templateOpen}
+                                            className="w-full justify-between bg-background/50 border-border/50 text-foreground h-12 rounded-xl focus:ring-primary/20 hover:bg-background/80"
+                                        >
+                                            {selectedTemplate
+                                                ? templates.find((t) => String(t.id) === selectedTemplate)?.name
+                                                : "Search framework..."}
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[300px] xl:w-[350px] p-0 bg-card border-border/50 shadow-2xl rounded-xl">
+                                        <Command>
+                                            <CommandInput placeholder="Search templates..." className="h-10 text-xs" />
+                                            <CommandList className="max-h-[250px] overflow-y-auto custom-scrollbar">
+                                                <CommandEmpty className="py-4 text-center text-xs text-muted-foreground">No templates found.</CommandEmpty>
+                                                <CommandGroup>
+                                                    {templates.map((t: any) => (
+                                                        <CommandItem
+                                                            key={t.id}
+                                                            value={t.name}
+                                                            onSelect={() => {
+                                                                setSelectedTemplate(String(t.id));
+                                                                setTemplateOpen(false);
+                                                            }}
+                                                            className="text-xs"
+                                                        >
+                                                            <Check
+                                                                className={cn(
+                                                                    "mr-2 h-4 w-4 text-primary",
+                                                                    selectedTemplate === String(t.id) ? "opacity-100" : "opacity-0"
+                                                                )}
+                                                            />
+                                                            {t.name}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                             <div>
                                 <Label className={labelClass}>
@@ -455,13 +496,15 @@ export default function ColdMailPage() {
 
                 {/* Contacts Table */}
                 <Card className="lg:col-span-8 bg-card/60 backdrop-blur-xl border-border/50 shadow-2xl rounded-2xl overflow-hidden">
-                    <CardHeader className="border-b border-border/50 pb-6 bg-secondary/10">
-                        <div className="flex justify-between items-center">
-                            <CardTitle className="text-lg font-medium flex items-center gap-3">
-                                <Users className="w-5 h-5 text-primary/70" />
-                                Lead Collection
-                            </CardTitle>
-                            <div className="relative w-64 max-w-sm">
+                    <CardHeader className="border-b border-border/50 pb-4 bg-secondary/10">
+                        <div className="flex flex-col xl:flex-row justify-between xl:items-center gap-4">
+                            <Tabs value={contactScope} onValueChange={setContactScope} className="w-[200px]">
+                                <TabsList className="grid w-full grid-cols-2 h-9 border-border/50 bg-background/50 shadow-sm rounded-lg">
+                                    <TabsTrigger value="global" className="text-xs">Global Leads</TabsTrigger>
+                                    <TabsTrigger value="my" className="text-xs">My Scrapes</TabsTrigger>
+                                </TabsList>
+                            </Tabs>
+                            <div className="relative w-full xl:w-64">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     type="text"

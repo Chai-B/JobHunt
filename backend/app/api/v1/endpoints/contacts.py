@@ -23,10 +23,15 @@ async def list_contacts(
     skip: int = 0,
     limit: int = 200,
     search: Optional[str] = None,
+    scope: str = "global",
     current_user: User = Depends(deps.get_current_active_user)
 ) -> Any:
     # Build filter conditions
     filters = []
+    
+    if scope == "my":
+        filters.append(ScrapedContact.user_id == current_user.id)
+
     if search:
         search_term = f"%{search}%"
         filters.append(
@@ -64,7 +69,7 @@ async def create_contact(
     if res.scalars().first():
         raise HTTPException(status_code=400, detail="Contact with this email already exists")
         
-    db_obj = ScrapedContact(**contact_in.model_dump())
+    db_obj = ScrapedContact(**contact_in.model_dump(), user_id=current_user.id)
     db.add(db_obj)
     await db.commit()
     await db.refresh(db_obj)
@@ -90,7 +95,7 @@ async def create_contacts_bulk(
     new_objs = []
     for c in contacts_in:
         if c.email not in existing_emails:
-            new_objs.append(ScrapedContact(**c.model_dump()))
+            new_objs.append(ScrapedContact(**c.model_dump(), user_id=current_user.id))
             existing_emails.add(c.email) # Avoid duplicates in the input list itself
             
     if new_objs:
@@ -221,7 +226,8 @@ async def import_contacts(
                 "company": str(row[company_col]).strip() if company_col and pd.notna(row[company_col]) else None,
                 "role": str(row[role_col]).strip() if role_col and pd.notna(row[role_col]) else None,
                 "source_url": "Imported File",
-                "is_verified": False
+                "is_verified": False,
+                "user_id": current_user.id
             }
             new_contacts.append(ScrapedContact(**contact_data))
             existing_emails.add(email)

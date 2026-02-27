@@ -16,6 +16,12 @@ export function TutorialOverlay() {
         }
     }, []);
 
+    useEffect(() => {
+        const handleForceTrigger = () => setRun(true);
+        window.addEventListener("trigger-tutorial", handleForceTrigger);
+        return () => window.removeEventListener("trigger-tutorial", handleForceTrigger);
+    }, []);
+
     const steps = [
         {
             target: "body",
