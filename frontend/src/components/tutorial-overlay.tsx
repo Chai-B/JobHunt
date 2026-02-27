@@ -142,8 +142,19 @@ export function TutorialOverlay() {
             continuous
             showProgress
             showSkipButton
-            disableScrolling={false}
-            scrollOffset={100}
+            disableScrolling={true}
+            floaterProps={{
+                disableAnimation: true,
+                styles: {
+                    floater: {
+                        maxWidth: 'calc(100vw - 300px)',
+                    },
+                    container: {
+                        maxHeight: 'calc(100vh - 100px)',
+                        overflowY: 'auto'
+                    }
+                }
+            }}
             callback={handleJoyrideCallback}
             styles={{
                 options: {
