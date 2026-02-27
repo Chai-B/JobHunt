@@ -123,13 +123,17 @@ export function TutorialOverlay() {
     }, [pathname]);
 
     const handleJoyrideCallback = (data: CallBackProps) => {
-        const { status } = data;
+        const { status, type } = data;
         const finishedStatuses: string[] = [STATUS.FINISHED, STATUS.SKIPPED];
 
-        if (finishedStatuses.includes(status)) {
+        // Ensure scrolling is always re-enabled if the tour finishes, stops, or unmounts
+        if (finishedStatuses.includes(status) || type === 'tour:end') {
             setRun(false);
             // Mark the global tutorial as seen so it never auto-runs again on any page change
             localStorage.setItem("jobhunt_tutorial_seen_global", "true");
+
+            // Forcefully remove any scroll locks Joyride might have left behind
+            document.body.style.overflow = '';
         }
     };
 
@@ -143,14 +147,15 @@ export function TutorialOverlay() {
             showProgress
             showSkipButton
             disableScrolling={true}
+            disableScrollParentFix={true}
             floaterProps={{
                 disableAnimation: true,
                 styles: {
                     floater: {
-                        maxWidth: 'calc(100vw - 300px)',
+                        maxWidth: '400px', // Prevent wide tooltips from going off screen horizontally
                     },
                     container: {
-                        maxHeight: 'calc(100vh - 100px)',
+                        maxHeight: '60vh', // strictly constrain height of tooltips
                         overflowY: 'auto'
                     }
                 }
