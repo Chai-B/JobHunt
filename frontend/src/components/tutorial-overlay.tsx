@@ -2,54 +2,119 @@
 
 import { useState, useEffect } from "react";
 import Joyride, { CallBackProps, STATUS } from "react-joyride";
+import { usePathname } from "next/navigation";
+import { toast } from "sonner";
+
+function getStepsForPath(path: string) {
+    switch (path) {
+        case "/dashboard":
+            return [
+                { target: "body", content: "Welcome to your JobHunt Dashboard! This is your central command center.", placement: "center" as const, disableBeacon: true },
+                { target: "nav", content: "Use the sidebar to navigate between your tools: Scraper, Cold Mail, Resumes, and more.", placement: "right" as const },
+                { target: "main", content: "Review your recent statistics and activity at a glance here.", placement: "top" as const }
+            ];
+        case "/dashboard/jobs":
+            return [
+                { target: "body", content: "Welcome to the Jobs section! Here you can manage all discovered opportunities.", placement: "center" as const, disableBeacon: true },
+                { target: "main", content: "This table lists all jobs. You can sort, filter, and dive into detailed information for each role.", placement: "top" as const },
+            ];
+        case "/dashboard/scraper":
+            return [
+                { target: "body", content: "The Scraper is your AI-powered data extraction tool.", placement: "center" as const, disableBeacon: true },
+                { target: "input", content: "Provide the target URL or query you want our headless browser to scrape.", placement: "bottom" as const },
+                { target: "main button", content: "Click here to execute the agent. It automatically bypasses blocks and extracts clean data.", placement: "bottom" as const }
+            ];
+        case "/dashboard/applications":
+            return [
+                { target: "body", content: "Track all your submitted applications in one place.", placement: "center" as const, disableBeacon: true },
+                { target: "main", content: "View the status of your applications. Our Auto-Apply agent logs everything here automatically.", placement: "top" as const }
+            ];
+        case "/dashboard/cold-mail":
+            return [
+                { target: "body", content: "Welcome to Cold Mail campaigns. Automate your outreach gracefully.", placement: "center" as const, disableBeacon: true },
+                { target: "main", content: "Select a contact, choose a template, and generate highly personalized emails based on your profile & their background.", placement: "top" as const }
+            ];
+        case "/dashboard/templates":
+            return [
+                { target: "body", content: "Email templates accelerate your workflow.", placement: "center" as const, disableBeacon: true },
+                { target: "main", content: "Create templates with variables like {{name}} or {{company}} which auto-fill during your outreach.", placement: "top" as const }
+            ];
+        case "/dashboard/contacts":
+            return [
+                { target: "body", content: "Your personal CRM for networking.", placement: "center" as const, disableBeacon: true },
+                { target: "main", content: "Manage leads, export to CSV, or verify email addresses directly from here.", placement: "top" as const }
+            ];
+        case "/dashboard/extract":
+            return [
+                { target: "body", content: "The Universal Extractor turns messy text into clean data.", placement: "center" as const, disableBeacon: true },
+                { target: "textarea", content: "Paste any unstructured text containing emails, names, or job descriptions here.", placement: "right" as const },
+                { target: "main button", content: "Our AI will parse the text and save it directly into your Contacts or Jobs database.", placement: "top" as const }
+            ];
+        case "/dashboard/resumes":
+            return [
+                { target: "body", content: "Manage your resumes for different roles.", placement: "center" as const, disableBeacon: true },
+                { target: "main", content: "Upload your PDFs. Our AI parses and vectors them to perfectly match your experience against job requirements.", placement: "top" as const }
+            ];
+        case "/dashboard/profile":
+            return [
+                { target: "body", content: "Your professional profile.", placement: "center" as const, disableBeacon: true },
+                { target: "form", content: "Ensure this information is accurate. The AI uses this data to answer job application questions on your behalf!", placement: "top" as const }
+            ];
+        case "/dashboard/settings":
+            return [
+                { target: "body", content: "System configurations and automation rules.", placement: "center" as const, disableBeacon: true },
+                { target: "main", content: "Toggle your background automation tasks on or off. Set it to auto-apply while you sleep!", placement: "top" as const }
+            ];
+        case "/dashboard/logs":
+            return [
+                { target: "body", content: "System Logs and Active Agents.", placement: "center" as const, disableBeacon: true },
+                { target: "main", content: "Monitor the real-time terminal output of your background workers and AI agents.", placement: "top" as const }
+            ];
+        default:
+            return [];
+    }
+}
 
 export function TutorialOverlay() {
     const [run, setRun] = useState(false);
+    const [steps, setSteps] = useState<any[]>([]);
+    const pathname = usePathname();
 
     useEffect(() => {
-        // Only trigger the tutorial once per lifetime, stored in localStorage
-        const hasSeenTutorial = localStorage.getItem("jobhunt_tutorial_seen");
-        if (!hasSeenTutorial) {
-            // Slight delay so the UI fully mounts
-            const timer = setTimeout(() => setRun(true), 1500);
-            return () => clearTimeout(timer);
+        if (!pathname) return;
+
+        const pageKey = `jobhunt_tutorial_${pathname}`;
+        const hasSeenTutorial = localStorage.getItem(pageKey);
+
+        const pageSteps = getStepsForPath(pathname);
+        if (pageSteps.length > 0) {
+            setSteps(pageSteps);
+            if (!hasSeenTutorial) {
+                // Slight delay so the UI fully mounts
+                const timer = setTimeout(() => setRun(true), 1000);
+                return () => clearTimeout(timer);
+            } else {
+                setRun(false); // Make sure it's off if already seen
+            }
+        } else {
+            setRun(false);
+            setSteps([]);
         }
-    }, []);
+    }, [pathname]);
 
     useEffect(() => {
-        const handleForceTrigger = () => setRun(true);
+        const handleForceTrigger = () => {
+            const pageSteps = getStepsForPath(pathname);
+            if (pageSteps.length > 0) {
+                setSteps(pageSteps);
+                setRun(true);
+            } else {
+                toast.info("No interactive tutorial available for this specific page yet.");
+            }
+        };
         window.addEventListener("trigger-tutorial", handleForceTrigger);
         return () => window.removeEventListener("trigger-tutorial", handleForceTrigger);
-    }, []);
-
-    const steps = [
-        {
-            target: "body",
-            content: "Welcome to JobHunt V2! This 10-second quick tour will show you the most powerful tools in your new arsenal.",
-            placement: "center" as const,
-            disableBeacon: true,
-        },
-        {
-            target: "a[href='/dashboard/scraper']",
-            content: "The Scraper is where the magic happens. We've upgraded this to use ultra-fast, headless browsers that extract jobs & contact leads perfectly without relying on AI.",
-            placement: "right" as const,
-        },
-        {
-            target: "a[href='/dashboard/extract']",
-            content: "Found some messy data online? Paste it into the Universal Extractor, and we'll automatically parse it into Contacts or Job Postings to save to your CRM.",
-            placement: "right" as const,
-        },
-        {
-            target: "a[href='/dashboard/contacts']",
-            content: "Manage your networking stack here. You can easily import your existing contacts via CSV or Excel sheets.",
-            placement: "right" as const,
-        },
-        {
-            target: "a[href='/dashboard/templates']",
-            content: "Don't forget to configure your email templates for one-click cold outreach. Your linked variables will auto-fill!",
-            placement: "right" as const,
-        }
-    ];
+    }, [pathname]);
 
     const handleJoyrideCallback = (data: CallBackProps) => {
         const { status } = data;
@@ -57,9 +122,13 @@ export function TutorialOverlay() {
 
         if (finishedStatuses.includes(status)) {
             setRun(false);
-            localStorage.setItem("jobhunt_tutorial_seen", "true");
+            if (pathname) {
+                localStorage.setItem(`jobhunt_tutorial_${pathname}`, "true");
+            }
         }
     };
+
+    if (steps.length === 0) return null;
 
     return (
         <Joyride
@@ -124,7 +193,7 @@ export function TutorialOverlay() {
                 }
             }}
             locale={{
-                last: "Go to Dashboard",
+                last: "Done",
                 next: "Next",
                 skip: "Skip Tour"
             }}

@@ -501,13 +501,13 @@ export default function ColdMailPage() {
                             <Tabs value={contactScope} onValueChange={setContactScope} className="w-[200px]">
                                 <TabsList className="grid w-full grid-cols-2 h-9 border-border/50 bg-background/50 shadow-sm rounded-lg">
                                     <TabsTrigger value="global" className="text-xs">Global Leads</TabsTrigger>
-                                    <TabsTrigger value="my" className="text-xs">My Scrapes</TabsTrigger>
+                                    <TabsTrigger value="my" className="text-xs">My Contacts</TabsTrigger>
                                 </TabsList>
                             </Tabs>
                             <div className="relative w-full xl:w-64">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                    type="text"
+                                    type="text" ß
                                     placeholder="Filter attributes..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
