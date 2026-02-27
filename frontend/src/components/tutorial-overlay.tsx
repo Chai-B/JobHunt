@@ -83,22 +83,28 @@ export function TutorialOverlay() {
     useEffect(() => {
         if (!pathname) return;
 
-        const pageKey = `jobhunt_tutorial_${pathname}`;
-        const hasSeenTutorial = localStorage.getItem(pageKey);
+        // We only want to automatically trigger the tutorial ONCE for the very first page they see after login.
+        const globalKey = "jobhunt_tutorial_seen_global";
+        const hasSeenGlobalTutorial = localStorage.getItem(globalKey);
 
         const pageSteps = getStepsForPath(pathname);
         if (pageSteps.length > 0) {
             setSteps(pageSteps);
-            if (!hasSeenTutorial) {
+            if (!hasSeenGlobalTutorial) {
                 // Slight delay so the UI fully mounts
                 const timer = setTimeout(() => setRun(true), 1000);
                 return () => clearTimeout(timer);
             } else {
-                setRun(false); // Make sure it's off if already seen
+                setRun(false); // Make sure it's off if they've already seen the initial global tour
             }
         } else {
             setRun(false);
             setSteps([]);
+            // If they land on a page with no tutorial on first login, still mark the global tutorial as "seen" 
+            // so it doesn't randomly pop up later on a different tab.
+            if (!hasSeenGlobalTutorial) {
+                localStorage.setItem(globalKey, "true");
+            }
         }
     }, [pathname]);
 
@@ -122,9 +128,8 @@ export function TutorialOverlay() {
 
         if (finishedStatuses.includes(status)) {
             setRun(false);
-            if (pathname) {
-                localStorage.setItem(`jobhunt_tutorial_${pathname}`, "true");
-            }
+            // Mark the global tutorial as seen so it never auto-runs again on any page change
+            localStorage.setItem("jobhunt_tutorial_seen_global", "true");
         }
     };
 

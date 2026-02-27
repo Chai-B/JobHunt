@@ -164,9 +164,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
 
     return (
-        <div className="flex h-screen bg-background text-foreground font-sans selection:bg-secondary">
+        <div className="flex h-screen w-full bg-background text-foreground font-sans selection:bg-secondary overflow-hidden">
             {/* Sidebar */}
-            <div className="w-64 border-r border-border bg-card px-4 py-8 flex flex-col justify-between relative z-10">
+            <div className="w-64 h-full border-r border-border bg-card px-4 py-8 flex-shrink-0 flex flex-col justify-between relative z-10">
                 <div>
                     <div className="flex items-center gap-3 px-2 mb-10">
                         <div className="h-8 w-8 rounded-md bg-secondary flex items-center justify-center border border-border">
@@ -231,7 +231,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto w-full p-6 sm:p-10 bg-background relative">
+            <main className="flex-1 h-full overflow-y-auto w-full p-6 sm:p-10 bg-background relative">
 
 
                 {user && user.has_completed_onboarding === false && (
