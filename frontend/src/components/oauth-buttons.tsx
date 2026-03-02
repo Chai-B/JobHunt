@@ -49,7 +49,7 @@ export function OAuthButtons() {
             }
 
             // Trigger redirect-based OAuth
-            const origin = typeof window !== 'undefined' ? window.location.origin : 'https://job-hunt-ebon.vercel.app';
+            const origin = typeof window !== 'undefined' ? window.location.origin : '';
             const absoluteRedirectUrl = `${origin}/sso-callback`;
 
             await signIn.authenticateWithRedirect({

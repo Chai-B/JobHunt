@@ -4,31 +4,46 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { TerminalSquare } from "lucide-react";
-import { useUser, useClerk } from "@clerk/nextjs";
+
+// Safe Clerk hooks — return null during SSR/build
+function useClerkSafe() {
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { useClerk } = require("@clerk/nextjs");
+        return useClerk();
+    } catch {
+        return null;
+    }
+}
+
+function useUserSafe() {
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { useUser } = require("@clerk/nextjs");
+        return useUser();
+    } catch {
+        return { isLoaded: false, isSignedIn: false, user: null };
+    }
+}
 
 export default function OAuthCallbackPage() {
     const router = useRouter();
-    const clerk = useClerk();
+    const clerk = useClerkSafe();
     const [status, setStatus] = useState("Verifying with Clerk...");
-    const { isLoaded, isSignedIn, user } = useUser();
+    const { isLoaded, isSignedIn, user } = useUserSafe();
     const hasSynced = useRef(false);
 
-    // 1. Manually process the OAuth parameters from the URL
     useEffect(() => {
         if (clerk && !hasSynced.current) {
-            // We call this manually to avoid the automatic AuthenticateWithRedirectCallback behavior
-            // which often triggers redirects to Hosted Forms if it thinks the session is incomplete.
-            clerk.handleRedirectCallback({
-                // We keep them on this page to finish our local backend sync
+            clerk.handleRedirectCallback?.({
                 signInForceRedirectUrl: "/sso-callback",
                 signUpForceRedirectUrl: "/sso-callback",
-            }).catch((err) => {
+            }).catch((err: any) => {
                 console.error("Clerk redirect error:", err);
             });
         }
     }, [clerk]);
 
-    // 2. Once Clerk confirms sign-in, sync with our backend
     useEffect(() => {
         const syncOAuthUser = async () => {
             if (hasSynced.current) return;
@@ -40,7 +55,7 @@ export default function OAuthCallbackPage() {
 
                 if (!email) {
                     toast.error("No email found.");
-                    router.push("/");
+                    router.push("/login");
                     return;
                 }
 
@@ -64,13 +79,12 @@ export default function OAuthCallbackPage() {
                     const data = await res.json();
                     localStorage.setItem("token", data.access_token);
 
-                    // Force a direct push to dashboard
                     toast.success("Welcome back!");
                     window.location.href = "/dashboard";
                 } catch (err: any) {
                     console.error("Sync error:", err);
                     toast.error(err.message || "Callback failed.");
-                    router.push("/");
+                    router.push("/login");
                 }
             }
         };
@@ -78,7 +92,6 @@ export default function OAuthCallbackPage() {
         syncOAuthUser();
     }, [isLoaded, isSignedIn, user, router]);
 
-    // Fallback if we get stuck
     useEffect(() => {
         const timer = setTimeout(() => {
             if (isLoaded && !hasSynced.current) {

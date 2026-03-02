@@ -19,6 +19,7 @@ class EmailTemplateUpdate(BaseModel):
 
 class EmailTemplateRead(EmailTemplateBase):
     id: int
+    user_id: Optional[int] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 

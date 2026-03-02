@@ -47,8 +47,8 @@ export default function DashboardOverview() {
     if (loading) return (
         <div className="space-y-8 animate-in fade-in duration-500">
             <div>
-                <Skeleton className="h-10 w-64 mb-2" />
-                <Skeleton className="h-4 w-96" />
+                <Skeleton className="h-10 w-48 sm:w-64 mb-2" />
+                <Skeleton className="h-4 w-64 sm:w-96" />
             </div>
 
             <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
@@ -66,8 +66,8 @@ export default function DashboardOverview() {
                 ))}
             </div>
 
-            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-7">
-                <Card className="col-span-4 bg-card border-border shadow-sm h-[400px]">
+            <div className="grid gap-5 grid-cols-1 lg:grid-cols-7">
+                <Card className="lg:col-span-4 bg-card border-border shadow-sm h-[400px]">
                     <CardHeader>
                         <Skeleton className="h-6 w-32 mb-2" />
                         <Skeleton className="h-4 w-64" />
@@ -76,7 +76,7 @@ export default function DashboardOverview() {
                         <Skeleton className="h-[250px] w-full rounded-lg mt-4" />
                     </CardContent>
                 </Card>
-                <Card className="col-span-3 bg-card border-border shadow-sm h-[400px]">
+                <Card className="lg:col-span-3 bg-card border-border shadow-sm h-[400px]">
                     <CardHeader>
                         <Skeleton className="h-6 w-32 mb-2" />
                         <Skeleton className="h-4 w-64" />
@@ -163,8 +163,8 @@ export default function DashboardOverview() {
                 </Card>
             </div>
 
-            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-7">
-                <Card className="col-span-4 bg-card border-border shadow-sm">
+            <div className="grid gap-5 grid-cols-1 lg:grid-cols-7">
+                <Card className="lg:col-span-4 bg-card border-border shadow-sm">
                     <CardHeader>
                         <CardTitle className="text-foreground font-medium tracking-wide flex items-center gap-2">Funnel Velocity</CardTitle>
                         <CardDescription className="text-muted-foreground">Volumetric tracking of your applications moving through the pipeline.</CardDescription>
@@ -200,7 +200,7 @@ export default function DashboardOverview() {
                     </CardContent>
                 </Card>
 
-                <Card className="col-span-3 bg-card border-border shadow-sm">
+                <Card className="lg:col-span-3 bg-card border-border shadow-sm">
                     <CardHeader>
                         <CardTitle className="text-foreground font-medium flex items-center gap-2">
                             <Cpu className="h-5 w-5 text-foreground" />

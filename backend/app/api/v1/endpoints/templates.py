@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel
+import re
 
 from app.api import deps
 from app.db.models.user import User
@@ -12,6 +13,11 @@ from app.schemas.email_template import EmailTemplateCreate, EmailTemplateRead, E
 from sqlalchemy import func
 
 router = APIRouter()
+
+class TemplateOverrideRequest(BaseModel):
+    template_id: int
+    subject: str
+    body_text: str
 
 class AITemplateRequest(BaseModel):
     purpose: str = "cold_outreach"
@@ -93,6 +99,58 @@ async def update_template(
     await db.commit()
     await db.refresh(db_obj)
     return db_obj
+
+@router.post("/override", response_model=EmailTemplateRead)
+async def override_template(
+    *,
+    db: AsyncSession = Depends(deps.get_personal_db),
+    override_in: TemplateOverrideRequest,
+    current_user: User = Depends(deps.get_current_active_user)
+) -> Any:
+    """Update a user's template or clone a global template if they edit it."""
+    res = await db.execute(select(EmailTemplate).where(EmailTemplate.id == override_in.template_id))
+    db_obj = res.scalars().first()
+    
+    if not db_obj:
+        raise HTTPException(status_code=404, detail="Template not found")
+        
+    if db_obj.user_id == current_user.id:
+        # User owns it, just update
+        db_obj.subject = override_in.subject
+        db_obj.body_text = override_in.body_text
+        db.add(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
+        return db_obj
+    else:
+        # Clone it for the user
+        # Check if they already have one with this generated name to avoid unique constraint errors
+        base_name = re.sub(r'^\[My Copy\] ', '', db_obj.name)
+        new_name = f"[My Copy] {base_name}"
+        
+        # Ensure unique name
+        suffix = ""
+        counter = 1
+        while True:
+            check_name = new_name + suffix
+            check_res = await db.execute(select(EmailTemplate).where(EmailTemplate.name == check_name))
+            if not check_res.scalars().first():
+                new_name = check_name
+                break
+            counter += 1
+            suffix = f" {counter}"
+
+        new_db_obj = EmailTemplate(
+            name=new_name,
+            subject=override_in.subject,
+            body_text=override_in.body_text,
+            is_active=True,
+            user_id=current_user.id
+        )
+        db.add(new_db_obj)
+        await db.commit()
+        await db.refresh(new_db_obj)
+        return new_db_obj
 
 @router.post("/generate-ai")
 async def generate_ai_template(
