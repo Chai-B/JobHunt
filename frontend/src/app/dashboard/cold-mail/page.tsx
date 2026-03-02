@@ -230,7 +230,7 @@ export default function ColdMailPage() {
         return res.json();
     };
 
-    const dispatchMail = async (contactId: number) => {
+    const dispatchMail = async (contactId: number, templateId?: string) => {
         const token = localStorage.getItem("token");
         const res = await fetch(`${API_BASE_URL}/api/v1/scraper/dispatch-mail`, {
             method: "POST",
