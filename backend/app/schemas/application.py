@@ -1,0 +1,35 @@
+from pydantic import BaseModel
+from typing import Optional
+from datetime import datetime
+
+class ApplicationBase(BaseModel):
+    job_id: Optional[int] = None
+    resume_id: Optional[int] = None
+
+class ApplicationCreate(ApplicationBase):
+    pass
+
+class ApplicationUpdate(BaseModel):
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+class ApplicationRead(ApplicationBase):
+    id: int
+    user_id: int
+    company_name: Optional[str] = None
+    job_title: Optional[str] = None
+    application_type: Optional[str] = None
+    status: str
+    notes: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_role: Optional[str] = None
+    source_url: Optional[str] = None
+    location: Optional[str] = None
+    applied_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+

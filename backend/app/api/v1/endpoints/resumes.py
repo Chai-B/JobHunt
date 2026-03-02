@@ -1,0 +1,180 @@
+from typing import Any
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
+from loguru import logger
+import asyncio
+import os
+from pathlib import Path
+
+from app.api import deps
+from app.core.config import settings
+from app.db.models.user import User
+from app.db.models.resume import Resume
+from app.schemas.resume import ResumeRead, ResumeList, ResumeUpdate
+from app.worker.tasks import process_resume_async
+from app.services.task_registry import register_task, cancel_user_tasks
+
+router = APIRouter()
+
+# Standardize directories from central config
+UPLOAD_DIR = settings.UPLOAD_DIR
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+ALLOWED_EXTENSIONS = {"pdf", "docx", "doc", "txt", "md"}
+
+@router.post("/upload", response_model=ResumeRead, status_code=202)
+async def upload_resume(
+    file: UploadFile = File(...),
+    label: str | None = Form(None),
+    db: AsyncSession = Depends(deps.get_personal_db),
+    current_user: User = Depends(deps.get_current_active_user)
+) -> Any:
+    """Upload a new resume and trigger background parsing."""
+    ext = file.filename.split(".")[-1].lower() if file.filename else ""
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"Unsupported file extension: {ext}")
+        
+    
+    file_bytes = await file.read()
+    
+    if len(file_bytes) == 0:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty (0 bytes).")
+    
+    # Create pending DB record with file bytes stored in-database
+    new_resume = Resume(
+        user_id=current_user.id,
+        filename=file.filename,
+        format=ext,
+        label=label,
+        status="pending",
+        file_data=file_bytes
+    )
+    db.add(new_resume)
+    await db.commit()
+    await db.refresh(new_resume)
+    
+    # Verify file_data persistence
+    file_data_size = len(new_resume.file_data) if new_resume.file_data else 0
+    if file_data_size == 0:
+        logger.error(f"Resume {new_resume.id}: file_data NOT persisted despite {len(file_bytes)} bytes uploaded!")
+    else:
+        logger.info(f"Resume {new_resume.id}: file_data persisted ({file_data_size} bytes)")
+    
+    # Save file physically to container volume as backup
+    file_path = UPLOAD_DIR / f"{new_resume.id}_{file.filename}"
+    with open(file_path, "wb") as f:
+        f.write(file_bytes)
+    
+    # Run directly in the current event loop (non-blocking)
+    task = asyncio.create_task(
+        process_resume_async(new_resume.id, file_bytes, file.filename)
+    )
+    task_id = register_task(current_user.id, "resume_extraction", task)
+    
+    logger.info(f"User {current_user.id} uploaded resume {new_resume.id}. Task {task_id} started.")
+    
+    return new_resume
+
+@router.post("/stop", status_code=200)
+async def stop_resume_processing(
+    current_user: User = Depends(deps.get_current_active_user)
+):
+    """Stop all running resume processing tasks for the current user."""
+    count = cancel_user_tasks(current_user.id, task_type="resume_extraction")
+    return {"message": f"Stopped {count} resume processing task(s).", "cancelled": count}
+
+@router.get("/", response_model=ResumeList)
+async def list_resumes(
+    skip: int = 0,
+    limit: int = 100,
+    db: AsyncSession = Depends(deps.get_personal_db),
+    current_user: User = Depends(deps.get_current_active_user)
+) -> Any:
+    """Get all resumes for the current user."""
+    count_stmt = select(func.count(Resume.id)).where(Resume.user_id == current_user.id)
+    count_res = await db.execute(count_stmt)
+    total = count_res.scalar() or 0
+    
+    stmt = select(Resume).where(Resume.user_id == current_user.id).offset(skip).limit(limit).order_by(Resume.created_at.desc())
+    res = await db.execute(stmt)
+    items = res.scalars().all()
+    
+    return {"items": items, "total": total}
+
+@router.post("/{resume_id}/extract-to-profile")
+async def extract_resume_to_profile(
+    resume_id: int,
+    db: AsyncSession = Depends(deps.get_personal_db),
+    current_user: User = Depends(deps.get_current_active_user)
+) -> Any:
+    """Uses LLM to extract profile information from the parsed resume text to auto-fill the profile."""
+    res = await db.execute(select(Resume).where(Resume.id == resume_id, Resume.user_id == current_user.id))
+    resume = res.scalars().first()
+    if not resume or not resume.raw_text:
+        raise HTTPException(status_code=404, detail="Resume not found or not fully parsed yet.")
+        
+    from app.db.models.setting import UserSetting
+    from app.services.llm import call_llm
+    import json
+    
+    settings_res = await db.execute(select(UserSetting).where(UserSetting.user_id == current_user.id))
+    settings = settings_res.scalars().first()
+    
+    if not settings or not settings.gemini_api_keys:
+        raise HTTPException(status_code=400, detail="Gemini API Key required in Settings to run AI extraction.")
+        
+    prompt = f"""Extract the following profile information from this resume text. If you cannot find a certain field, leave it empty.
+Return strictly valid JSON: {{"full_name": "", "email": "", "phone": "", "location": "", "linkedin_url": "", "bio": "", "skills": "", "experience_years": null, "education": ""}}.
+Resume Text:
+{resume.raw_text[:10000]}"""
+
+    try:
+        raw_json = await call_llm(prompt, settings, is_json=True)
+        data = json.loads(raw_json, strict=False)
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LLM Profile Extraction failed: {str(e)}")
+
+@router.put("/{resume_id}", response_model=ResumeRead)
+async def update_resume(
+    resume_id: int,
+    *,
+    db: AsyncSession = Depends(deps.get_personal_db),
+    resume_in: ResumeUpdate,
+    current_user: User = Depends(deps.get_current_active_user)
+) -> Any:
+    """Update a resume's metadata or parsed raw text."""
+    res = await db.execute(select(Resume).where(Resume.id == resume_id, Resume.user_id == current_user.id))
+    resume = res.scalars().first()
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+        
+    update_data = resume_in.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(resume, field, value)
+        
+    db.add(resume)
+    await db.commit()
+    await db.refresh(resume)
+    
+    logger.info(f"User {current_user.id} updated resume {resume.id}")
+    return resume
+
+@router.delete("/{resume_id}", status_code=200)
+async def delete_resume(
+    resume_id: int,
+    db: AsyncSession = Depends(deps.get_personal_db),
+    current_user: User = Depends(deps.get_current_active_user)
+) -> Any:
+    """Delete a resume."""
+    res = await db.execute(select(Resume).where(Resume.id == resume_id, Resume.user_id == current_user.id))
+    resume = res.scalars().first()
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    
+    await db.delete(resume)
+    await db.commit()
+    
+    logger.info(f"User {current_user.id} deleted resume {resume_id}")
+    return {"message": "Resume deleted successfully."}

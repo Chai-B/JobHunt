@@ -1,0 +1,37 @@
+node_modules/
+venv/
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Build
+dist/
+build/
+*.egg-info/
+.next/
+
+# Data
+*.sqlite3
+*.db
+
+# Test scripts
+backend/test_*.py
+backend/fix_*.py
+
+# Deploy config (not for repo)
+Caddyfile
