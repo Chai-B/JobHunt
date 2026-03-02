@@ -10,7 +10,7 @@ depends_on = None
 
 def upgrade():
     # Drop existing feedbacks if it exists because of incompatible schema
-    op.drop_table('feedbacks', checkfirst=True)
+    op.execute("DROP TABLE IF EXISTS feedbacks CASCADE")
     
     op.create_table(
         'feedbacks',
