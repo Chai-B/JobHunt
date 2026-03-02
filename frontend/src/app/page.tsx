@@ -57,7 +57,7 @@ const features = [
 ];
 
 const workflow = [
-  { step: "01", title: "Upload & Connect", desc: "Add your resumes and connect your Gmail account via OAuth. The system parses your documents, extracts key details, and configures your workspace automatically.", icon: FileText, color: "from-blue-500/20 to-blue-600/5" },
+  { step: "01", title: "Upload & Connect", desc: "Add your resumes and connect your Gmail account via OAuth and your API Keys. The system parses your documents, extracts key details, and configures your workspace automatically.", icon: FileText, color: "from-blue-500/20 to-blue-600/5" },
   { step: "02", title: "Create & Send", desc: "Build AI-powered email templates with dynamic tags like {name}, {company}, {role}. Tags auto-fill from your resume and contacts — no manual editing needed.", icon: Mail, color: "from-violet-500/20 to-violet-600/5" },
   { step: "03", title: "Track & Automate", desc: "Your inbox syncs automatically every 2 hours. Application statuses update in real-time. Every interaction is logged in a searchable, filterable timeline.", icon: TerminalSquare, color: "from-emerald-500/20 to-emerald-600/5" },
 ];
@@ -171,7 +171,7 @@ export default function LandingPage() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
               </span>
-              AI-Powered Job Automation Platform
+              AI-Powered Job Search Automation Platform
             </div>
           </FadeIn>
 
@@ -181,7 +181,7 @@ export default function LandingPage() {
               Your job search,
               <br />
               <span className="animate-gradient bg-gradient-to-r from-zinc-300 via-white to-zinc-400 bg-clip-text text-transparent">
-                on autopilot.
+                on autopilot .
               </span>
             </h1>
           </FadeIn>
@@ -322,7 +322,7 @@ export default function LandingPage() {
             <div>
               <p className="text-sm uppercase tracking-[0.2em] text-zinc-600 mb-4">Capabilities</p>
               <h2 className="text-4xl sm:text-5xl font-medium tracking-tight mb-5">
-                Built for real
+                Built for
                 <br className="hidden sm:block" />
                 job seekers
               </h2>

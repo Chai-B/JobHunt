@@ -125,6 +125,7 @@ export default function ColdMailPage() {
     const [showPreview, setShowPreview] = useState(false);
     const [previewData, setPreviewData] = useState<any>(null);
     const [previewLoading, setPreviewLoading] = useState(false);
+    const [batchDispatch, setBatchDispatch] = useState(false);
     const [previewContactId, setPreviewContactId] = useState<number | null>(null);
 
     const [editedSubject, setEditedSubject] = useState("");
@@ -331,21 +332,41 @@ export default function ColdMailPage() {
             } catch (err: any) {
                 toast.error(err.message);
                 setSendingId(null);
+                setBatchDispatch(false);
                 return;
             }
         }
 
-        try {
-            await dispatchMail(previewContactId, finalTemplateId);
-            toast.success("Outreach email dispatched.");
-        } catch (err: any) {
-            toast.error(err.message);
-        } finally {
-            setSendingId(null);
-            setPreviewContactId(null);
-            setPreviewData(null);
-            setRawTemplateData(null);
+        if (batchDispatch) {
+            setBatchSending(true);
+            let sent = 0;
+            let failed = 0;
+
+            for (const id of Array.from(selectedContactIds)) {
+                try {
+                    await dispatchMail(id, finalTemplateId);
+                    sent++;
+                } catch {
+                    failed++;
+                }
+            }
+            setBatchSending(false);
+            setBatchDispatch(false);
+            toast.success(`Batch Complete: ${sent} Sent, ${failed} Failed.`);
+            setSelectedContactIds(new Set());
+        } else {
+            try {
+                await dispatchMail(previewContactId, finalTemplateId);
+                toast.success("Outreach email dispatched.");
+            } catch (err: any) {
+                toast.error(err.message);
+            }
         }
+
+        setSendingId(null);
+        setPreviewContactId(null);
+        setPreviewData(null);
+        setRawTemplateData(null);
     };
 
     const handleSaveMissingTags = async () => {
@@ -393,11 +414,18 @@ export default function ColdMailPage() {
 
         // Quick preview check on the first contact to validate tags
         const firstId = Array.from(selectedContactIds)[0];
+        setPreviewLoading(true);
+        setPreviewContactId(firstId);
+        setBatchDispatch(true);
+
         try {
             const preview = await fetchPreview(firstId);
+            setPreviewData(preview);
+
             const criticalWarnings = (preview.warnings || []).filter((w: string) =>
                 w.includes("Critical field empty") || w.includes("Unreplaced tags") || w.includes("unavailable")
             );
+
             if (criticalWarnings.length > 0) {
                 const tags = (preview.tag_values || {});
                 const emptyTags = Object.entries(tags)
@@ -407,29 +435,24 @@ export default function ColdMailPage() {
                     setMissingTags(emptyTags);
                     setPendingDispatch({ type: 'batch' });
                     setShowValidationDialog(true);
+                    setPreviewLoading(false);
                     return;
                 }
             }
+
+            const rawTpl = templates.find(t => String(t.id) === selectedTemplate);
+            if (rawTpl) {
+                setRawTemplateData({ subject: rawTpl.subject, body: rawTpl.body_text });
+                setEditedSubject(rawTpl.subject);
+                setEditedBody(rawTpl.body_text);
+            }
+
+            setShowPreview(true);
         } catch (err: any) {
             toast.error(`Pre-flight check failed: ${err.message}`);
-            return;
+        } finally {
+            setPreviewLoading(false);
         }
-
-        setBatchSending(true);
-        let sent = 0;
-        let failed = 0;
-
-        for (const id of Array.from(selectedContactIds)) {
-            try {
-                await dispatchMail(id);
-                sent++;
-            } catch {
-                failed++;
-            }
-        }
-        setBatchSending(false);
-        toast.success(`Batch Complete: ${sent} Sent, ${failed} Failed.`);
-        setSelectedContactIds(new Set());
     };
 
     const labelClass = "text-[11px] uppercase tracking-[0.2em] text-muted-foreground/60 font-medium mb-2 flex items-center";
@@ -710,41 +733,43 @@ export default function ColdMailPage() {
 
             {/* Sticky Floating Action Bar for Selection */}
             {selectedContactIds.size > 0 && (
-                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-10 duration-500">
-                    <div className="flex items-center gap-6 px-8 py-4 bg-background/60 backdrop-blur-2xl border border-primary/20 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] ring-1 ring-white/5">
-                        <div className="flex items-center gap-4 border-r border-border/50 pr-6">
+                <div className="fixed bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-10 duration-500 w-[95vw] sm:w-auto">
+                    <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-6 px-4 sm:px-8 py-3 sm:py-4 bg-background/80 backdrop-blur-2xl border border-primary/20 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] ring-1 ring-white/5">
+                        <div className="flex items-center gap-4 sm:border-r border-border/50 sm:pr-6 w-full sm:w-auto justify-center sm:justify-start">
                             <div className="h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center">
                                 <Zap className="w-5 h-5 text-primary" />
                             </div>
-                            <div className="flex flex-col">
+                            <div className="flex flex-col text-center sm:text-left">
                                 <span className="text-lg font-medium leading-none">{selectedContactIds.size} Target{selectedContactIds.size > 1 ? 's' : ''}</span>
                                 <span className="text-[10px] uppercase font-medium tracking-widest text-primary/70 mt-1">Batch Ready</span>
                             </div>
                         </div>
-                        <Button
-                            onClick={sendBatchMails}
-                            disabled={batchSending || !selectedTemplate || !selectedResume}
-                            className="bg-primary text-primary-foreground hover:opacity-90 rounded-xl px-8 py-6 h-auto font-medium text-base shadow-xl transition-all hover:scale-105 active:scale-95 gap-3"
-                        >
-                            {batchSending ? <Activity className="w-5 h-5 animate-spin" /> : <Mail className="w-5 h-5" />}
-                            {batchSending ? "Processing wave..." : "Dispatch Batch Wave"}
-                            {!batchSending && <ChevronRight className="w-4 h-4 opacity-50" />}
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedContactIds(new Set())}
-                            className="text-muted-foreground hover:text-foreground rounded-lg"
-                        >
-                            Cancel Selection
-                        </Button>
+                        <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                            <Button
+                                onClick={sendBatchMails}
+                                disabled={batchSending || !selectedTemplate || !selectedResume}
+                                className="w-full sm:w-auto bg-primary text-primary-foreground hover:opacity-90 rounded-xl px-8 py-6 h-auto font-medium text-sm sm:text-base shadow-xl transition-all hover:scale-105 active:scale-95 gap-3"
+                            >
+                                {batchSending ? <Activity className="w-5 h-5 animate-spin" /> : <Mail className="w-5 h-5" />}
+                                {batchSending ? "Processing wave..." : "Dispatch Batch Wave"}
+                                {!batchSending && <ChevronRight className="w-4 h-4 opacity-50" />}
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setSelectedContactIds(new Set())}
+                                className="w-full sm:w-auto text-muted-foreground hover:text-foreground rounded-lg h-10"
+                            >
+                                Cancel Selection
+                            </Button>
+                        </div>
                     </div>
                 </div>
             )}
 
             {/* Missing Tags Dialog */}
             <AlertDialog open={showValidationDialog} onOpenChange={setShowValidationDialog}>
-                <AlertDialogContent className="bg-card border-border/50 shadow-2xl rounded-2xl max-w-md">
+                <AlertDialogContent className="bg-card border-border/50 shadow-2xl rounded-2xl max-w-md w-[95vw] sm:w-full">
                     <AlertDialogHeader>
                         <AlertDialogTitle className="flex items-center gap-2">
                             <AlertTriangle className="w-5 h-5 text-amber-500" />
@@ -794,8 +819,11 @@ export default function ColdMailPage() {
             </AlertDialog>
 
             {/* Email Preview & Editor Dialog */}
-            <AlertDialog open={showPreview} onOpenChange={setShowPreview}>
-                <AlertDialogContent className="bg-card border-border/50 shadow-2xl rounded-2xl max-w-3xl overflow-hidden p-0 flex flex-col max-h-[90vh]">
+            <AlertDialog open={showPreview} onOpenChange={(open) => {
+                setShowPreview(open);
+                if (!open) setBatchDispatch(false);
+            }}>
+                <AlertDialogContent className="bg-card border-border/50 shadow-2xl rounded-2xl max-w-3xl overflow-hidden p-0 flex flex-col max-h-[90vh] w-[95vw] sm:w-full">
                     <div className="p-6 border-b border-border/50 bg-secondary/10 shrink-0">
                         <AlertDialogHeader>
                             <AlertDialogTitle className="flex items-center gap-2 text-xl font-medium tracking-tight">

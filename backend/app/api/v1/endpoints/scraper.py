@@ -22,6 +22,7 @@ router = APIRouter()
 @router.post("/run", status_code=status.HTTP_202_ACCEPTED)
 async def trigger_scraper(
     req: ScraperJobRequest,
+    db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_user)
 ):
     """
@@ -30,6 +31,10 @@ async def trigger_scraper(
     if req.target_type not in ["jobs", "contacts"]:
         raise HTTPException(status_code=400, detail="Invalid target type. Must be 'jobs' or 'contacts'.")
         
+    settings = (await db.execute(select(UserSetting).where(UserSetting.user_id == current_user.id))).scalars().first()
+    if not settings or not settings.gemini_api_keys:
+        raise HTTPException(status_code=400, detail="Gemini API Key is missing. Please configure it in Settings to use the AI Scraper.")
+
     logger.info(f"User {current_user.email} triggered scraper for {req.target_url} ({req.target_type})")
     
     task = asyncio.create_task(
@@ -73,6 +78,23 @@ async def dispatch_cold_mail(
     current_user: User = Depends(deps.get_current_active_user)
 ):
     """Dispatch an Autonomous Cold Mail Agent."""
+    
+    # Pre-flight check: Ensure sending mechanisms are configured before dispatching to Celery
+    settings = (await db.execute(select(UserSetting).where(UserSetting.user_id == current_user.id))).scalars().first()
+    if not settings:
+        raise HTTPException(400, "Settings not configured. Please visit Settings to connect your email.")
+    
+    if getattr(settings, 'use_gmail_for_send', False):
+        if not getattr(settings, 'gmail_access_token', None):
+            raise HTTPException(400, "Gmail send is enabled but access token is missing. Connect Gmail in Settings.")
+    else:
+        missing_smtp = []
+        if not settings.smtp_server: missing_smtp.append("SMTP Server")
+        if not settings.smtp_username: missing_smtp.append("SMTP Username")
+        if not settings.smtp_password: missing_smtp.append("SMTP Password")
+        if missing_smtp:
+            raise HTTPException(400, f"Missing SMTP configuration: {', '.join(missing_smtp)}. Configure in Settings.")
+
     stmt = select(ScrapedContact).where(ScrapedContact.id == req.contact_id)
     contact = (await db.execute(stmt)).scalars().first()
     if not contact: raise HTTPException(404, "Collaborative Contact not found")
@@ -109,9 +131,12 @@ async def preview_cold_mail(
     exp_match = re.search(r'(\d+)', str(raw_exp))
     exp_years = exp_match.group(1) if exp_match else ""
 
+    target_role = (resume_data.get("target_role") or getattr(settings, 'target_roles', "")).strip()
+
     val_map = {
         "contact_name": (contact.name or "").strip(),
-        "job_title": (contact.role or "").strip(),
+        "contact_role": (contact.role or "").strip(),
+        "job_title": target_role,
         "company": (contact.company or "").strip(),
         "experience_years": exp_years,
         "skills": (resume_data.get("skills") or getattr(current_user, 'skills', "") or "").strip(),
@@ -140,7 +165,7 @@ async def preview_cold_mail(
     if remaining_tags:
         warnings.append(f"Unreplaced tags: {remaining_tags}")
     
-    critical_fields = {"contact_name": "Contact Name", "company": "Company", "user_name": "Your Name"}
+    critical_fields = {"contact_name": "Contact Name", "company": "Company", "user_name": "Your Name", "job_title": "Target Role"}
     for key, label in critical_fields.items():
         if not val_map.get(key):
             warnings.append(f"Critical field empty: {label}")

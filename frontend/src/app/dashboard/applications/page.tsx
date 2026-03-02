@@ -373,7 +373,7 @@ export default function ApplicationsPage() {
                                                                         exit={{ height: 0, opacity: 0 }}
                                                                         className="overflow-hidden bg-background/30"
                                                                     >
-                                                                        <div className="p-12 grid lg:grid-cols-2 gap-16">
+                                                                        <div className="p-4 sm:p-8 lg:p-12 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
                                                                             <div className="space-y-10">
                                                                                 <div className="space-y-4">
                                                                                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary/80">
@@ -395,7 +395,7 @@ export default function ApplicationsPage() {
                                                                                 <div className="p-8 rounded-3xl bg-card border border-border/50 shadow-inner space-y-8">
                                                                                     <div className="space-y-4">
                                                                                         <h4 className="text-[10px] uppercase tracking-widest font-black text-muted-foreground/40">Recruiter Profile</h4>
-                                                                                        <div className="grid grid-cols-2 gap-8">
+                                                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8">
                                                                                             <div className="flex flex-col gap-1">
                                                                                                 <span className="text-[10px] text-muted-foreground uppercase opacity-50">Name</span>
                                                                                                 <span className="text-sm font-medium">{app.contact_name || "Automated"}</span>
@@ -448,7 +448,7 @@ export default function ApplicationsPage() {
             </Card>
 
             <AlertDialog open={deleteConfirmId !== null} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
-                <AlertDialogContent className="bg-card border-border/50 shadow-2xl rounded-2xl max-w-sm">
+                <AlertDialogContent className="bg-card border-border/50 shadow-2xl rounded-2xl max-w-sm w-[95vw] sm:w-full">
                     <AlertDialogHeader>
                         <AlertDialogTitle className="flex items-center gap-2">
                             <AlertTriangle className="w-5 h-5 text-destructive" />

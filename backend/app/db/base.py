@@ -7,4 +7,4 @@ from app.db.models.setting import UserSetting  # noqa
 from app.db.models.action_log import ActionLog  # noqa
 from app.db.models.email_template import EmailTemplate  # noqa
 from app.db.models.application import Application  # noqa
-from app.db.models.feedback import Feedback  # noqa
+from app.db.models.feedback import Feedback, FeedbackComment  # noqa

@@ -46,41 +46,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const [runningProcesses, setRunningProcesses] = useState<any[]>([]);
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
-    const [feedbackOpen, setFeedbackOpen] = useState(false);
-    const [feedbackText, setFeedbackText] = useState("");
-    const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
-
     // Close sidebar on navigation
     useEffect(() => {
         setSidebarOpen(false);
     }, [pathname]);
-
-    const handleFeedbackSubmit = async () => {
-        if (!feedbackText.trim()) return;
-        setIsSubmittingFeedback(true);
-        try {
-            const token = localStorage.getItem("token");
-            const res = await fetch(`${API_BASE_URL}/api/v1/feedbacks/`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify({ message: feedbackText })
-            });
-            if (res.ok) {
-                toast.success("Feedback submitted. Thank you!");
-                setFeedbackOpen(false);
-                setFeedbackText("");
-            } else {
-                toast.error("Failed to submit feedback.");
-            }
-        } catch (err) {
-            toast.error("Network error.");
-        } finally {
-            setIsSubmittingFeedback(false);
-        }
-    };
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -217,13 +186,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <HelpCircle className="h-4 w-4 transition-colors" />
                     Help / Tutorials
                 </button>
-                <button
-                    onClick={() => setFeedbackOpen(true)}
-                    className="group flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                <Link
+                    href="/dashboard/feedback"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`group flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${pathname.startsWith('/dashboard/feedback') ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'}`}
                 >
                     <MessageSquare className="h-4 w-4 transition-colors" />
-                    Feedback
-                </button>
+                    Feedback Hub
+                </Link>
                 <div className="mt-4 pt-4 border-t border-border/50 space-y-2">
                     <div className="text-xs text-muted-foreground truncate font-medium bg-secondary py-2 px-3 rounded-md border border-border">{user.email}</div>
                     <button
@@ -284,37 +254,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </div>
                 </div>
             </main>
-
-            <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
-                <DialogContent className="sm:max-w-[425px] bg-card border-border/50 rounded-2xl shadow-2xl">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <MessageSquare className="w-5 h-5 text-primary" />
-                            Submit Feedback
-                        </DialogTitle>
-                        <DialogDescription>
-                            Have an idea, caught a bug, or just want to share your thoughts? We&apos;re listening.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <Textarea
-                            placeholder="Type your feedback here..."
-                            className="bg-background/50 border-border/50 focus-visible:ring-primary min-h-[120px] rounded-xl"
-                            value={feedbackText}
-                            onChange={(e) => setFeedbackText(e.target.value)}
-                        />
-                    </div>
-                    <DialogFooter>
-                        <Button
-                            onClick={handleFeedbackSubmit}
-                            disabled={!feedbackText.trim() || isSubmittingFeedback}
-                            className="rounded-xl px-6"
-                        >
-                            {isSubmittingFeedback ? "Submitting..." : "Send Feedback"}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
         </div>
     );
 }

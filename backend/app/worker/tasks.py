@@ -714,10 +714,13 @@ async def run_cold_mail_async(user_id: int, contact_id: int, template_id: int, r
             exp_match = re.search(r'(\d+)', str(raw_exp))
             exp_years = exp_match.group(1) if exp_match else ""
 
+            target_role = (resume_data.get("target_role") or getattr(settings, 'target_roles', "")).strip()
+
             val_map = {
                 # Contact-specific
                 "contact_name": (contact.name or "").strip(),
-                "job_title": (contact.role or "").strip(),
+                "contact_role": (contact.role or "").strip(),
+                "job_title": target_role,
                 "company": (contact.company or "").strip(),
                 # Resume-derived
                 "experience_years": exp_years,
