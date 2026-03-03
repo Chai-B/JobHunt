@@ -33,6 +33,7 @@ export default function OAuthCallbackPage() {
     const { isLoaded, isSignedIn, user } = useUserSafe();
     const hasSynced = useRef(false);
 
+    // Step 1: Process Clerk redirect callback
     useEffect(() => {
         if (clerk && !hasSynced.current) {
             clerk.handleRedirectCallback?.({
@@ -40,10 +41,12 @@ export default function OAuthCallbackPage() {
                 signUpForceRedirectUrl: "/sso-callback",
             }).catch((err: any) => {
                 console.error("Clerk redirect error:", err);
+                setStatus("Retrying...");
             });
         }
     }, [clerk]);
 
+    // Step 2: Once Clerk confirms user → sync with backend
     useEffect(() => {
         const syncOAuthUser = async () => {
             if (hasSynced.current) return;
@@ -95,18 +98,24 @@ export default function OAuthCallbackPage() {
         syncOAuthUser();
     }, [isLoaded, isSignedIn, user, router]);
 
+    // Step 3: Fallback — if nothing happens in 10s, redirect
     useEffect(() => {
         const timer = setTimeout(() => {
-            if (isLoaded && !hasSynced.current) {
+            if (!hasSynced.current) {
+                // If user is signed in with Clerk but sync didn't fire, try dashboard
                 const token = localStorage.getItem("token");
-                if (token && isSignedIn) {
+                if (token) {
                     window.location.href = "/dashboard";
+                    return;
                 }
+                // Otherwise send back to login
+                toast.error("Sign-in timed out. Please try again.");
+                router.push("/login");
             }
-        }, 8000);
+        }, 10000);
 
         return () => clearTimeout(timer);
-    }, [isLoaded, isSignedIn]);
+    }, [router]);
 
     return (
         <div className="flex h-screen items-center justify-center bg-background">
