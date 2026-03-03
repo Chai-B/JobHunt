@@ -28,6 +28,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [showVerifyNotice, setShowVerifyNotice] = useState(false);
   const clerk = useClerkSafe();
   const router = useRouter();
 
@@ -61,7 +62,8 @@ export default function LoginPage() {
           const err = await res.json();
           throw new Error(err.detail || "Registration failed. Please try again.");
         }
-        toast.success("Account created successfully. Please sign in.");
+        toast.success("Account created! Check your email for a verification link.");
+        setShowVerifyNotice(true);
         setIsRegistering(false);
       } else {
         const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
@@ -106,6 +108,13 @@ export default function LoginPage() {
             {isRegistering ? "Set up your workspace to automate your job search." : "Sign in to access your automated application dashboard."}
           </p>
         </div>
+
+        {showVerifyNotice && (
+          <div className="mb-4 p-4 bg-primary/5 border border-primary/20 rounded-xl text-center animate-in fade-in slide-in-from-top-4 duration-500">
+            <p className="text-sm font-medium text-foreground">Check your email</p>
+            <p className="text-xs text-muted-foreground mt-1">We sent a verification link to your email. Click it to activate your account.</p>
+          </div>
+        )}
 
         <div className="p-8 bg-card border border-border rounded-xl shadow-sm relative overflow-hidden min-h-[400px]">
           {loading && clerk?.session ? (

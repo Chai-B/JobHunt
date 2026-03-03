@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, computed_field
 from typing import Optional
 
 class UserSettingBase(BaseModel):
@@ -20,17 +20,24 @@ class UserSettingBase(BaseModel):
     use_gmail_for_send: Optional[bool] = False
     cold_mail_automation_enabled: Optional[bool] = False
     auto_apply_enabled: Optional[bool] = False
-    # Intentionally excluding smtp_password from the Base to avoid accidental exposure
 
 class UserSettingCreate(UserSettingBase):
     smtp_password: Optional[str] = None
 
 class UserSettingUpdate(UserSettingBase):
     smtp_password: Optional[str] = None
+    gmail_access_token: Optional[str] = None
+    gmail_refresh_token: Optional[str] = None
 
 class UserSettingRead(UserSettingBase):
     id: int
     user_id: int
+    # Never expose raw tokens — only indicate connection status
     gmail_access_token: Optional[str] = None
+    
+    @computed_field
+    @property
+    def has_gmail_connected(self) -> bool:
+        return bool(self.gmail_access_token)
     
     model_config = ConfigDict(from_attributes=True)

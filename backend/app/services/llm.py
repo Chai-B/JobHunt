@@ -1,6 +1,7 @@
 import json
 import re
 from loguru import logger
+from app.core.encryption import decrypt
 from openai import AsyncOpenAI
 from app.db.models.setting import UserSetting
 
@@ -65,7 +66,7 @@ async def call_llm(prompt: str, settings: UserSetting, is_json: bool = False, sy
             if not settings.gemini_api_keys:
                 raise ValueError("Gemini API key is required but not set in Settings.")
             
-            api_key = settings.gemini_api_keys.split(",")[0].strip()
+            api_key = decrypt(settings.gemini_api_keys).split(",")[0].strip()
             genai.configure(api_key=api_key)
             model = genai.GenerativeModel(model_name)
             
@@ -90,7 +91,7 @@ async def call_llm(prompt: str, settings: UserSetting, is_json: bool = False, sy
                 raise ValueError("Custom LLM API key is required but not set in Settings.")
                 
             client_kwargs = {
-                "api_key": settings.openai_api_key.strip()
+                "api_key": decrypt(settings.openai_api_key).strip()
             }
             if settings.llm_base_url:
                 client_kwargs["base_url"] = settings.llm_base_url.strip()

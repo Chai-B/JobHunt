@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from app.core.encryption import decrypt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from loguru import logger
@@ -85,13 +86,13 @@ async def dispatch_cold_mail(
         raise HTTPException(400, "Settings not configured. Please visit Settings to connect your email.")
     
     if getattr(settings, 'use_gmail_for_send', False):
-        if not getattr(settings, 'gmail_access_token', None):
+        if not decrypt(getattr(settings, 'gmail_access_token', None) or ''):
             raise HTTPException(400, "Gmail send is enabled but access token is missing. Connect Gmail in Settings.")
     else:
         missing_smtp = []
         if not settings.smtp_server: missing_smtp.append("SMTP Server")
         if not settings.smtp_username: missing_smtp.append("SMTP Username")
-        if not settings.smtp_password: missing_smtp.append("SMTP Password")
+        if not decrypt(settings.smtp_password or ''): missing_smtp.append("SMTP Password")
         if missing_smtp:
             raise HTTPException(400, f"Missing SMTP configuration: {', '.join(missing_smtp)}. Configure in Settings.")
 

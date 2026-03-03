@@ -306,7 +306,8 @@ async def run_inbox_scanner_async(user_id: int):
             db.add(log_entry)
             await db.commit()
 
-            scanner = InboxScanner(user_settings.gmail_access_token, getattr(user_settings, "gmail_refresh_token", ""))
+            from app.core.encryption import decrypt as _decrypt
+            scanner = InboxScanner(_decrypt(user_settings.gmail_access_token), _decrypt(getattr(user_settings, "gmail_refresh_token", "")))
             watermark = user_settings.last_inbox_sync_time
             emails = scanner.fetch_recent_emails(watermark=watermark, max_results=100)
 

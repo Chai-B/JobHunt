@@ -25,6 +25,12 @@ class User(Base):
     experience_years = Column(Integer, nullable=True)
     education = Column(String, nullable=True)
     
+    # Auth security fields
+    is_email_verified = Column(Boolean, default=False, nullable=False, server_default="false")
+    email_verification_token = Column(String, nullable=True)
+    password_reset_token = Column(String, nullable=True)
+    password_reset_expires = Column(DateTime(timezone=True), nullable=True)
+    
     # Audit timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

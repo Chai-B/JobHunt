@@ -1,5 +1,5 @@
 "use client";
-import { API_BASE_URL } from "@/lib/config";
+import { API_BASE_URL, OAUTH_SYNC_SECRET } from "@/lib/config";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -62,7 +62,10 @@ export default function OAuthCallbackPage() {
                 try {
                     const res = await fetch(`${API_BASE_URL}/api/v1/auth/oauth-sync`, {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: {
+                            "Content-Type": "application/json",
+                            ...(OAUTH_SYNC_SECRET ? { "X-OAuth-Secret": OAUTH_SYNC_SECRET } : {}),
+                        },
                         body: JSON.stringify({
                             email: email,
                             full_name: user.fullName || user.firstName || email.split("@")[0],

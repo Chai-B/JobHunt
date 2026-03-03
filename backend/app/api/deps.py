@@ -14,6 +14,7 @@ from app.db.models.user import User
 from app.db.models.setting import UserSetting
 from app.schemas.user import TokenPayload
 from app.crud import user as crud_user
+from app.core.encryption import decrypt
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/login"
@@ -68,7 +69,7 @@ async def get_personal_db(
     """
     settings = current_user.settings
     if settings and settings.external_db_url:
-        target_url = settings.external_db_url
+        target_url = decrypt(settings.external_db_url)
         if target_url.startswith("postgres://"):
             target_url = target_url.replace("postgres://", "postgresql+asyncpg://", 1)
         elif target_url.startswith("postgresql://"):

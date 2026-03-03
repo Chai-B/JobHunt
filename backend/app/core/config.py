@@ -1,8 +1,10 @@
 from pydantic_settings import BaseSettings
+from typing import Optional
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "JobHunt API"
     API_V1_STR: str = "/api/v1"
+    ENVIRONMENT: str = "production"  # "development" to enable /docs
     
     # Database
     DATABASE_URL: str | None = None
@@ -15,15 +17,12 @@ class Settings(BaseSettings):
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
         if self.DATABASE_URL:
-            # Clean up common copy-paste errors from dashboard (quotes, spaces)
             clean_url = self.DATABASE_URL.strip().strip("'").strip('"')
-            # Ensure it uses the asyncpg driver
             if clean_url.startswith("postgresql://"):
                 clean_url = clean_url.replace("postgresql://", "postgresql+asyncpg://", 1)
             elif clean_url.startswith("postgres://"):
                 clean_url = clean_url.replace("postgres://", "postgresql+asyncpg://", 1)
                 
-            # Supabase PgBouncer (6543) transaction mode doesn't support asyncpg prepared statements
             if ":6543" in clean_url and "prepared_statement_cache_size=0" not in clean_url:
                 separator = "&" if "?" in clean_url else "?"
                 clean_url = f"{clean_url}{separator}prepared_statement_cache_size=0"
@@ -37,10 +36,39 @@ class Settings(BaseSettings):
 
     # JWT Auth
     SECRET_KEY: str = "SUPER_SECRET_CHANGE_ME_IN_PROD"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 30  # 30 days
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days (reduced from 30)
+    
+    # Encryption — used to encrypt API keys, tokens, and credentials at rest
+    ENCRYPTION_KEY: str = ""
     
     # Clerk (headless sync)
     CLERK_SECRET_KEY: str = ""
+    
+    # OAuth sync shared secret — protects the /oauth-sync endpoint
+    OAUTH_SYNC_SECRET: str = ""
+    
+    # System Transactional Email (for verification/reset emails — NOT user's personal SMTP)
+    SYSTEM_SMTP_HOST: str = ""
+    SYSTEM_SMTP_PORT: int = 587
+    SYSTEM_SMTP_USER: str = ""
+    SYSTEM_SMTP_PASSWORD: str = ""
+    SYSTEM_FROM_EMAIL: str = "noreply@jobhunt.app"
+    FRONTEND_URL: str = "http://localhost:3000"  # used for reset/verify email links
+    
+    # CORS
+    BACKEND_CORS_ORIGINS: str | None = None
+    
+    def get_cors_origins(self) -> list[str]:
+        """Parse CORS origins from env. Falls back to frontend URL only."""
+        if self.BACKEND_CORS_ORIGINS:
+            return [o.strip() for o in self.BACKEND_CORS_ORIGINS.split(",") if o.strip()]
+        # Sensible defaults: localhost for dev + frontend URL
+        origins = [
+            "http://localhost:3000",
+            "http://localhost:3001",
+            self.FRONTEND_URL,
+        ]
+        return list(set(origins))
     
     # Paths
     @property
@@ -57,7 +85,6 @@ class Settings(BaseSettings):
     # Google OAuth
     GOOGLE_CLIENT_ID: str | None = None
     GOOGLE_CLIENT_SECRET: str | None = None
-    BACKEND_CORS_ORIGINS: list[str] | str | None = None
     
     model_config = {
         "case_sensitive": True,

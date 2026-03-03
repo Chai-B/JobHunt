@@ -7,6 +7,7 @@ from app.api.deps import get_current_user, reusable_oauth2
 from app.db.models.user import User
 from app.db.models.setting import UserSetting
 from app.core.config import settings
+from app.core.encryption import encrypt
 import google_auth_oauthlib.flow
 from loguru import logger
 from sqlalchemy import select
@@ -125,9 +126,9 @@ async def gmail_callback(request: Request, code: str, state: str, db: AsyncSessi
             user_settings = UserSetting(user_id=current_user.id)
             db.add(user_settings)
             
-        user_settings.gmail_access_token = credentials.token
+        user_settings.gmail_access_token = encrypt(credentials.token)
         if credentials.refresh_token:
-            user_settings.gmail_refresh_token = credentials.refresh_token
+            user_settings.gmail_refresh_token = encrypt(credentials.refresh_token)
         user_settings.use_gmail_for_send = True
         
         await db.commit()

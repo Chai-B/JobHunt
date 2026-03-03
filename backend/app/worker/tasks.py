@@ -21,6 +21,7 @@ from bs4 import BeautifulSoup
 from app.services.llm import call_llm
 from app.services.inbox_scanner import run_inbox_scanner_async
 from app.core.config import settings as app_settings
+from app.core.encryption import decrypt
 import json
 import smtplib
 from email.mime.text import MIMEText
@@ -567,7 +568,7 @@ async def run_auto_apply_async(user_id: int, app_id: int):
 
             # Setup Gemini (Localized load to prevent global module crash)
             import google.generativeai as genai
-            api_key = settings.gemini_api_keys.split(",")[0].strip()
+            api_key = decrypt(settings.gemini_api_keys).split(",")[0].strip()
             genai.configure(api_key=api_key)
             model_name = settings.preferred_model or "gemini-2.0-flash"
             model = genai.GenerativeModel(model_name)
@@ -809,7 +810,7 @@ async def run_cold_mail_async(user_id: int, contact_id: int, template_id: int, r
             try:
                 if getattr(settings, 'use_gmail_for_send', False) and getattr(settings, 'gmail_access_token', None) and getattr(settings, 'gmail_refresh_token', None):
                     from app.services.gmail_service import GmailService
-                    gmail_svc = GmailService(settings.gmail_access_token, settings.gmail_refresh_token)
+                    gmail_svc = GmailService(decrypt(settings.gmail_access_token), decrypt(settings.gmail_refresh_token))
                     gmail_svc.send_email(
                         to=contact.email,
                         subject=subject,
@@ -823,7 +824,7 @@ async def run_cold_mail_async(user_id: int, contact_id: int, template_id: int, r
                     port = settings.smtp_port or 587
                     server = smtplib.SMTP(settings.smtp_server, port)
                     server.starttls()
-                    server.login(settings.smtp_username, settings.smtp_password)
+                    server.login(settings.smtp_username, decrypt(settings.smtp_password))
                     server.send_message(msg)
                     server.quit()
                     success_msg = f"Cold mail sent to {contact.email} via SMTP"
@@ -1061,7 +1062,7 @@ async def run_daily_match_alerts_async():
                     port = settings.smtp_port or 587
                     server = smtplib.SMTP(settings.smtp_server, port)
                     server.starttls()
-                    server.login(settings.smtp_username, settings.smtp_password)
+                    server.login(settings.smtp_username, decrypt(settings.smtp_password))
                     server.send_message(msg)
                     server.quit()
                     
