@@ -59,16 +59,13 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: str | None = None
     
     def get_cors_origins(self) -> list[str]:
-        """Parse CORS origins from env. Falls back to frontend URL only."""
+        """Parse CORS origins from env. Falls back to wildcard if not configured."""
         if self.BACKEND_CORS_ORIGINS:
             return [o.strip() for o in self.BACKEND_CORS_ORIGINS.split(",") if o.strip()]
-        # Sensible defaults: localhost for dev + frontend URL
-        origins = [
-            "http://localhost:3000",
-            "http://localhost:3001",
-            self.FRONTEND_URL,
-        ]
-        return list(set(origins))
+        # Not configured — allow all origins (same as before hardening)
+        # Set BACKEND_CORS_ORIGINS in .env to lock down, e.g.:
+        # BACKEND_CORS_ORIGINS=https://job-hunt-ebon.vercel.app,http://localhost:3000
+        return ["*"]
     
     # Paths
     @property
