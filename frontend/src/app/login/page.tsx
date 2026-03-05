@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ArrowRight, Briefcase } from "lucide-react";
+import { ArrowRight, ArrowLeft, Briefcase } from "lucide-react";
 import dynamic from "next/dynamic";
 
 // Load OAuthButtons only on client (uses Clerk hooks that crash at build time)
@@ -114,6 +114,13 @@ export default function LoginPage() {
         )}
 
         <div className="p-8 bg-card border border-border rounded-xl shadow-sm relative overflow-hidden min-h-[400px]">
+          <button
+            onClick={() => router.push("/")}
+            className="absolute top-4 left-4 p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            title="Go back"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
 
 
           {/* OAuth Buttons — loaded only on client */}

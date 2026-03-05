@@ -98,9 +98,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     setMounted(true);
-    const token = localStorage.getItem("token");
-    if (token) router.push("/dashboard");
-  }, [router]);
+  }, []);
 
   if (!mounted) return null;
 

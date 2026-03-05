@@ -44,18 +44,17 @@ export function OAuthButtons() {
         try {
             // Check if user is already signed in to Clerk
             if (isSignedIn) {
-                window.location.href = "/sso-callback";
+                window.location.href = "/login";
                 return;
             }
 
             // Trigger redirect-based OAuth
             const origin = typeof window !== 'undefined' ? window.location.origin : '';
-            const absoluteRedirectUrl = `${origin}/sso-callback`;
             const absoluteLoginUrl = `${origin}/login`;
 
             await signIn.authenticateWithRedirect({
                 strategy,
-                redirectUrl: absoluteRedirectUrl,
+                redirectUrl: absoluteLoginUrl,
                 redirectUrlComplete: absoluteLoginUrl,
             });
         } catch (err: any) {
