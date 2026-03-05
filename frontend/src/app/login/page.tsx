@@ -93,6 +93,16 @@ export default function LoginPage() {
 
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-background text-foreground relative overflow-hidden selection:bg-secondary">
+      {/* Global back button */}
+      <button
+        onClick={() => router.push("/")}
+        className="absolute top-6 left-6 p-2 rounded-md font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
+        title="Go back to Home"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        <span className="text-sm hidden sm:inline">Back to Home</span>
+      </button>
+
       <div className="w-full max-w-[400px] animate-in fade-in zoom-in-95 duration-700 px-6">
         <div className="mb-10 text-center flex flex-col items-center">
           <div className="h-14 w-14 rounded-full bg-secondary flex items-center justify-center border border-border mb-6">
@@ -114,15 +124,6 @@ export default function LoginPage() {
         )}
 
         <div className="p-8 bg-card border border-border rounded-xl shadow-sm relative overflow-hidden min-h-[400px]">
-          <button
-            onClick={() => router.push("/")}
-            className="absolute top-4 left-4 p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-            title="Go back"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-
-
           {/* OAuth Buttons — loaded only on client */}
           <OAuthButtons />
 
