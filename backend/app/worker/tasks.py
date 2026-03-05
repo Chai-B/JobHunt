@@ -555,7 +555,7 @@ async def run_auto_apply_async(user_id: int, app_id: int):
             if not settings or not settings.gemini_api_keys:
                 logger.error("No Gemini key configured for auto-apply.")
                 app_record.status = "error"
-                app_record.notes = "Failed: Missing Gemini API Key in Settings."
+                app_record.notes = "Failed: Missing LLM API Key in Settings."
                 db.add(app_record)
                 await db.commit()
                 return

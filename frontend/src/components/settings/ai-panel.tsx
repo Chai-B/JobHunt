@@ -37,7 +37,7 @@ export function AIPanel({ formData, handleChange }: { formData: any, handleChang
                     {formData.llm_provider === "gemini" ? (
                         <>
                             <div>
-                                <Label htmlFor="gemini_api_keys" className={labelClass}>Gemini API Keys <Tip text="Provide multiple keys separated by commas for rotation." /></Label>
+                                <Label htmlFor="gemini_api_keys" className={labelClass}>LLM API Keys <Tip text="Provide multiple keys separated by commas for rotation." /></Label>
                                 <Input id="gemini_api_keys" name="gemini_api_keys" value={formData.gemini_api_keys} onChange={handleChange} type="password" placeholder="AIzaSyA..., AIzaSyB..." className={`${inputClass} font-mono`} />
                             </div>
                             <div>

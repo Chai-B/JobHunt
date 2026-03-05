@@ -169,7 +169,7 @@ async def generate_ai_template(
         
     provider = settings.llm_provider or "gemini"
     if provider == "gemini" and not settings.gemini_api_keys:
-        raise HTTPException(status_code=400, detail="Configure a Gemini API Key in Settings first.")
+        raise HTTPException(status_code=400, detail="Configure an LLM API Key in Settings first.")
     elif provider == "openai" and not settings.openai_api_key:
         raise HTTPException(status_code=400, detail="Configure a Custom API Key in Settings first.")
     

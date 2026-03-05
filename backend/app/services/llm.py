@@ -64,7 +64,7 @@ async def call_llm(prompt: str, settings: UserSetting, is_json: bool = False, sy
         if provider == "gemini":
             import google.generativeai as genai
             if not settings.gemini_api_keys:
-                raise ValueError("Gemini API key is required but not set in Settings.")
+                raise ValueError("LLM API key is required but not set in Settings.")
             
             api_key = decrypt(settings.gemini_api_keys).split(",")[0].strip()
             genai.configure(api_key=api_key)

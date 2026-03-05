@@ -34,7 +34,7 @@ async def trigger_scraper(
         
     settings = (await db.execute(select(UserSetting).where(UserSetting.user_id == current_user.id))).scalars().first()
     if not settings or not settings.gemini_api_keys:
-        raise HTTPException(status_code=400, detail="Gemini API Key is missing. Please configure it in Settings to use the AI Scraper.")
+        raise HTTPException(status_code=400, detail="LLM API Key is missing. Please configure it in Settings to use the AI Scraper.")
 
     logger.info(f"User {current_user.email} triggered scraper for {req.target_url} ({req.target_type})")
     

@@ -122,7 +122,7 @@ async def extract_resume_to_profile(
     settings = settings_res.scalars().first()
     
     if not settings or not settings.gemini_api_keys:
-        raise HTTPException(status_code=400, detail="Gemini API Key required in Settings to run AI extraction.")
+        raise HTTPException(status_code=400, detail="LLM API Key required in Settings to run AI extraction.")
         
     prompt = f"""Extract the following profile information from this resume text. If you cannot find a certain field, leave it empty.
 Return strictly valid JSON: {{"full_name": "", "email": "", "phone": "", "location": "", "linkedin_url": "", "bio": "", "skills": "", "experience_years": null, "education": ""}}.
