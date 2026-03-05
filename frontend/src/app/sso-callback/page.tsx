@@ -4,17 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { TerminalSquare } from "lucide-react";
-
-// Safe Clerk hooks — return null during SSR/build
-function useClerkSafe() {
-    try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { useClerk } = require("@clerk/nextjs");
-        return useClerk();
-    } catch {
-        return null;
-    }
-}
+import { AuthenticateWithRedirectCallback } from "@clerk/nextjs";
 
 function useUserSafe() {
     try {
@@ -26,38 +16,22 @@ function useUserSafe() {
     }
 }
 
-export default function OAuthCallbackPage() {
+function SyncLogic() {
     const router = useRouter();
-    const clerk = useClerkSafe();
-    const [status, setStatus] = useState("Verifying with Clerk...");
     const { isLoaded, isSignedIn, user } = useUserSafe();
+    const [status, setStatus] = useState("Finalizing sync...");
     const hasSynced = useRef(false);
 
-    // Step 1: Process Clerk redirect callback
-    useEffect(() => {
-        if (clerk && !hasSynced.current) {
-            clerk.handleRedirectCallback?.({
-                signInForceRedirectUrl: "/sso-callback",
-                signUpForceRedirectUrl: "/sso-callback",
-            }).catch((err: any) => {
-                console.error("Clerk redirect error:", err);
-                setStatus("Retrying...");
-            });
-        }
-    }, [clerk]);
-
-    // Step 2: Once Clerk confirms user → sync with backend
     useEffect(() => {
         const syncOAuthUser = async () => {
             if (hasSynced.current) return;
 
             if (isLoaded && isSignedIn && user) {
                 hasSynced.current = true;
-                setStatus("Finalizing sync...");
                 const email = user.primaryEmailAddress?.emailAddress || user.emailAddresses?.[0]?.emailAddress;
 
                 if (!email) {
-                    toast.error("No email found.");
+                    toast.error("No email found from auth provider.");
                     router.push("/login");
                     return;
                 }
@@ -98,33 +72,63 @@ export default function OAuthCallbackPage() {
         syncOAuthUser();
     }, [isLoaded, isSignedIn, user, router]);
 
-    // Step 3: Fallback — if nothing happens in 10s, redirect
+    // Fallback timer just in case sync hangs
     useEffect(() => {
         const timer = setTimeout(() => {
             if (!hasSynced.current) {
-                // If user is signed in with Clerk but sync didn't fire, try dashboard
                 const token = localStorage.getItem("token");
                 if (token) {
                     window.location.href = "/dashboard";
-                    return;
+                } else {
+                    toast.error("Sign-in timed out. Please try again.");
+                    router.push("/login");
                 }
-                // Otherwise send back to login
-                toast.error("Sign-in timed out. Please try again.");
-                router.push("/login");
             }
         }, 10000);
-
         return () => clearTimeout(timer);
     }, [router]);
 
     return (
-        <div className="flex h-screen items-center justify-center bg-background">
-            <div className="flex flex-col items-center gap-4">
-                <TerminalSquare className="h-6 w-6 text-muted-foreground animate-pulse" />
-                <p className="text-muted-foreground text-xs font-medium tracking-widest uppercase">
-                    {status}
-                </p>
+        <div className="flex flex-col items-center gap-4">
+            <TerminalSquare className="h-6 w-6 text-muted-foreground animate-pulse" />
+            <p className="text-muted-foreground text-xs font-medium tracking-widest uppercase">
+                {status}
+            </p>
+        </div>
+    );
+}
+
+export default function OAuthCallbackPage() {
+    const { isLoaded, isSignedIn } = useUserSafe();
+
+    // If Clerk is still processing the redirect from Google/GitHub, show the AuthenticateWithRedirectCallback
+    // This handles the dirty work of exchanging the OAuth token
+    if (!isLoaded || (!isSignedIn && typeof window !== "undefined" && window.location.search.includes("redirect_status"))) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-background">
+                <div className="flex flex-col items-center gap-4">
+                    <TerminalSquare className="h-6 w-6 text-muted-foreground animate-pulse" />
+                    <p className="text-muted-foreground text-xs font-medium tracking-widest uppercase">
+                        Verifying with Clerk...
+                    </p>
+                    {/* Only render if we're actually in the Clerk flow to avoid Next.js hydration errors */}
+                    <div className="hidden">
+                        <AuthenticateWithRedirectCallback
+                            signInUrl="/login"
+                            signUpUrl="/login"
+                            signInForceRedirectUrl="/sso-callback"
+                            signUpForceRedirectUrl="/sso-callback"
+                        />
+                    </div>
+                </div>
             </div>
+        );
+    }
+
+    // Once Clerk is done and we are signed in, run our backend sync
+    return (
+        <div className="flex h-screen items-center justify-center bg-background">
+            <SyncLogic />
         </div>
     );
 }
