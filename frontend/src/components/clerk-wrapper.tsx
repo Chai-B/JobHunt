@@ -17,7 +17,15 @@ export function ClerkWrapper({ children }: { children: React.ReactNode }) {
     }
 
     return (
-        <ClerkProvider publishableKey={publishableKey}>
+        <ClerkProvider
+            publishableKey={publishableKey}
+            signInUrl="/login"
+            signUpUrl="/login"
+            signInFallbackRedirectUrl="/sso-sync"
+            signUpFallbackRedirectUrl="/sso-sync"
+            afterSignInUrl="/sso-sync"
+            afterSignUpUrl="/sso-sync"
+        >
             {children}
         </ClerkProvider>
     );
