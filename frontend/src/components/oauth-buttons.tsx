@@ -51,11 +51,12 @@ export function OAuthButtons() {
             // Trigger redirect-based OAuth
             const origin = typeof window !== 'undefined' ? window.location.origin : '';
             const absoluteRedirectUrl = `${origin}/sso-callback`;
+            const absoluteSyncUrl = `${origin}/sso-sync`;
 
             await signIn.authenticateWithRedirect({
                 strategy,
                 redirectUrl: absoluteRedirectUrl,
-                redirectUrlComplete: absoluteRedirectUrl,
+                redirectUrlComplete: absoluteSyncUrl,
             });
         } catch (err: any) {
             console.error("Clerk OAuth Error:", err);
