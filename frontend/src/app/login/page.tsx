@@ -36,11 +36,8 @@ export default function LoginPage() {
     const localToken = localStorage.getItem("token");
     if (localToken) {
       router.push("/dashboard");
-    } else if (clerk?.session) {
-      setLoading(true);
-      router.push("/sso-callback");
     }
-  }, [clerk?.session, router]);
+  }, [router]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,12 +114,7 @@ export default function LoginPage() {
         )}
 
         <div className="p-8 bg-card border border-border rounded-xl shadow-sm relative overflow-hidden min-h-[400px]">
-          {loading && clerk?.session ? (
-            <div className="absolute inset-0 z-50 bg-card flex flex-col items-center justify-center gap-4 animate-in fade-in duration-300">
-              <Briefcase className="h-8 w-8 text-foreground animate-pulse" />
-              <p className="text-xs font-medium tracking-widest uppercase text-muted-foreground">Syncing session...</p>
-            </div>
-          ) : null}
+
 
           {/* OAuth Buttons — loaded only on client */}
           <OAuthButtons />
