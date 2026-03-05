@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
-import { ClerkWrapper } from "@/components/clerk-wrapper";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { GlobalClerkSync } from "@/components/global-clerk-sync";
 
 export const metadata: Metadata = {
   title: "JobHunt",
@@ -27,7 +28,8 @@ export default function RootLayout({
         <link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,300,400,500,600,700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-sans antialiased bg-background text-foreground min-h-screen selection:bg-zinc-800">
-        <ClerkWrapper>
+        <ClerkProvider>
+          <GlobalClerkSync />
           <ThemeProvider
             attribute="class"
             defaultTheme="dark"
@@ -39,7 +41,7 @@ export default function RootLayout({
           </ThemeProvider>
           <Analytics />
           <SpeedInsights />
-        </ClerkWrapper>
+        </ClerkProvider>
       </body>
     </html>
   );

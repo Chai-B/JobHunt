@@ -1,7 +1,7 @@
 "use client";
 
-import { ClerkProvider, useSession, useUser } from "@clerk/nextjs";
-import { usePathname, useRouter } from "next/navigation";
+import { useSession, useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { API_BASE_URL, OAUTH_SYNC_SECRET } from "@/lib/config";
@@ -11,7 +11,7 @@ import { API_BASE_URL, OAUTH_SYNC_SECRET } from "@/lib/config";
  * If Clerk signs the user in, this automatically forces the backend sync
  * and puts them in the dashboard, avoiding redirect-loop relying pages.
  */
-function GlobalClerkSync() {
+export function GlobalClerkSync() {
     const { session, isLoaded: sessionLoaded } = useSession();
     const { user, isLoaded: userLoaded } = useUser();
     const router = useRouter();
@@ -68,19 +68,4 @@ function GlobalClerkSync() {
     }, [sessionLoaded, userLoaded, session, user, router]);
 
     return null;
-}
-
-export function ClerkWrapper({ children }: { children: React.ReactNode }) {
-    const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-
-    if (!publishableKey) {
-        return <>{children}</>;
-    }
-
-    return (
-        <ClerkProvider publishableKey={publishableKey}>
-            <GlobalClerkSync />
-            {children}
-        </ClerkProvider>
-    );
 }
